@@ -1400,7 +1400,7 @@ async function handleCollabLink(){
     // Identify the participant before joining so chat already knows who they are.
     let name=String(tr.collabParticipantName||state.profile?.name||localStorage.getItem('waypoint-chat-name')||'').trim().slice(0,60);
     if(!name){
-      name=(prompt(es?'Antes de unirte al viaje, escribe tu nombre. Así los demás participantes sabrán quién eres en el chat y durante la colaboración:':'Before joining the trip, enter your name so other participants can identify you in chat and during collaboration:','')||'').trim().slice(0,60);
+      name=(prompt('Antes de unirte al viaje, escribe tu nombre para que los demás participantes sepan quién eres.\n\nBefore joining the trip, enter your name so the other participants know who you are.','')||'').trim().slice(0,60);
     }
     if(!name) throw new Error('name required');
     tr.collabParticipantName=name;
