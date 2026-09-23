@@ -155,3 +155,11 @@ Waypoint 4.7 adds:
 - GIF messages store only the GIPHY content ID in Waypoint; clients resolve the current media rendition directly from GIPHY.
 - Visible `Powered by GIPHY` attribution in the picker.
 - `GIPHY_API_KEY` must be configured in Railway for GIF search. The key is delivered to the web client at runtime because GIPHY requires search/media requests to be made directly client-side rather than proxied by Waypoint.
+
+## Waypoint 4.8 chat media refinements
+
+- Emoji picker is now a compact popover with categories and recent emojis instead of a large exposed grid.
+- GIFs support two paths:
+  1. GIPHY search when `GIPHY_API_KEY` is configured in Railway.
+  2. Direct media URL fallback from approved GIPHY/Tenor media hosts for testing or manual use.
+- GIF messages render inline in the collaborative chat.

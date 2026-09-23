@@ -211,7 +211,7 @@ const server=http.createServer(async(req,res)=>{
   try{
     const u=new URL(req.url,'http://localhost');
 
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'4.7.0',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'4.8.0',time:new Date().toISOString()});
 
     if(req.method==='GET'&&u.pathname==='/api/fx/rate'){
       const from=String(u.searchParams.get('from')||'').trim().toUpperCase();
@@ -391,12 +391,23 @@ const server=http.createServer(async(req,res)=>{
         const kind=String(incoming.kind||'text')==='gif'?'gif':'text';
         const textValue=String(incoming.text||'').trim();
         const gifId=String(incoming.gifId||'').trim().slice(0,120);
+        const gifUrl=String(incoming.gifUrl||'').trim().slice(0,1200);
         const gifTitle=String(incoming.gifTitle||'GIF').trim().slice(0,160);
         const participantId=String(incoming.participantId||'').trim().slice(0,100);
         const clientMessageId=String(incoming.clientMessageId||'').trim().slice(0,100);
         if(kind==='text'&&!textValue) return json(res,400,{error:'message is empty'});
         if(kind==='text'&&textValue.length>500) return json(res,400,{error:'message too long'});
-        if(kind==='gif'&&!/^[A-Za-z0-9_-]{1,120}$/.test(gifId)) return json(res,400,{error:'invalid gif id'});
+        if(kind==='gif'){
+          const validId=/^[A-Za-z0-9_-]{1,120}$/.test(gifId);
+          let validUrl=false;
+          if(gifUrl){
+            try{
+              const parsed=new URL(gifUrl);
+              validUrl=parsed.protocol==='https:'&&['media.giphy.com','i.giphy.com','media.tenor.com','c.tenor.com'].includes(parsed.hostname.toLowerCase());
+            }catch(e){}
+          }
+          if(!validId&&!validUrl) return json(res,400,{error:'invalid gif'});
+        }
         if(!participantId) return json(res,400,{error:'participant identity required'});
         const participant=(room.participants||[]).find(p=>p.participantId===participantId);
         if(!participant) return json(res,403,{error:'participant not registered'});
@@ -409,7 +420,8 @@ const server=http.createServer(async(req,res)=>{
         const message={
           id:crypto.randomUUID(),clientMessageId,kind,
           text:kind==='text'?textValue:'',
-          gifId:kind==='gif'?gifId:undefined,
+          gifId:kind==='gif'&&gifId?gifId:undefined,
+          gifUrl:kind==='gif'&&gifUrl?gifUrl:undefined,
           gifTitle:kind==='gif'?gifTitle:undefined,
           name:participant.name,participantId,createdAt:new Date().toISOString()
         };
@@ -492,4 +504,4 @@ const server=http.createServer(async(req,res)=>{
   }
 });
 
-server.listen(PORT,HOST,()=>console.log(`Waypoint 4.7.0 listening on http://${HOST}:${PORT}`));
+server.listen(PORT,HOST,()=>console.log(`Waypoint 4.8.0 listening on http://${HOST}:${PORT}`));

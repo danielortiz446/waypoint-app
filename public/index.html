@@ -441,6 +441,46 @@ body{transition:background .3s;}
   .chat-gif{max-width:72vw;}
 }
 
+
+/* refined chat media picker v4.8 */
+.chat-compose-wrap{position:relative;}
+.chat-tools{display:flex;gap:6px;align-items:center;margin-bottom:7px;}
+.chat-tool-btn{display:inline-flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.045);color:var(--ink-text);border-radius:10px;min-width:38px;height:34px;padding:0 10px;font-size:14px;font-weight:700;cursor:pointer;transition:.15s ease;}
+.chat-tool-btn:hover{background:rgba(255,255,255,.08);transform:translateY(-1px);}
+.chat-tool-btn.active{border-color:rgba(201,162,39,.38);background:rgba(201,162,39,.13);color:var(--brass-light);}
+.chat-media-popover{position:absolute;left:12px;right:12px;bottom:86px;z-index:30;background:rgba(9,25,42,.99);border:1px solid rgba(255,255,255,.11);border-radius:14px;box-shadow:0 18px 48px rgba(0,0,0,.38);overflow:hidden;backdrop-filter:blur(16px);}
+.chat-media-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.08);}
+.chat-media-title{font-size:12px;font-weight:800;color:var(--ink-text);}
+.chat-media-close{border:0;background:transparent;color:var(--muted);font-size:18px;cursor:pointer;padding:2px 6px;border-radius:7px;}
+.chat-media-close:hover{background:rgba(255,255,255,.07);color:var(--ink-text);}
+.emoji-tabs{display:flex;gap:5px;padding:8px 10px 0;overflow:auto;}
+.emoji-tab{border:0;background:transparent;color:var(--muted);border-radius:9px;padding:6px 9px;font-size:15px;cursor:pointer;white-space:nowrap;}
+.emoji-tab.active{background:rgba(201,162,39,.12);color:var(--brass-light);}
+.emoji-picker{padding:9px 10px 11px;display:grid;grid-template-columns:repeat(8,1fr);gap:4px;max-height:210px;overflow:auto;}
+.emoji-btn{border:0;background:transparent;border-radius:9px;font-size:21px;height:36px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.emoji-btn:hover{background:rgba(255,255,255,.08);}
+.gif-picker-body{padding:10px;}
+.gif-search-row{display:flex;gap:7px;}
+.gif-search-row input{flex:1;}
+.gif-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:9px;max-height:250px;overflow:auto;}
+.gif-item{border:0;background:rgba(255,255,255,.04);border-radius:10px;overflow:hidden;padding:0;cursor:pointer;aspect-ratio:1.25/1;position:relative;}
+.gif-item img{width:100%;height:100%;object-fit:cover;display:block;}
+.gif-loading,.gif-empty{padding:20px 10px;text-align:center;color:var(--muted);font-size:11px;grid-column:1/-1;line-height:1.5;}
+.gif-url-row{display:flex;gap:7px;margin-top:9px;padding-top:9px;border-top:1px solid rgba(255,255,255,.07);}
+.gif-url-row input{flex:1;}
+.giphy-attrib{padding:6px 10px 9px;text-align:right;color:var(--muted);font:9px var(--font-mono);}
+.chat-gif{display:block;max-width:280px;width:100%;border-radius:10px;background:rgba(255,255,255,.04);}
+.chat-gif-placeholder{width:230px;max-width:100%;aspect-ratio:1.3/1;border-radius:10px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:10px;}
+.chat-msg.gif-message{padding:6px;}
+.chat-msg.gif-message .chat-meta{padding:3px 5px 0;}
+.chat-msg.gif-message .chat-status{padding:0 5px 3px;}
+@media(max-width:600px){
+  .chat-media-popover{left:8px;right:8px;bottom:92px;}
+  .emoji-picker{grid-template-columns:repeat(7,1fr);max-height:235px;}
+  .gif-grid{grid-template-columns:repeat(2,minmax(0,1fr));max-height:34vh;}
+  .chat-gif{max-width:74vw;}
+}
+
 </style>
 </head>
 <body>
@@ -1084,21 +1124,58 @@ function ensureChatName(tripId){
   return name;
 }
 
-const CHAT_EMOJIS=['😀','😃','😄','😁','😂','🤣','😊','😍','🥰','😘','😎','🤩','🥳','😇','🙂','😉','🤗','🤔','😴','😭','🥺','😢','😡','😱','🤯','😅','🙃','❤️','🩷','🧡','💛','💚','🩵','💙','💜','🤍','🖤','💕','💞','💯','✨','⭐','🔥','🎉','🎊','👏','🙌','👍','👎','🙏','🤝','💪','👀','✈️','🌎','🌴','🏝️','🗺️','📍','🧳','🏨','🚗','🚆','☀️','🌙','☕','🍽️','🍹','🎵','📸','✅','⚠️','❗','❓'];
-let giphyConfigCache=null;
-function chatEmojiHtml(){
-  return CHAT_EMOJIS.map(e=>`<button type="button" class="emoji-btn" onclick="insertChatEmoji('${e.replace(/'/g,"\\'")}')" aria-label="${e}">${e}</button>`).join('');
+
+const CHAT_EMOJI_SECTIONS={
+  recent:{label:'🕘',items:[]},
+  faces:{label:'😀',items:['😀','😃','😄','😁','😂','🤣','😊','😍','🥰','😘','😎','🤩','🥳','😇','🙂','😉','🤗','🤔','😴','😭','🥺','😢','😡','😱','🤯','😅','🙃']},
+  hearts:{label:'❤️',items:['❤️','🩷','🧡','💛','💚','🩵','💙','💜','🤍','🖤','💕','💞','💓','💗','💖','💘','💝']},
+  travel:{label:'✈️',items:['✈️','🌎','🌍','🌴','🏝️','🗺️','📍','🧳','🏨','🚗','🚆','🚕','🚌','🚢','🚤','⛵','🏖️','🏔️','☀️','🌙','🌧️']},
+  fun:{label:'✨',items:['✨','⭐','🔥','🎉','🎊','👏','🙌','👍','👎','🙏','🤝','💪','👀','💯','✅','⚠️','❗','❓','📸','🎵','☕','🍽️','🍹']}
+};
+function recentChatEmojis(){
+  try{return JSON.parse(localStorage.getItem('waypoint-chat-recent-emojis')||'[]').slice(0,24);}catch(e){return [];}
 }
-function toggleChatEmojiPicker(){
-  const emoji=document.getElementById('chat-emoji-picker'), gif=document.getElementById('chat-gif-picker');
-  if(!emoji)return;
-  const open=emoji.hidden;
-  emoji.hidden=!open;
-  if(gif)gif.hidden=true;
-  document.getElementById('chat-emoji-btn')?.classList.toggle('active',open);
+function rememberChatEmoji(emoji){
+  const next=[emoji,...recentChatEmojis().filter(x=>x!==emoji)].slice(0,24);
+  localStorage.setItem('waypoint-chat-recent-emojis',JSON.stringify(next));
+}
+function chatEmojiTabsHtml(active='recent'){
+  return Object.entries(CHAT_EMOJI_SECTIONS).map(([key,s])=>`<button type="button" class="emoji-tab ${key===active?'active':''}" onclick="showChatEmojiSection('${key}')" aria-label="${key}">${s.label}</button>`).join('');
+}
+function chatEmojiGridHtml(section='recent'){
+  const items=section==='recent'?(recentChatEmojis().length?recentChatEmojis():CHAT_EMOJI_SECTIONS.faces.items.slice(0,16)):(CHAT_EMOJI_SECTIONS[section]?.items||CHAT_EMOJI_SECTIONS.faces.items);
+  return items.map(e=>`<button type="button" class="emoji-btn" onclick="insertChatEmoji('${e.replace(/'/g,"\\'")}')" aria-label="${e}">${e}</button>`).join('');
+}
+function showChatEmojiSection(section){
+  document.querySelectorAll('.emoji-tab').forEach(x=>x.classList.remove('active'));
+  document.querySelector(`.emoji-tab[onclick*="'${section}'"]`)?.classList.add('active');
+  const grid=document.getElementById('chat-emoji-grid');
+  if(grid)grid.innerHTML=chatEmojiGridHtml(section);
+}
+function closeChatMediaPickers(){
+  const pop=document.getElementById('chat-media-popover');
+  if(pop)pop.hidden=true;
+  document.getElementById('chat-emoji-btn')?.classList.remove('active');
   document.getElementById('chat-gif-btn')?.classList.remove('active');
-  if(!open) document.getElementById('chat-input')?.focus();
+  document.getElementById('chat-input')?.focus();
 }
+function openChatMediaPicker(kind){
+  const pop=document.getElementById('chat-media-popover');
+  const emoji=document.getElementById('chat-emoji-panel');
+  const gif=document.getElementById('chat-gif-panel');
+  if(!pop||!emoji||!gif)return;
+  const alreadyOpen=!pop.hidden && ((kind==='emoji'&&!emoji.hidden)||(kind==='gif'&&!gif.hidden));
+  if(alreadyOpen){closeChatMediaPickers();return;}
+  pop.hidden=false;
+  emoji.hidden=kind!=='emoji';
+  gif.hidden=kind!=='gif';
+  document.getElementById('chat-emoji-btn')?.classList.toggle('active',kind==='emoji');
+  document.getElementById('chat-gif-btn')?.classList.toggle('active',kind==='gif');
+  if(kind==='emoji')showChatEmojiSection('recent');
+  if(kind==='gif')loadGiphyResults('');
+}
+function toggleChatEmojiPicker(){openChatMediaPicker('emoji');}
+function toggleChatGifPicker(){openChatMediaPicker('gif');}
 function insertChatEmoji(emoji){
   const input=document.getElementById('chat-input'); if(!input)return;
   const start=input.selectionStart??input.value.length, end=input.selectionEnd??start;
@@ -1107,8 +1184,16 @@ function insertChatEmoji(emoji){
   input.value=next;
   const pos=start+emoji.length;
   input.setSelectionRange(pos,pos);
+  rememberChatEmoji(emoji);
   updateChatComposer(ui.chatTripId);
+  showChatEmojiSection('recent');
   input.focus();
+}
+let giphyConfigCache=null;
+function giphyCustomerId(){
+  let id=localStorage.getItem('waypoint-giphy-customer-id');
+  if(!id){id='wp-'+randomKey();localStorage.setItem('waypoint-giphy-customer-id',id);}
+  return id;
 }
 async function getGiphyConfig(){
   if(giphyConfigCache)return giphyConfigCache;
@@ -1118,22 +1203,6 @@ async function getGiphyConfig(){
     giphyConfigCache=r.ok?j:{enabled:false};
   }catch(e){giphyConfigCache={enabled:false};}
   return giphyConfigCache;
-}
-function giphyCustomerId(){
-  let id=localStorage.getItem('waypoint-giphy-customer-id');
-  if(!id){id='wp-'+randomKey();localStorage.setItem('waypoint-giphy-customer-id',id);}
-  return id;
-}
-function toggleChatGifPicker(){
-  const gif=document.getElementById('chat-gif-picker'), emoji=document.getElementById('chat-emoji-picker');
-  if(!gif)return;
-  const open=gif.hidden;
-  gif.hidden=!open;
-  if(emoji)emoji.hidden=true;
-  document.getElementById('chat-gif-btn')?.classList.toggle('active',open);
-  document.getElementById('chat-emoji-btn')?.classList.remove('active');
-  if(open) loadGiphyResults('');
-  else document.getElementById('chat-input')?.focus();
 }
 let giphySearchTimer=null;
 function scheduleGiphySearch(){
@@ -1146,7 +1215,7 @@ async function loadGiphyResults(query){
   grid.innerHTML=`<div class="gif-loading">${es?'Cargando GIFs…':'Loading GIFs…'}</div>`;
   const cfg=await getGiphyConfig();
   if(!cfg.enabled||!cfg.apiKey){
-    grid.innerHTML=`<div class="gif-empty">${es?'Los GIFs todavía no están activados. Agrega GIPHY_API_KEY en Railway.':'GIFs are not enabled yet. Add GIPHY_API_KEY in Railway.'}</div>`;
+    grid.innerHTML=`<div class="gif-empty">${es?'La búsqueda todavía no está conectada. Puedes pegar un enlace directo de GIF abajo o agregar GIPHY_API_KEY en Railway.':'GIF search is not connected yet. Paste a direct GIF URL below or add GIPHY_API_KEY in Railway.'}</div>`;
     return;
   }
   try{
@@ -1168,8 +1237,43 @@ async function loadGiphyResults(query){
     }).join('');
   }catch(e){
     console.error('GIPHY search failed',e);
-    grid.innerHTML=`<div class="gif-empty">${es?'No se pudieron cargar los GIFs. Inténtalo de nuevo.':'Could not load GIFs. Try again.'}</div>`;
+    grid.innerHTML=`<div class="gif-empty">${es?'No se pudieron cargar los GIFs. Puedes usar la opción de enlace directo abajo.':'Could not load GIFs. You can use the direct URL option below.'}</div>`;
   }
+}
+function allowedDirectGifUrl(value){
+  try{
+    const u=new URL(String(value||'').trim());
+    if(u.protocol!=='https:')return null;
+    const host=u.hostname.toLowerCase();
+    const allowed=['media.giphy.com','i.giphy.com','media.tenor.com','c.tenor.com'];
+    if(!allowed.includes(host))return null;
+    return u.href.slice(0,1200);
+  }catch(e){return null;}
+}
+async function sendDirectGifUrl(tripId){
+  const input=document.getElementById('gif-url-input');
+  const url=allowedDirectGifUrl(input?.value);
+  if(!url){
+    showToast(state.lang==='es'?'Usa un enlace directo de media.giphy.com o media.tenor.com.':'Use a direct media.giphy.com or media.tenor.com link.');
+    input?.focus(); return;
+  }
+  const tr=tripById(tripId); if(!tr||ui.chatSending)return;
+  const participantId=tr.collabParticipantId||chatParticipantId();
+  const clientMessageId='c-'+randomKey();
+  ui.chatSending=true;
+  try{
+    const r=await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}/chat`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Edit-Key':tr.editKey},
+      body:JSON.stringify({kind:'gif',gifUrl:url,gifTitle:'GIF',participantId,clientMessageId})
+    });
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(j.error||`chat ${r.status}`);
+    if(j.message)ui.chatMessages=[...(ui.chatMessages||[]).filter(x=>x.id!==j.message.id),j.message];
+    closeChatMediaPickers(); renderChatMessagesInPlace();
+  }catch(e){
+    console.error(e); showToast(state.lang==='es'?'No se pudo enviar el GIF.':'Could not send the GIF.');
+  }finally{ui.chatSending=false;}
 }
 async function resolveChatGifs(){
   const ids=[...new Set((ui.chatMessages||[]).filter(m=>m.kind==='gif'&&m.gifId).map(m=>m.gifId))];
@@ -1184,10 +1288,7 @@ async function resolveChatGifs(){
     const r=await fetch(`https://api.giphy.com/v1/gifs?${p.toString()}`);
     const j=await r.json();
     for(const g of (j.data||[])){
-      ui.chatGifMap[g.id]={
-        url:g.images?.fixed_width?.url||g.images?.downsized?.url||g.images?.original?.url||'',
-        alt:g.title||'GIF'
-      };
+      ui.chatGifMap[g.id]={url:g.images?.fixed_width?.url||g.images?.downsized?.url||g.images?.original?.url||'',alt:g.title||'GIF'};
     }
     renderChatMessagesInPlace();
   }catch(e){console.error('GIPHY resolve failed',e);}
@@ -1208,13 +1309,10 @@ async function sendChatGif(tripId,index){
     if(!r.ok)throw new Error(j.error||`chat ${r.status}`);
     ui.chatGifMap=ui.chatGifMap||{};
     ui.chatGifMap[g.id]={url:g.images?.fixed_width?.url||g.images?.downsized?.url||g.images?.original?.url||'',alt:g.title||'GIF'};
-    if(j.message) ui.chatMessages=[...(ui.chatMessages||[]).filter(x=>x.id!==j.message.id),j.message];
-    const picker=document.getElementById('chat-gif-picker'); if(picker)picker.hidden=true;
-    document.getElementById('chat-gif-btn')?.classList.remove('active');
-    renderChatMessagesInPlace();
+    if(j.message)ui.chatMessages=[...(ui.chatMessages||[]).filter(x=>x.id!==j.message.id),j.message];
+    closeChatMediaPickers(); renderChatMessagesInPlace();
   }catch(e){
-    console.error(e);
-    showToast(state.lang==='es'?'No se pudo enviar el GIF.':'Could not send the GIF.');
+    console.error(e); showToast(state.lang==='es'?'No se pudo enviar el GIF.':'Could not send the GIF.');
   }finally{ui.chatSending=false;}
 }
 
@@ -1242,13 +1340,15 @@ function chatMessagesHtml(messages,me,es){
   let lastDay='';
   return messages.map(m=>{
     const day=chatDayLabel(m.createdAt); let sep='';
-    if(day!==lastDay){ lastDay=day; sep=`<div class="chat-day">${escapeHtml(day)}</div>`; }
+    if(day!==lastDay){lastDay=day;sep=`<div class="chat-day">${escapeHtml(day)}</div>`;}
     const mine=m.participantId===me;
     let body='';
-    if(m.kind==='gif'&&m.gifId){
+    if(m.kind==='gif'){
       const gif=(ui.chatGifMap||{})[m.gifId];
-      body=gif?.url
-        ?`<img class="chat-gif" loading="lazy" src="${escapeHtml(gif.url)}" alt="${escapeHtml(gif.alt||m.gifTitle||'GIF')}">`
+      const src=m.gifUrl||gif?.url||'';
+      const alt=m.gifTitle||gif?.alt||'GIF';
+      body=src
+        ?`<img class="chat-gif" loading="lazy" src="${escapeHtml(src)}" alt="${escapeHtml(alt)}">`
         :`<div class="chat-gif-placeholder">${es?'Cargando GIF…':'Loading GIF…'}</div>`;
     }else{
       body=`<div class="chat-text">${escapeHtml(m.text||'')}</div>`;
@@ -3017,20 +3117,37 @@ function renderModal(){
         <div class="chat-typing" id="chat-typing" aria-live="polite"></div>
         <div class="chat-compose-wrap">
           <div class="chat-tools">
-            <button type="button" id="chat-emoji-btn" class="chat-tool-btn" onclick="toggleChatEmojiPicker()" aria-label="${es?'Emojis':'Emojis'}">😊</button>
+            <button type="button" id="chat-emoji-btn" class="chat-tool-btn" onclick="toggleChatEmojiPicker()" aria-label="Emoji">😊</button>
             <button type="button" id="chat-gif-btn" class="chat-tool-btn" onclick="toggleChatGifPicker()" aria-label="GIF">GIF</button>
           </div>
-          <div id="chat-emoji-picker" class="chat-picker emoji-picker" hidden>${chatEmojiHtml()}</div>
-          <div id="chat-gif-picker" class="chat-picker" hidden>
-            <div class="gif-picker-head">
-              <div class="gif-search-row">
-                <input id="gif-search" maxlength="50" placeholder="${es?'Buscar GIFs…':'Search GIFs…'}" oninput="scheduleGiphySearch()">
-                <button type="button" class="btn btn-ghost btn-sm" onclick="loadGiphyResults(document.getElementById('gif-search')?.value||'')">${es?'Buscar':'Search'}</button>
-              </div>
+
+          <div id="chat-media-popover" class="chat-media-popover" hidden>
+            <div class="chat-media-head">
+              <div class="chat-media-title">${es?'Agregar al mensaje':'Add to message'}</div>
+              <button type="button" class="chat-media-close" onclick="closeChatMediaPickers()" aria-label="${es?'Cerrar':'Close'}">×</button>
             </div>
-            <div id="gif-grid" class="gif-grid"><div class="gif-loading">${es?'Abre el buscador para cargar GIFs.':'Open the picker to load GIFs.'}</div></div>
-            <div class="giphy-attrib">Powered by GIPHY</div>
+
+            <div id="chat-emoji-panel" hidden>
+              <div class="emoji-tabs">${chatEmojiTabsHtml('recent')}</div>
+              <div id="chat-emoji-grid" class="emoji-picker">${chatEmojiGridHtml('recent')}</div>
+            </div>
+
+            <div id="chat-gif-panel" hidden>
+              <div class="gif-picker-body">
+                <div class="gif-search-row">
+                  <input id="gif-search" maxlength="50" placeholder="${es?'Buscar GIFs…':'Search GIFs…'}" oninput="scheduleGiphySearch()">
+                  <button type="button" class="btn btn-ghost btn-sm" onclick="loadGiphyResults(document.getElementById('gif-search')?.value||'')">${es?'Buscar':'Search'}</button>
+                </div>
+                <div id="gif-grid" class="gif-grid"><div class="gif-loading">${es?'Cargando GIFs…':'Loading GIFs…'}</div></div>
+                <div class="gif-url-row">
+                  <input id="gif-url-input" placeholder="${es?'O pega un GIF directo de GIPHY/Tenor':'Or paste a direct GIPHY/Tenor GIF URL'}">
+                  <button type="button" class="btn btn-ghost btn-sm" onclick="sendDirectGifUrl('${tr.id}')">${es?'Enviar':'Send'}</button>
+                </div>
+              </div>
+              <div class="giphy-attrib">Powered by GIPHY</div>
+            </div>
           </div>
+
           <div class="chat-compose">
             <textarea id="chat-input" maxlength="500" autocomplete="off" autocapitalize="sentences" enterkeyhint="send" aria-label="${es?'Escribir mensaje':'Write message'}" placeholder="${es?'Escribe un mensaje…':'Write a message…'}" oninput="updateChatComposer('${tr.id}')" onkeydown="chatKeydown(event,'${tr.id}')">${escapeHtml(draft)}</textarea>
             <button type="button" id="chat-send-btn" class="btn btn-brass" onclick="sendTripChat('${tr.id}')" ${String(draft||'').trim()?'':'disabled'}>${es?'Enviar':'Send'}</button>

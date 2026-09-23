@@ -47,7 +47,7 @@ async function sseNext(id,key){
     r=await fetch(base+'/manifest.webmanifest');
     results.push(['manifest',r.ok&&(await r.json()).name.includes('Waypoint')]);
     r=await fetch(base+'/health');
-    results.push(['health',r.ok&&(await r.json()).version==='4.7.0']);
+    results.push(['health',r.ok&&(await r.json()).version==='4.8.0']);
 
     const id='trip-test',key='secret-edit-key';
     r=await fetch(base+`/api/trips/${id}`,{method:'PUT',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({clientRevision:0,data:{waypointLive:1,trip:{name:'QA Trip'},days:[],bookings:[]}})});
@@ -90,6 +90,11 @@ async function sseNext(id,key){
 
     r=await fetch(base+`/api/trips/${id}/chat`,{method:'POST',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({kind:'gif',gifId:'bad gif id!',participantId:'qa-user',clientMessageId:'gif-bad'})});
     results.push(['chat invalid gif rejected',r.status===400]);
+
+    r=await fetch(base+`/api/trips/${id}/chat`,{method:'POST',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({kind:'gif',gifUrl:'https://media.giphy.com/media/xT4uQulxzV39haRFjG/giphy.gif',gifTitle:'Direct QA GIF',participantId:'qa-user',clientMessageId:'gif-url-qa-1'})});
+    const gifUrlSent=await r.json();
+    results.push(['chat direct gif url',r.status===201&&gifUrlSent.message&&gifUrlSent.message.gifUrl&&gifUrlSent.message.kind==='gif']);
+
 
     r=await fetch(base+'/api/giphy-config');
     const giphyCfg=await r.json();
