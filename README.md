@@ -152,3 +152,12 @@ Waypoint 4.7 adds:
 ## Flight reservations
 
 Waypoint stores flight reservations as planning records: flight number, origin, destination, date/time, provider, confirmation and notes. Real-time flight-status notifications are intentionally not included in this version, so the app has no unfinished flight-alert controls or paid flight-data dependency.
+
+## Waypoint 4.9 global trip chat
+
+- Collaborative chat is now a trip-level feature rather than an itinerary-only control.
+- A global chat launcher is available from every trip tab while collaboration is active.
+- On desktop, chat opens as a non-blocking drawer so users can switch trip tabs while keeping the conversation open.
+- Drafts remain local per trip.
+- Read receipts are participant-based. Opening the chat marks messages through the latest visible/server-loaded message as read.
+- Senders see `Read by <name>` / `Leído por <nombre>` and `Read by everyone` / `Leído por todos` when applicable.

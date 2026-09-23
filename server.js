@@ -101,6 +101,13 @@ function notifyParticipants(id){
   for(const res of [...set]){ try{res.write(msg);}catch(e){set.delete(res);} }
 }
 
+
+function notifyRead(id,participant){
+  const set=eventClients.get(id); if(!set)return;
+  const msg=`event: read\ndata: ${JSON.stringify({participantId:participant.participantId,name:participant.name,lastMessageId:participant.lastMessageId||null,lastReadAt:participant.lastReadAt||null})}\n\n`;
+  for(const res of [...set]){try{res.write(msg);}catch(e){set.delete(res);}}
+}
+
 function addEventClient(id,res){
   if(!eventClients.has(id)) eventClients.set(id,new Set());
   eventClients.get(id).add(res);
@@ -114,7 +121,7 @@ const server=http.createServer(async(req,res)=>{
   try{
     const u=new URL(req.url,'http://localhost');
 
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'4.8.2',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'4.9.0',time:new Date().toISOString()});
 
     if(req.method==='GET'&&u.pathname==='/api/fx/rate'){
       const from=String(u.searchParams.get('from')||'').trim().toUpperCase();
@@ -201,6 +208,33 @@ const server=http.createServer(async(req,res)=>{
       return json(res,405,{error:'method not allowed'});
     }
 
+
+
+    const readMatch=u.pathname.match(/^\/api\/trips\/([^/]+)\/read$/);
+    if(readMatch&&req.method==='POST'){
+      const id=decodeURIComponent(readMatch[1]), room=rooms[id];
+      if(!room)return json(res,404,{error:'trip not found'});
+      const editKey=String(req.headers['x-edit-key']||'');
+      if(hash(editKey)!==room.keyHash)return json(res,403,{error:'invalid edit key'});
+      const incoming=await readBody(req);
+      const participantId=String(incoming.participantId||'').trim().slice(0,100);
+      const participant=(room.participants||[]).find(p=>p.participantId===participantId);
+      if(!participant)return json(res,403,{error:'participant not registered'});
+      const messages=Array.isArray(room.chat)?room.chat:[];
+      const requestedId=String(incoming.lastMessageId||'').trim().slice(0,100);
+      const message=messages.find(m=>m.id===requestedId)||messages[messages.length-1];
+      if(!message)return json(res,200,{ok:true,participants:room.participants||[]});
+      const nextReadAt=message.createdAt;
+      const current=Date.parse(participant.lastReadAt||0);
+      if(!current||Date.parse(nextReadAt)>=current){
+        participant.lastMessageId=message.id;
+        participant.lastReadAt=nextReadAt;
+        participant.lastSeenAt=new Date().toISOString();
+        persist();
+        notifyRead(id,participant);
+      }
+      return json(res,200,{ok:true,participants:room.participants||[]});
+    }
 
     const typingMatch=u.pathname.match(/^\/api\/trips\/([^/]+)\/typing$/);
     if(typingMatch&&req.method==='POST'){
@@ -331,4 +365,4 @@ const server=http.createServer(async(req,res)=>{
   }
 });
 
-server.listen(PORT,HOST,()=>console.log(`Waypoint 4.8.2 listening on http://${HOST}:${PORT}`));
+server.listen(PORT,HOST,()=>console.log(`Waypoint 4.9.0 listening on http://${HOST}:${PORT}`));

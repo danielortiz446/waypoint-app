@@ -47,7 +47,7 @@ async function sseNext(id,key){
     r=await fetch(base+'/manifest.webmanifest');
     results.push(['manifest',r.ok&&(await r.json()).name.includes('Waypoint')]);
     r=await fetch(base+'/health');
-    results.push(['health',r.ok&&(await r.json()).version==='4.8.2']);
+    results.push(['health',r.ok&&(await r.json()).version==='4.9.0']);
 
     const id='trip-test',key='secret-edit-key';
     r=await fetch(base+`/api/trips/${id}`,{method:'PUT',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({clientRevision:0,data:{waypointLive:1,trip:{name:'QA Trip'},days:[],bookings:[]}})});
@@ -84,6 +84,18 @@ r=await fetch(base+'/api/giphy-config');
     r=await fetch(base+`/api/trips/${id}/participants?key=${encodeURIComponent(key)}`);
     const participantList=await r.json();
     results.push(['participant list',r.ok&&participantList.participants.length===2]);
+
+
+    r=await fetch(base+`/api/trips/${id}/participants`,{method:'POST',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({name:'Reader',participantId:'qa-reader'})});
+    results.push(['read receipt participant',r.ok]);
+
+    r=await fetch(base+`/api/trips/${id}/chat`,{method:'POST',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({text:'Read me',participantId:'qa-user',clientMessageId:'read-me-1'})});
+    const readMsg=await r.json();
+
+    r=await fetch(base+`/api/trips/${id}/read`,{method:'POST',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({participantId:'qa-reader',lastMessageId:readMsg.message.id,lastReadAt:readMsg.message.createdAt})});
+    const readReceipt=await r.json();
+    const reader=readReceipt.participants.find(p=>p.participantId==='qa-reader');
+    results.push(['chat read receipt',r.ok&&reader&&reader.lastMessageId===readMsg.message.id&&reader.lastReadAt===readMsg.message.createdAt]);
 
     r=await fetch(base+`/api/trips/${id}/chat`,{method:'POST',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({text:'Spoof attempt',name:'Fake Name',participantId:'qa-user',clientMessageId:'client-1'})});
     const trustedNameMsg=await r.json();

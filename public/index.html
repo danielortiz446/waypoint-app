@@ -479,6 +479,34 @@ body{transition:background .3s;}
   .chat-gif{max-width:74vw;}
 }
 
+
+/* global trip chat + read receipts v4.9 */
+.trip-chat-launcher{
+  position:fixed;right:22px;bottom:22px;z-index:70;
+  display:flex;align-items:center;gap:8px;min-height:48px;
+  padding:0 16px;border-radius:999px;border:1px solid rgba(201,162,39,.32);
+  background:rgba(12,30,48,.96);color:var(--paper);box-shadow:0 12px 34px rgba(0,0,0,.34);
+  font-weight:800;cursor:pointer;backdrop-filter:blur(14px);
+}
+.trip-chat-launcher:hover{transform:translateY(-1px);background:rgba(17,38,60,.98);}
+.trip-chat-launcher .chat-badge{position:absolute;right:-3px;top:-4px;}
+.trip-global-collab{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  margin:-4px 0 14px;padding:9px 11px;border-radius:11px;
+  background:rgba(68,185,120,.07);border:1px solid rgba(68,185,120,.16);
+}
+.trip-global-collab .left{font-size:11px;color:var(--muted);line-height:1.45;}
+.chat-read{font:8px var(--font-mono);color:var(--brass-light);text-align:right;margin-top:3px;white-space:normal;}
+.chat-read .checks{letter-spacing:-2px;margin-right:4px;}
+@media(min-width:760px){
+  .modal-bg.chat-drawer-bg{background:transparent;pointer-events:none;align-items:flex-end;justify-content:flex-end;padding:18px;}
+  .modal-bg.chat-drawer-bg .modal{pointer-events:auto;width:min(620px,calc(100vw - 36px));max-height:calc(100vh - 36px);margin:0;box-shadow:0 24px 70px rgba(0,0,0,.48);}
+}
+@media(max-width:759px){
+  .trip-chat-launcher{right:14px;bottom:14px;min-width:48px;padding:0 13px;}
+  .trip-chat-launcher .label{display:none;}
+}
+
 </style>
 </head>
 <body>
@@ -1303,6 +1331,7 @@ function chatDayLabel(iso){
 }
 function chatMessagesHtml(messages,me,es){
   let lastDay='';
+  const tr=tripById(ui.chatTripId);
   return messages.map(m=>{
     const day=chatDayLabel(m.createdAt); let sep='';
     if(day!==lastDay){lastDay=day;sep=`<div class="chat-day">${escapeHtml(day)}</div>`;}
@@ -1319,10 +1348,53 @@ function chatMessagesHtml(messages,me,es){
     return `${sep}<div class="chat-msg ${mine?'mine':''} ${m.kind==='gif'?'gif-message':''}" data-message-id="${escapeHtml(m.id||'')}">
       <div class="chat-meta"><span>${escapeHtml(m.name||(es?'Participante':'Participant'))}</span><span>·</span><span>${escapeHtml(formatChatTime(m.createdAt))}</span></div>
       ${body}
-      ${mine?`<div class="chat-status">${es?'Enviado':'Sent'} ✓</div>`:''}
+      ${mine?chatReadReceiptHtml(tr,m,es):''}
     </div>`;
   }).join('');
 }
+
+function chatReadersForMessage(tr,m){
+  const me=tr?.collabParticipantId||chatParticipantId();
+  const created=Date.parse(m?.createdAt||0);
+  if(!created)return [];
+  return (tr?.collabParticipants||[]).filter(p=>{
+    if(!p||p.participantId===me)return false;
+    const read=Date.parse(p.lastReadAt||0);
+    return read>=created;
+  });
+}
+function chatReadReceiptHtml(tr,m,es){
+  if(!tr||m.participantId!==(tr.collabParticipantId||chatParticipantId()))return '';
+  const readers=chatReadersForMessage(tr,m);
+  if(!readers.length)return `<div class="chat-status">${es?'Enviado':'Sent'} ✓</div>`;
+  const names=readers.map(x=>x.name).filter(Boolean);
+  const others=(tr.collabParticipants||[]).filter(p=>p.participantId!==(tr.collabParticipantId||chatParticipantId()));
+  if(others.length>0&&readers.length>=others.length){
+    return `<div class="chat-read"><span class="checks">✓✓</span>${es?'Leído por todos':'Read by everyone'}</div>`;
+  }
+  const shown=names.slice(0,2).join(', ');
+  const extra=names.length>2?` +${names.length-2}`:'';
+  return `<div class="chat-read"><span class="checks">✓✓</span>${es?'Leído por':'Read by'} ${escapeHtml(shown)}${extra}</div>`;
+}
+async function markTripChatRead(tripId){
+  const tr=tripById(tripId);
+  if(!tr?.liveSync||!ui.chatMessages?.length)return;
+  const latest=ui.chatMessages[ui.chatMessages.length-1];
+  const participantId=tr.collabParticipantId||chatParticipantId();
+  if(!latest?.createdAt||!participantId)return;
+  try{
+    const r=await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}/read`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Edit-Key':tr.editKey},
+      body:JSON.stringify({participantId,lastMessageId:latest.id,lastReadAt:latest.createdAt})
+    });
+    if(r.ok){
+      const j=await r.json().catch(()=>({}));
+      if(Array.isArray(j.participants))tr.collabParticipants=j.participants;
+    }
+  }catch(e){}
+}
+
 function updateChatComposer(tripId){
   const input=document.getElementById('chat-input');
   const btn=document.getElementById('chat-send-btn');
@@ -1353,8 +1425,10 @@ async function loadTripChat(tripId,quiet=false){
     const j=await r.json();
     ui.chatTripId=tripId; ui.chatMessages=Array.isArray(j.messages)?j.messages:[]; ui.chatLoading=false; ui.chatError='';
     tr.chatUnread=0;
+    await loadCollabParticipants(tripId);
     if(ui.modal==='tripChat') renderChatMessagesInPlace();
     resolveChatGifs();
+    await markTripChatRead(tripId);
     return true;
   }catch(e){
     console.error('Waypoint chat load failed:',e);
@@ -1629,8 +1703,19 @@ function ensureLiveStream(tr){
       try{
         const msg=JSON.parse(ev.data||'{}');
         const isMine=msg.participantId===(tr.collabParticipantId||chatParticipantId());
-        if(ui.modal==='tripChat'&&ui.chatTripId===tr.id){ await loadTripChat(tr.id,true); }
-        else if(!isMine){ tr.chatUnread=Math.min(99,Number(tr.chatUnread||0)+1); render(); }
+        if(ui.modal==='tripChat'&&ui.chatTripId===tr.id){
+          await loadTripChat(tr.id,true);
+          if(!isMine)await markTripChatRead(tr.id);
+        }else if(!isMine){
+          tr.chatUnread=Math.min(99,Number(tr.chatUnread||0)+1);
+          render();
+        }
+      }catch(e){}
+    });
+    es.addEventListener('read',async ()=>{
+      try{
+        await loadCollabParticipants(tr.id);
+        if(ui.modal==='tripChat'&&ui.chatTripId===tr.id)renderChatMessagesInPlace();
       }catch(e){}
     });
     es.addEventListener('typing',ev=>{
@@ -1909,7 +1994,18 @@ function viewTripDetail(){
       <button class="${ui.tripSubTab==='checklist'?'active':''}" onclick="setTripSubTab('checklist')"><span class="ic">☑</span>${t.tabs.checklist}</button>
       <button class="${ui.tripSubTab==='notes'?'active':''}" onclick="setTripSubTab('notes')"><span class="ic">📄</span>${t.tabs.notes}</button>
     </div>
+    ${tr.liveSync?`<div class="trip-global-collab">
+      <div class="left"><span class="sync-dot"></span> ${state.lang==='es'?'Colaboración activa':'Live collaboration'}${collabParticipantsText(tr)?` · 👥 ${escapeHtml(collabParticipantsText(tr))}`:''}</div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;">
+        <button class="btn btn-ghost btn-sm" onclick="openTripChat('${tr.id}')">💬 ${state.lang==='es'?'Chat':'Chat'}${Number(tr.chatUnread||0)>0?` <span class="chat-badge">${Math.min(99,Number(tr.chatUnread||0))}</span>`:''}</button>
+        <button class="btn btn-ghost btn-sm" onclick="syncTripNow('${tr.id}')">↻ ${state.lang==='es'?'Sincronizar':'Sync'}</button>
+        ${tr.collabOwner&&tr.ownerKey
+          ?`<button class="btn btn-danger btn-sm" onclick="stopLiveCollaboration('${tr.id}')">⛔ ${state.lang==='es'?'Dejar de compartir':'Stop sharing'}</button>`
+          :`<button class="btn btn-ghost btn-sm" onclick="leaveLiveCollaboration('${tr.id}')">↩ ${state.lang==='es'?'Salir':'Leave'}</button>`}
+      </div>
+    </div>`:''}
     <div id="trip-subview">${renderTripSubTab(tr)}</div>
+    ${tr.liveSync?`<button class="trip-chat-launcher" onclick="openTripChat('${tr.id}')" aria-label="${state.lang==='es'?'Abrir chat del viaje':'Open trip chat'}">💬 <span class="label">${state.lang==='es'?'Chat del viaje':'Trip chat'}</span>${Number(tr.chatUnread||0)>0?`<span class="chat-badge">${Math.min(99,Number(tr.chatUnread||0))}</span>`:''}</button>`:''}
   `;
 }
 function setTripSubTab(tab){ ui.tripSubTab=tab; render(); }
@@ -2336,16 +2432,6 @@ function viewItinerarySub(tr){
       ${days.length? `<button class="btn btn-ghost btn-sm" onclick="openShareCenter('${tr.id}')">📤 ${t.itinerary.share}</button>`:''}
       ${days.length? `<button class="btn btn-brass btn-sm" onclick="startLiveCollaboration('${tr.id}')">👥 ${state.lang==='es'?'Colaborar en vivo':'Live collaboration'}</button>`:''}
     </div>
-    ${tr.liveSync? `<div class="collab-bar">
-  <div class="collab-status"><span class="sync-dot"></span><span>${state.lang==='es'?'Colaboración activa':'Live collaboration'}${tr.lastSyncedAt?' · '+new Date(tr.lastSyncedAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):''}${collabParticipantsText(tr)?`<br><small>👥 ${escapeHtml(collabParticipantsText(tr))}</small>`:''}</span></div>
-  <div style="display:flex;gap:7px;flex-wrap:wrap;">
-    <button class="btn btn-ghost btn-sm" onclick="openTripChat('${tr.id}')">💬 Chat${Number(tr.chatUnread||0)>0?`<span class="chat-badge">${Math.min(99,Number(tr.chatUnread||0))}</span>`:''}</button>
-    <button class="btn btn-ghost btn-sm" onclick="syncTripNow('${tr.id}')">↻ ${state.lang==='es'?'Sincronizar':'Sync'}</button>
-    ${tr.collabOwner&&tr.ownerKey
-      ?`<button class="btn btn-danger btn-sm" onclick="stopLiveCollaboration('${tr.id}')">⛔ ${state.lang==='es'?'Dejar de compartir':'Stop sharing'}</button>`
-      :`<button class="btn btn-ghost btn-sm" onclick="leaveLiveCollaboration('${tr.id}')">↩ ${state.lang==='es'?'Salir':'Leave'}</button>`}
-  </div>
-</div>`:''}
     ${tr.shareId? `<p class="field-hint" style="margin:-8px 0 14px;">${t.itinerary.sharedHint}</p>`:''}
     ${days.length? days.map((d,i)=>dayCard(tr,d,i,days.length)).join('') : `<div class="panel empty"><p>${t.itinerary.noDays}</p></div>`}
   `;
@@ -2961,7 +3047,7 @@ function renderModal(){
   if(!ui.modal) return;
   const t=tt();
   const bg = document.createElement('div');
-  bg.className='modal-bg';
+  bg.className='modal-bg'+(ui.modal==='tripChat'?' chat-drawer-bg':'');
   bg.onclick=(e)=>{ if(e.target===bg){ ui.modal=null; render(); } };
   let inner='';
 
@@ -3016,7 +3102,10 @@ function renderModal(){
             <div class="chat-title-row"><h3>💬 ${es?'Chat del viaje':'Trip chat'}</h3></div>
             <div class="chat-presence"><span class="chat-online-dot"></span>${escapeHtml(tr.name||'')}${people.length?` · ${people.length} ${es?(people.length===1?'participante':'participantes'):(people.length===1?'participant':'participants')}`:''}</div>
           </div>
-          <button type="button" class="btn btn-ghost btn-sm" onclick="loadTripChat('${tr.id}')" aria-label="${es?'Actualizar mensajes':'Refresh messages'}">↻</button>
+          <div style="display:flex;gap:6px;">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="loadTripChat('${tr.id}')" aria-label="${es?'Actualizar mensajes':'Refresh messages'}">↻</button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="closeModal()" aria-label="${es?'Cerrar chat':'Close chat'}">✕</button>
+          </div>
         </div>
         ${ui.chatError?`<div class="chat-error">${escapeHtml(ui.chatError)}</div>`:''}
         <div class="chat-list" id="chat-list" role="log" aria-live="polite" aria-relevant="additions text">
