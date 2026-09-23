@@ -1145,6 +1145,16 @@ function chatParticipantName(tripId){
   if(saved) return saved.slice(0,60);
   return String(localStorage.getItem('waypoint-chat-name')||'').trim().slice(0,60);
 }
+
+function promptCollabName(currentName=''){
+  const suggested=String(currentName||'').trim().slice(0,60);
+  const value=prompt(
+    'Antes de unirte al viaje, confirma o cambia tu nombre para que los demás participantes sepan quién eres.\n\nBefore joining the trip, confirm or change your name so the other participants know who you are.',
+    suggested
+  );
+  return value===null?null:String(value||'').trim().slice(0,60);
+}
+
 function ensureChatName(tripId){
   let name=chatParticipantName(tripId);
   if(name) return name;
@@ -1523,6 +1533,28 @@ async function registerCollabParticipant(tr){
     return false;
   }
 }
+async function changeCollabParticipantName(tripId){
+  const tr=tripById(tripId); if(!tr||!tr.liveSync)return;
+  const current=String(tr.collabParticipantName||chatParticipantName(tripId)||'').trim();
+  const next=promptCollabName(current);
+  if(next===null)return;
+  if(!next){
+    showToast(state.lang==='es'?'El nombre no puede quedar vacío.':'Name cannot be empty.');
+    return;
+  }
+  tr.collabParticipantName=next;
+  localStorage.setItem('waypoint-chat-name',next);
+  await saveState();
+  const ok=await registerCollabParticipant(tr);
+  if(ok){
+    await loadCollabParticipants(tripId);
+    if(ui.modal==='tripChat')render();
+    showToast(state.lang==='es'?`Ahora apareces como ${next}`:`You now appear as ${next}`);
+  }else{
+    showToast(state.lang==='es'?'No se pudo actualizar el nombre.':'Could not update the name.');
+  }
+}
+
 async function loadCollabParticipants(tripId){
   const tr=tripById(tripId);
   if(!tr||!tr.liveSync) return [];
@@ -1811,11 +1843,11 @@ async function handleCollabLink(){
     tr.syncRevision=j.revision||0; tr.lastSyncedAt=new Date().toISOString();
     tr.collabParticipantId=tr.collabParticipantId||chatParticipantId();
 
-    // Identify the participant before joining so chat already knows who they are.
-    let name=String(tr.collabParticipantName||state.profile?.name||localStorage.getItem('waypoint-chat-name')||'').trim().slice(0,60);
-    if(!name){
-      name=(prompt('Antes de unirte al viaje, escribe tu nombre para que los demás participantes sepan quién eres.\n\nBefore joining the trip, enter your name so the other participants know who you are.','')||'').trim().slice(0,60);
-    }
+    // Always confirm identity when an invitation link is opened.
+    // Existing name is only a suggestion, so the participant can change it or use another device.
+    const suggestedName=String(tr.collabParticipantName||state.profile?.name||localStorage.getItem('waypoint-chat-name')||'').trim().slice(0,60);
+    const name=promptCollabName(suggestedName);
+    if(name===null) throw new Error('name cancelled');
     if(!name) throw new Error('name required');
     tr.collabParticipantName=name;
     localStorage.setItem('waypoint-chat-name',name);
@@ -3112,9 +3144,10 @@ function renderModal(){
         <div class="chat-head">
           <div>
             <div class="chat-title-row"><h3>💬 ${es?'Chat del viaje':'Trip chat'}</h3></div>
-            <div class="chat-presence"><span class="chat-online-dot"></span>${escapeHtml(tr.name||'')}${people.length?` · ${people.length} ${es?(people.length===1?'participante':'participantes'):(people.length===1?'participant':'participants')}`:''}</div>
+            <div class="chat-presence"><span class="chat-online-dot"></span>${escapeHtml(tr.name||'')}${people.length?` · ${people.length} ${es?(people.length===1?'participante':'participantes'):(people.length===1?'participant':'participants')}`:''}<br>👤 ${escapeHtml(tr.collabParticipantName||chatParticipantName(tr.id)||'')}</div>
           </div>
-          <div style="display:flex;gap:6px;">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="changeCollabParticipantName('${tr.id}')" aria-label="${es?'Cambiar nombre':'Change name'}">👤 ${es?'Cambiar nombre':'Change name'}</button>
             <button type="button" class="btn btn-ghost btn-sm" onclick="loadTripChat('${tr.id}')" aria-label="${es?'Actualizar mensajes':'Refresh messages'}">↻</button>
             <button type="button" class="btn btn-ghost btn-sm" onclick="closeModal()" aria-label="${es?'Cerrar chat':'Close chat'}">✕</button>
           </div>
