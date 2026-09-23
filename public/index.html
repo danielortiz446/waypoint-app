@@ -512,6 +512,9 @@ body{transition:background .3s;}
   .trip-chat-launcher .label{display:none;}
 }
 
+
+.trip-global-collab .btn-brass{white-space:nowrap;}
+
 </style>
 </head>
 <body>
@@ -2004,11 +2007,17 @@ function viewTripDetail(){
       <div style="display:flex;gap:7px;flex-wrap:wrap;">
         <button class="btn btn-ghost btn-sm" onclick="openTripChat('${tr.id}')">💬 ${state.lang==='es'?'Chat':'Chat'}${Number(tr.chatUnread||0)>0?` <span class="chat-badge">${Math.min(99,Number(tr.chatUnread||0))}</span>`:''}</button>
         <button class="btn btn-ghost btn-sm" onclick="syncTripNow('${tr.id}')">↻ ${state.lang==='es'?'Sincronizar':'Sync'}</button>
+        <button class="btn btn-brass btn-sm" onclick="startLiveCollaboration('${tr.id}')">📤 ${state.lang==='es'?'Compartir colaboración':'Share collaboration'}</button>
         ${tr.collabOwner&&tr.ownerKey
           ?`<button class="btn btn-danger btn-sm" onclick="stopLiveCollaboration('${tr.id}')">⛔ ${state.lang==='es'?'Dejar de compartir':'Stop sharing'}</button>`
           :`<button class="btn btn-ghost btn-sm" onclick="leaveLiveCollaboration('${tr.id}')">↩ ${state.lang==='es'?'Salir':'Leave'}</button>`}
       </div>
-    </div>`:''}
+    </div>`:`<div class="trip-global-collab">
+      <div class="left">👥 ${state.lang==='es'?'Este viaje todavía no está compartido. Activa la colaboración para planificarlo con otras personas.':'This trip is not shared yet. Enable collaboration to plan it with other people.'}</div>
+      <div>
+        <button class="btn btn-brass btn-sm" onclick="startLiveCollaboration('${tr.id}')">👥 ${state.lang==='es'?'Colaborar en vivo':'Live collaboration'}</button>
+      </div>
+    </div>`}
     <div id="trip-subview">${renderTripSubTab(tr)}</div>
     ${tr.liveSync?`<button class="trip-chat-launcher" onclick="openTripChat('${tr.id}')" aria-label="${state.lang==='es'?'Abrir chat del viaje':'Open trip chat'}"><span class="chat-icon">💬</span><span class="label">${state.lang==='es'?'Chat del viaje':'Trip chat'}</span>${Number(tr.chatUnread||0)>0?`<span class="chat-badge">${Math.min(99,Number(tr.chatUnread||0))}</span>`:''}</button>`:''}
   `;
@@ -2435,9 +2444,7 @@ function viewItinerarySub(tr){
       <button class="btn btn-brass btn-sm" onclick="openDayForm()">+ ${t.itinerary.addDay}</button>
       ${days.length? `<button class="btn btn-ghost btn-sm" onclick="printItinerary('${tr.id}')">🖨 ${t.itinerary.print}</button>`:''}
       ${days.length? `<button class="btn btn-ghost btn-sm" onclick="openShareCenter('${tr.id}')">📤 ${t.itinerary.share}</button>`:''}
-      ${days.length? `<button class="btn btn-brass btn-sm" onclick="startLiveCollaboration('${tr.id}')">👥 ${state.lang==='es'?'Colaborar en vivo':'Live collaboration'}</button>`:''}
     </div>
-    ${tr.shareId? `<p class="field-hint" style="margin:-8px 0 14px;">${t.itinerary.sharedHint}</p>`:''}
     ${days.length? days.map((d,i)=>dayCard(tr,d,i,days.length)).join('') : `<div class="panel empty"><p>${t.itinerary.noDays}</p></div>`}
   `;
 }
