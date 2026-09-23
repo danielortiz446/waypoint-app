@@ -167,3 +167,33 @@ Waypoint stores flight reservations as planning records: flight number, origin, 
 Collaboration now synchronizes the major trip-planning areas: itinerary, bookings, expenses/budget data, packing items and travel notes. The collaborative chat acts as a trip hub by mixing normal participant messages with concise system activity events such as itinerary changes, new bookings, expenses, packing updates and notes.
 
 Activity events identify the participant associated with the synchronized change and keep the latest 150 events per shared trip. The chat itself remains limited separately and retains read receipts, typing indicators, emoji/GIPHY support and participant identity.
+
+## Waypoint 6.0 Complete Travel Suite
+
+Waypoint 6.0 expands the trip workspace beyond planning:
+
+- Today / Up Next timeline for activities and bookings.
+- Trip Map hub with destination map, saved-place list and multi-stop Google Maps route handoff.
+- Optional integrated weather using Open-Meteo's commercial customer API (`OPEN_METEO_API_KEY`).
+- Shared expenses with payer, participants, balances and settle-up suggestions.
+- Packing assignment by participant.
+- Collaboration roles: owner, editor and server-enforced view-only access.
+- Dedicated shared activity-history view.
+- Ideas/favorites that can be promoted into itinerary activities.
+- Collaborative polls and voting.
+- Chat replies, reactions, read receipts, GIPHY search and compressed photo attachments.
+- Offline-first local editing with pending-sync recovery when connectivity returns.
+- Local itinerary reminders (30-minute lead by default) using browser/PWA notifications when supported.
+- Smart home dashboard for the next trip.
+- Safe trip duplication as a fresh local template without copying collaboration credentials.
+- Richer export/import covering bookings, expenses, packing, notes, ideas and polls.
+
+### Important platform limits
+
+Browser/PWA reminders are event-driven. On iOS and other platforms, the operating system can suspend or terminate an installed web app, so Waypoint cannot guarantee that a purely local reminder will wake a fully closed app at an exact future time. Waypoint checks reminders while running and when it returns to the foreground.
+
+Chat photos are intentionally compressed and limited. The server accepts up to 30 photo messages per shared trip, with a small per-photo payload cap, to avoid uncontrolled growth of the Railway persistent volume.
+
+### Weather licensing
+
+Because Waypoint is intended to support a public/commercial deployment, the built-in weather proxy stays disabled unless `OPEN_METEO_API_KEY` is configured. Use an Open-Meteo commercial customer API subscription for a monetized deployment. The UI includes Open-Meteo attribution.

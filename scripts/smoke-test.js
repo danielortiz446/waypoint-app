@@ -47,16 +47,23 @@ async function sseNext(id,key){
     r=await fetch(base+'/manifest.webmanifest');
     results.push(['manifest',r.ok&&(await r.json()).name.includes('Waypoint')]);
     r=await fetch(base+'/health');
-    results.push(['health',r.ok&&(await r.json()).version==='5.0.0']);
+    results.push(['health',r.ok&&(await r.json()).version==='6.0.0']);
 
-    const id='trip-test',key='secret-edit-key';
-    r=await fetch(base+`/api/trips/${id}`,{method:'PUT',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({clientRevision:0,data:{waypointLive:1,trip:{name:'QA Trip'},days:[],bookings:[]}})});
+    const id='trip-test',key='secret-edit-key',viewKey='secret-view-key';
+    r=await fetch(base+`/api/trips/${id}`,{method:'PUT',headers:{'content-type':'application/json','x-edit-key':key,'x-view-key':viewKey},body:JSON.stringify({clientRevision:0,data:{waypointLive:1,trip:{name:'QA Trip'},days:[],bookings:[]}})});
     const created=await r.json();
     results.push(['create',r.ok&&created.revision===1]);
 
     r=await fetch(base+`/api/trips/${id}?key=${encodeURIComponent(key)}`);
     const got=await r.json();
     results.push(['read',r.ok&&got.data.trip.name==='QA Trip']);
+
+    r=await fetch(base+`/api/trips/${id}?key=${encodeURIComponent(viewKey)}`);
+    const viewerGot=await r.json();
+    results.push(['viewer read access',r.ok&&viewerGot.data.trip.name==='QA Trip']);
+
+    r=await fetch(base+`/api/trips/${id}`,{method:'PUT',headers:{'content-type':'application/json','x-edit-key':viewKey},body:JSON.stringify({clientRevision:1,data:{trip:{name:'Viewer should not edit'}}})});
+    results.push(['viewer write blocked',r.status===403]);
 
     r=await fetch(base+`/api/trips/${id}?key=wrong`);
     results.push(['invalid key',r.status===403]);
@@ -85,6 +92,13 @@ r=await fetch(base+'/api/giphy-config');
     const participantList=await r.json();
     results.push(['participant list',r.ok&&participantList.participants.length===2]);
 
+    r=await fetch(base+`/api/trips/${id}/participants`,{method:'POST',headers:{'content-type':'application/json','x-access-key':viewKey},body:JSON.stringify({name:'View User',participantId:'qa-viewer',role:'viewer'})});
+    results.push(['viewer participant registration',r.ok]);
+    r=await fetch(base+`/api/trips/${id}/chat?key=${encodeURIComponent(viewKey)}`);
+    results.push(['viewer chat read',r.ok]);
+    r=await fetch(base+`/api/trips/${id}/chat`,{method:'POST',headers:{'content-type':'application/json','x-edit-key':viewKey},body:JSON.stringify({text:'viewer cannot send',participantId:'qa-viewer'})});
+    results.push(['viewer chat send blocked',r.status===403]);
+
 
     r=await fetch(base+`/api/trips/${id}/participants`,{method:'POST',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({name:'Reader',participantId:'qa-reader'})});
     results.push(['read receipt participant',r.ok]);
@@ -100,6 +114,19 @@ r=await fetch(base+'/api/giphy-config');
     r=await fetch(base+`/api/trips/${id}/chat`,{method:'POST',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({text:'Spoof attempt',name:'Fake Name',participantId:'qa-user',clientMessageId:'client-1'})});
     const trustedNameMsg=await r.json();
     results.push(['chat trusted participant name',r.ok&&trustedNameMsg.message&&trustedNameMsg.message.name==='QA User']);
+
+    r=await fetch(base+`/api/trips/${id}/chat/${trustedNameMsg.message.id}/reactions`,{method:'POST',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({participantId:'qa-user',emoji:'❤️'})});
+    const reacted=await r.json();
+    results.push(['chat reactions',r.ok&&reacted.message&&Array.isArray(reacted.message.reactions['❤️'])&&reacted.message.reactions['❤️'].includes('qa-user')]);
+
+    const tinyPng='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Z2S8AAAAASUVORK5CYII=';
+    r=await fetch(base+`/api/trips/${id}/chat`,{method:'POST',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({kind:'photo',photoData:tinyPng,photoName:'pixel.png',participantId:'qa-user',clientMessageId:'photo-1',replyToId:trustedNameMsg.message.id})});
+    const photoMsg=await r.json();
+    results.push(['chat photo and reply',r.ok&&photoMsg.message&&photoMsg.message.kind==='photo'&&photoMsg.message.replyToId===trustedNameMsg.message.id]);
+
+    r=await fetch(base+'/api/weather?location=Miami');
+    const weather=await r.json();
+    results.push(['weather config gate',r.ok&&weather.enabled===false]);
 
     r=await fetch(base+`/api/trips/${id}/chat`,{method:'POST',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({text:'Spoof attempt',name:'Another Name',participantId:'qa-user',clientMessageId:'client-1'})});
     const duplicateMsg=await r.json();

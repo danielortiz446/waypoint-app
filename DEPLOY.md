@@ -79,3 +79,11 @@ For in-chat GIPHY search, add this Railway/hosting environment variable:
 `GIPHY_API_KEY=...`
 
 The GIPHY API key is delivered to the browser at runtime because GIPHY search is performed client-side.
+
+## Optional integrated weather
+
+For a monetized/public Waypoint deployment, configure a commercial Open-Meteo customer API key:
+
+`OPEN_METEO_API_KEY=...`
+
+Without this value the Weather card stays disabled instead of using Open-Meteo's non-commercial free endpoint.

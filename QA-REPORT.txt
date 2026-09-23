@@ -104,3 +104,18 @@ WAYPOINT 4.8.1 STABILITY REVIEW
 - Fixed active-collaboration re-sharing so invitees cannot be promoted locally to owner.
 - Reviewed GIPHY/privacy disclosures.
 - Re-ran JavaScript syntax and server smoke tests.
+
+WAYPOINT 6.0 COMPLETE TRAVEL SUITE
+- Added Today/Up Next view.
+- Added Map hub and route handoff.
+- Added optional commercial-key-gated weather.
+- Added shared expenses, balances and settle-up suggestions.
+- Added packing assignments.
+- Added owner/editor/viewer access with server-enforced view-only key.
+- Added dedicated activity history.
+- Added ideas/favorites and collaborative polls.
+- Added chat replies, reactions and compressed photo messages.
+- Added offline dirty-state recovery and reconnect sync.
+- Added PWA local reminders with service-worker notification display.
+- Added smarter Home trip pulse.
+- Fixed trip duplication to strip collaboration credentials and deep-copy related trip data.

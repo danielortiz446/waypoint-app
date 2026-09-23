@@ -42,6 +42,12 @@ function persist(){
   fs.renameSync(tmp,DATA_FILE);
 }
 function hash(v){ return crypto.createHash('sha256').update(String(v||'')).digest('hex'); }
+
+function isEditKey(room,key){return Boolean(room&&key&&hash(key)===room.keyHash);}
+function isViewKey(room,key){return Boolean(room&&key&&room.viewKeyHash&&hash(key)===room.viewKeyHash);}
+function hasReadAccess(room,key){return isEditKey(room,key)||isViewKey(room,key);}
+function accessKeyFromRequest(req){return String(req.headers['x-access-key']||req.headers['x-edit-key']||req.headers['x-view-key']||'');}
+
 function securityHeaders(){
   return {
     'X-Content-Type-Options':'nosniff',
@@ -112,8 +118,10 @@ function deriveActivityEvents(prev,next,actorName,actorId){
   compare(flattenActivities(prev.days),flattenActivities(next.days),{add:'activity_added',update:'activity_updated',remove:'activity_removed'},'title',['title','time','location','dayId']);
   compare(prev.bookings,next.bookings,{add:'booking_added',update:'booking_updated',remove:'booking_removed'},'title',['title','date','time','provider','confirmation','location','notes','flightNumber','origin','destination']);
   compare(prev.expenses,next.expenses,{add:'expense_added',update:null,remove:'expense_removed'},'desc',null,x=>({amount:Number.isFinite(Number(x.amount))?String(Number(x.amount).toFixed(2)):''}));
-  compare(prev.checklists,next.checklists,{add:'packing_added',update:'packing_updated',remove:'packing_removed'},'text',['text','done','category','qty']);
+  compare(prev.checklists,next.checklists,{add:'packing_added',update:'packing_updated',remove:'packing_removed'},'text',['text','done','category','qty','assignedTo']);
   compare(prev.docs,next.docs,{add:'note_added',update:'note_added',remove:'note_removed'},'label',['label','value']);
+  compare(prev.ideas,next.ideas,{add:'idea_added',update:'idea_updated',remove:'idea_removed'},'title',['title','location','category']);
+  compare(prev.polls,next.polls,{add:'poll_added',update:'poll_updated',remove:'poll_removed'},'question',['question','options','votes']);
 
   return events.filter(e=>e.type).slice(0,8);
 }
@@ -166,7 +174,7 @@ const server=http.createServer(async(req,res)=>{
   try{
     const u=new URL(req.url,'http://localhost');
 
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'5.0.0',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'6.0.0',time:new Date().toISOString()});
 
     if(req.method==='GET'&&u.pathname==='/api/fx/rate'){
       const from=String(u.searchParams.get('from')||'').trim().toUpperCase();
@@ -200,13 +208,46 @@ const server=http.createServer(async(req,res)=>{
 
 
 
+
+    if(req.method==='GET'&&u.pathname==='/api/weather'){
+      const apiKey=String(process.env.OPEN_METEO_API_KEY||'').trim();
+      const location=String(u.searchParams.get('location')||'').trim().slice(0,160);
+      if(!apiKey) return json(res,200,{enabled:false,provider:'Open-Meteo',reason:'commercial_api_key_required'});
+      if(!location) return json(res,400,{error:'location required'});
+      try{
+        const geoUrl=`https://customer-geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=en&format=json&apikey=${encodeURIComponent(apiKey)}`;
+        const gr=await fetch(geoUrl,{headers:{'accept':'application/json','user-agent':'Waypoint/6.0'}});
+        if(!gr.ok)throw new Error('geocoding '+gr.status);
+        const gj=await gr.json(), place=Array.isArray(gj.results)?gj.results[0]:null;
+        if(!place)return json(res,404,{error:'location not found'});
+        const params=new URLSearchParams({
+          latitude:String(place.latitude),longitude:String(place.longitude),
+          current:'temperature_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m',
+          hourly:'precipitation_probability',
+          forecast_days:'2',timezone:'auto',apikey:apiKey
+        });
+        const wr=await fetch(`https://customer-api.open-meteo.com/v1/forecast?${params.toString()}`,{headers:{'accept':'application/json','user-agent':'Waypoint/6.0'}});
+        if(!wr.ok)throw new Error('weather '+wr.status);
+        const w=await wr.json();
+        const current={...(w.current||{})};
+        if(Array.isArray(w.hourly?.time)&&Array.isArray(w.hourly?.precipitation_probability)){
+          const now=Date.now();let best=0,bestDiff=Infinity;
+          w.hourly.time.forEach((t,i)=>{const diff=Math.abs(Date.parse(t)-now);if(diff<bestDiff){bestDiff=diff;best=i;}});
+          current.precipitation_probability=w.hourly.precipitation_probability[best]??null;
+        }
+        return json(res,200,{enabled:true,provider:'Open-Meteo',location:[place.name,place.admin1,place.country].filter(Boolean).join(', '),latitude:place.latitude,longitude:place.longitude,current});
+      }catch(e){
+        return json(res,502,{enabled:true,provider:'Open-Meteo',error:'weather lookup failed'});
+      }
+    }
+
     if(req.method==='GET'&&u.pathname==='/api/giphy-config'){
       const key=String(process.env.GIPHY_API_KEY||'').trim();
       return json(res,200,{enabled:Boolean(key),apiKey:key||null,provider:key?'GIPHY':null});
     }
 
     if(req.method==='GET'&&u.pathname==='/api/features'){
-      return json(res,200,{giphy:Boolean(process.env.GIPHY_API_KEY)});
+      return json(res,200,{giphy:Boolean(process.env.GIPHY_API_KEY),weather:Boolean(process.env.OPEN_METEO_API_KEY)});
     }
 
     const eventMatch=u.pathname.match(/^\/api\/trips\/([^/]+)\/events$/);
@@ -215,7 +256,7 @@ const server=http.createServer(async(req,res)=>{
       const room=rooms[id];
       if(!room) return json(res,404,{error:'trip not found'});
       const key=u.searchParams.get('key')||'';
-      if(hash(key)!==room.keyHash) return json(res,403,{error:'invalid edit key'});
+      if(!hasReadAccess(room,key)) return json(res,403,{error:'invalid access key'});
       res.writeHead(200,{...securityHeaders(),'Content-Type':'text/event-stream; charset=utf-8','Cache-Control':'no-cache, no-transform','Connection':'keep-alive','X-Accel-Buffering':'no'});
       res.write(`event: ready\ndata: ${JSON.stringify({revision:room.revision})}\n\n`);
       addEventClient(id,res);
@@ -232,20 +273,21 @@ const server=http.createServer(async(req,res)=>{
       if(!room) return json(res,404,{error:'trip not found'});
       if(req.method==='GET'){
         const key=u.searchParams.get('key')||'';
-        if(hash(key)!==room.keyHash) return json(res,403,{error:'invalid edit key'});
+        if(!hasReadAccess(room,key)) return json(res,403,{error:'invalid access key'});
         return json(res,200,{participants:Array.isArray(room.participants)?room.participants:[]});
       }
       if(req.method==='POST'){
-        const editKey=String(req.headers['x-edit-key']||'');
-        if(hash(editKey)!==room.keyHash) return json(res,403,{error:'invalid edit key'});
+        const accessKey=accessKeyFromRequest(req);
+        if(!hasReadAccess(room,accessKey)) return json(res,403,{error:'invalid access key'});
         const incoming=await readBody(req);
         const participantId=String(incoming.participantId||'').trim().slice(0,100);
         const name=String(incoming.name||'').trim().slice(0,60);
         if(!participantId||!name) return json(res,400,{error:'participant identity required'});
         if(!Array.isArray(room.participants)) room.participants=[];
         const existing=room.participants.find(p=>p.participantId===participantId);
-        if(existing){ existing.name=name; existing.lastSeenAt=new Date().toISOString(); }
-        else room.participants.push({participantId,name,joinedAt:new Date().toISOString(),lastSeenAt:new Date().toISOString()});
+        const role=String(incoming.role||'editor')==='viewer'?'viewer':'editor';
+        if(existing){ existing.name=name; existing.role=role; existing.lastSeenAt=new Date().toISOString(); }
+        else room.participants.push({participantId,name,role,joinedAt:new Date().toISOString(),lastSeenAt:new Date().toISOString()});
         room.participants=room.participants.slice(-50);
         persist(); notifyParticipants(id);
         return json(res,200,{ok:true,participants:room.participants});
@@ -259,8 +301,8 @@ const server=http.createServer(async(req,res)=>{
     if(readMatch&&req.method==='POST'){
       const id=decodeURIComponent(readMatch[1]), room=rooms[id];
       if(!room)return json(res,404,{error:'trip not found'});
-      const editKey=String(req.headers['x-edit-key']||'');
-      if(hash(editKey)!==room.keyHash)return json(res,403,{error:'invalid edit key'});
+      const accessKey=accessKeyFromRequest(req);
+      if(!hasReadAccess(room,accessKey))return json(res,403,{error:'invalid access key'});
       const incoming=await readBody(req);
       const participantId=String(incoming.participantId||'').trim().slice(0,100);
       const participant=(room.participants||[]).find(p=>p.participantId===participantId);
@@ -292,6 +334,24 @@ const server=http.createServer(async(req,res)=>{
       notifyTyping(id); return json(res,200,{ok:true});
     }
 
+
+    const reactionMatch=u.pathname.match(/^\/api\/trips\/([^/]+)\/chat\/([^/]+)\/reactions$/);
+    if(reactionMatch&&req.method==='POST'){
+      const id=decodeURIComponent(reactionMatch[1]), messageId=decodeURIComponent(reactionMatch[2]), room=rooms[id];
+      if(!room)return json(res,404,{error:'trip not found'});
+      const editKey=String(req.headers['x-edit-key']||'');
+      if(!isEditKey(room,editKey))return json(res,403,{error:'invalid edit key'});
+      const incoming=await readBody(req), participantId=String(incoming.participantId||'').trim().slice(0,100), emoji=String(incoming.emoji||'').trim();
+      if(!participantId||(room.participants||[]).every(p=>p.participantId!==participantId))return json(res,403,{error:'participant not registered'});
+      if(!['❤️','👍','😂','🔥','✈️','👏'].includes(emoji))return json(res,400,{error:'unsupported reaction'});
+      const message=(room.chat||[]).find(m=>m.id===messageId);if(!message)return json(res,404,{error:'message not found'});
+      message.reactions=message.reactions||{};
+      const arr=Array.isArray(message.reactions[emoji])?message.reactions[emoji]:[];
+      message.reactions[emoji]=arr.includes(participantId)?arr.filter(x=>x!==participantId):[...arr,participantId].slice(-50);
+      persist();notifyChat(id,message);
+      return json(res,200,{ok:true,message});
+    }
+
     const chatMatch=u.pathname.match(/^\/api\/trips\/([^/]+)\/chat$/);
     if(chatMatch){
       const id=decodeURIComponent(chatMatch[1]);
@@ -299,22 +359,28 @@ const server=http.createServer(async(req,res)=>{
       if(!room) return json(res,404,{error:'trip not found'});
       if(req.method==='GET'){
         const key=u.searchParams.get('key')||'';
-        if(hash(key)!==room.keyHash) return json(res,403,{error:'invalid edit key'});
+        if(!hasReadAccess(room,key)) return json(res,403,{error:'invalid access key'});
         return json(res,200,{messages:Array.isArray(room.chat)?room.chat:[],activity:Array.isArray(room.activity)?room.activity:[]});
       }
       if(req.method==='POST'){
         const editKey=String(req.headers['x-edit-key']||'');
         if(hash(editKey)!==room.keyHash) return json(res,403,{error:'invalid edit key'});
         const incoming=await readBody(req);
-        const kind=String(incoming.kind||'text')==='gif'?'gif':'text';
+        const rawKind=String(incoming.kind||'text');
+        const kind=rawKind==='gif'?'gif':rawKind==='photo'?'photo':'text';
         const textValue=String(incoming.text||'').trim();
         const gifId=String(incoming.gifId||'').trim().slice(0,120);
         const gifTitle=String(incoming.gifTitle||'GIF').trim().slice(0,160);
+        const photoData=String(incoming.photoData||'');
+        const photoName=String(incoming.photoName||'Photo').trim().slice(0,120);
+        const replyToId=String(incoming.replyToId||'').trim().slice(0,100);
         const participantId=String(incoming.participantId||'').trim().slice(0,100);
         const clientMessageId=String(incoming.clientMessageId||'').trim().slice(0,100);
         if(kind==='text'&&!textValue) return json(res,400,{error:'message is empty'});
         if(kind==='text'&&textValue.length>500) return json(res,400,{error:'message too long'});
         if(kind==='gif'&&!/^[A-Za-z0-9_-]{1,120}$/.test(gifId)) return json(res,400,{error:'invalid gif id'});
+        if(kind==='photo'&&(!/^data:image\/(?:jpeg|png|webp);base64,/.test(photoData)||photoData.length>450000)) return json(res,400,{error:'invalid photo'});
+        if(kind==='photo'&&(room.chat||[]).filter(m=>m.kind==='photo').length>=30) return json(res,409,{error:'photo limit reached'});
         if(!participantId) return json(res,400,{error:'participant identity required'});
         const participant=(room.participants||[]).find(p=>p.participantId===participantId);
         if(!participant) return json(res,403,{error:'participant not registered'});
@@ -329,6 +395,10 @@ const server=http.createServer(async(req,res)=>{
           text:kind==='text'?textValue:'',
           gifId:kind==='gif'?gifId:undefined,
           gifTitle:kind==='gif'?gifTitle:undefined,
+          photoData:kind==='photo'?photoData:undefined,
+          photoName:kind==='photo'?photoName:undefined,
+          replyToId:replyToId&&room.chat.some(m=>m.id===replyToId)?replyToId:undefined,
+          reactions:{},
           name:participant.name,participantId,createdAt:new Date().toISOString()
         };
         room.chat.push(message);
@@ -348,7 +418,7 @@ const server=http.createServer(async(req,res)=>{
         const room=rooms[id];
         if(!room) return json(res,404,{error:'trip not found'});
         const key=u.searchParams.get('key')||'';
-        if(hash(key)!==room.keyHash) return json(res,403,{error:'invalid edit key'});
+        if(!hasReadAccess(room,key)) return json(res,403,{error:'invalid access key'});
         return json(res,200,{revision:room.revision,updatedAt:room.updatedAt,data:room.data});
       }
       if(req.method==='PUT'){
@@ -364,6 +434,7 @@ const server=http.createServer(async(req,res)=>{
         }
         const revision=(existing?.revision||0)+1;
         const ownerKey=String(req.headers['x-owner-key']||'');
+        const viewKey=String(req.headers['x-view-key']||'');
         const participantId=String(req.headers['x-participant-id']||'').trim().slice(0,100);
         const participant=(existing?.participants||[]).find(p=>p.participantId===participantId);
         const newEvents=existing?deriveActivityEvents(existing.data||{},incoming.data||{},participant?.name||'Participant',participantId):[];
@@ -371,6 +442,7 @@ const server=http.createServer(async(req,res)=>{
         rooms[id]={
           keyHash:existing?.keyHash||hash(editKey),
           ownerKeyHash:existing?.ownerKeyHash||(ownerKey?hash(ownerKey):null),
+          viewKeyHash:existing?.viewKeyHash||(viewKey?hash(viewKey):null),
           revision,updatedAt:new Date().toISOString(),data:incoming.data,
           chat:Array.isArray(existing?.chat)?existing.chat:[],
           activity,
@@ -415,4 +487,4 @@ const server=http.createServer(async(req,res)=>{
   }
 });
 
-server.listen(PORT,HOST,()=>console.log(`Waypoint 5.0.0 listening on http://${HOST}:${PORT}`));
+server.listen(PORT,HOST,()=>console.log(`Waypoint 6.0.0 listening on http://${HOST}:${PORT}`));
