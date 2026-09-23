@@ -482,14 +482,19 @@ body{transition:background .3s;}
 
 /* global trip chat + read receipts v4.9 */
 .trip-chat-launcher{
-  position:fixed;right:22px;bottom:22px;z-index:70;
-  display:flex;align-items:center;gap:8px;min-height:48px;
-  padding:0 16px;border-radius:999px;border:1px solid rgba(201,162,39,.32);
-  background:rgba(12,30,48,.96);color:var(--paper);box-shadow:0 12px 34px rgba(0,0,0,.34);
+  position:fixed;right:22px;bottom:92px;z-index:69;
+  display:flex;align-items:center;gap:10px;min-height:50px;
+  padding:0 16px 0 12px;border-radius:999px;border:1px solid rgba(201,162,39,.28);
+  background:rgba(12,30,48,.97);color:var(--paper);box-shadow:0 12px 34px rgba(0,0,0,.34);
   font-weight:800;cursor:pointer;backdrop-filter:blur(14px);
 }
-.trip-chat-launcher:hover{transform:translateY(-1px);background:rgba(17,38,60,.98);}
-.trip-chat-launcher .chat-badge{position:absolute;right:-3px;top:-4px;}
+.trip-chat-launcher:hover{transform:translateY(-1px);background:rgba(17,38,60,.99);}
+.trip-chat-launcher .chat-icon{
+  width:32px;height:32px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;
+  background:rgba(201,162,39,.18);color:var(--brass-light);font-size:16px;flex:0 0 auto;
+}
+.trip-chat-launcher .label{white-space:nowrap;}
+.trip-chat-launcher .chat-badge{position:absolute;right:-2px;top:-5px;}
 .trip-global-collab{
   display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
   margin:-4px 0 14px;padding:9px 11px;border-radius:11px;
@@ -503,7 +508,7 @@ body{transition:background .3s;}
   .modal-bg.chat-drawer-bg .modal{pointer-events:auto;width:min(620px,calc(100vw - 36px));max-height:calc(100vh - 36px);margin:0;box-shadow:0 24px 70px rgba(0,0,0,.48);}
 }
 @media(max-width:759px){
-  .trip-chat-launcher{right:14px;bottom:14px;min-width:48px;padding:0 13px;}
+  .trip-chat-launcher{right:14px;bottom:84px;min-width:52px;padding:0 13px 0 10px;}
   .trip-chat-launcher .label{display:none;}
 }
 
@@ -2005,7 +2010,7 @@ function viewTripDetail(){
       </div>
     </div>`:''}
     <div id="trip-subview">${renderTripSubTab(tr)}</div>
-    ${tr.liveSync?`<button class="trip-chat-launcher" onclick="openTripChat('${tr.id}')" aria-label="${state.lang==='es'?'Abrir chat del viaje':'Open trip chat'}">💬 <span class="label">${state.lang==='es'?'Chat del viaje':'Trip chat'}</span>${Number(tr.chatUnread||0)>0?`<span class="chat-badge">${Math.min(99,Number(tr.chatUnread||0))}</span>`:''}</button>`:''}
+    ${tr.liveSync?`<button class="trip-chat-launcher" onclick="openTripChat('${tr.id}')" aria-label="${state.lang==='es'?'Abrir chat del viaje':'Open trip chat'}"><span class="chat-icon">💬</span><span class="label">${state.lang==='es'?'Chat del viaje':'Trip chat'}</span>${Number(tr.chatUnread||0)>0?`<span class="chat-badge">${Math.min(99,Number(tr.chatUnread||0))}</span>`:''}</button>`:''}
   `;
 }
 function setTripSubTab(tab){ ui.tripSubTab=tab; render(); }
