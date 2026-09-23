@@ -385,6 +385,33 @@ body{transition:background .3s;}
 .chat-compose .btn{min-height:44px;}
 .chat-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:10px;background:var(--coral);color:#fff;font-size:9px;font-family:var(--font-mono);margin-left:4px;}
 
+
+/* professional collaborative chat v4.6 */
+.chat-modal{max-width:620px;padding:0;overflow:hidden;}
+.chat-shell{display:flex;flex-direction:column;height:min(78vh,680px);min-height:440px;}
+.chat-head{padding:15px 16px 12px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;background:rgba(255,255,255,.025);}
+.chat-title-row{display:flex;align-items:center;gap:8px;}
+.chat-title-row h3{margin:0;}
+.chat-presence{font-size:10px;color:var(--muted);margin-top:4px;line-height:1.45;}
+.chat-online-dot{display:inline-block;width:7px;height:7px;border-radius:999px;background:#45c878;margin-right:5px;box-shadow:0 0 0 3px rgba(69,200,120,.10);}
+.chat-list{flex:1;min-height:0;overflow:auto;padding:14px 14px 6px;background:rgba(0,0,0,.10);display:flex;flex-direction:column;gap:7px;scroll-behavior:smooth;}
+.chat-day{align-self:center;margin:7px 0 4px;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.06);font:9px var(--font-mono);color:var(--muted);}
+.chat-msg{max-width:78%;padding:9px 11px 7px;border-radius:14px 14px 14px 4px;background:rgba(255,255,255,.075);border:1px solid rgba(255,255,255,.07);align-self:flex-start;box-shadow:0 1px 0 rgba(0,0,0,.08);}
+.chat-msg.mine{align-self:flex-end;border-radius:14px 14px 4px 14px;background:rgba(201,162,39,.14);border-color:rgba(201,162,39,.24);}
+.chat-meta{font:9px var(--font-mono);color:var(--muted);margin-bottom:4px;display:flex;gap:6px;align-items:center;}
+.chat-text{font-size:13px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink-text);}
+.chat-status{font:8px var(--font-mono);color:var(--muted);text-align:right;margin-top:4px;}
+.chat-empty{margin:auto;padding:26px 16px;text-align:center;color:var(--muted);font-size:12px;max-width:330px;line-height:1.55;}
+.chat-error{margin:8px 14px 0;padding:8px 10px;border-radius:9px;background:rgba(220,80,80,.10);border:1px solid rgba(220,80,80,.18);font-size:11px;color:var(--ink-text);}
+.chat-typing{min-height:22px;padding:4px 16px 0;color:var(--muted);font-size:10px;font-style:italic;background:rgba(0,0,0,.10);}
+.chat-compose-wrap{padding:9px 12px 12px;border-top:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.025);}
+.chat-compose{display:flex;gap:8px;align-items:flex-end;}
+.chat-compose textarea{flex:1;min-height:44px;max-height:120px;resize:none;border-radius:12px;padding-right:42px;}
+.chat-compose .btn{min-height:44px;min-width:82px;}
+.chat-compose-meta{display:flex;justify-content:space-between;gap:10px;margin-top:5px;color:var(--muted);font:9px var(--font-mono);}
+.chat-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:10px;background:var(--coral);color:#fff;font-size:9px;font-family:var(--font-mono);margin-left:4px;}
+@media(max-width:600px){.chat-modal{width:100%;max-width:none;height:100dvh;max-height:none;border-radius:0;margin:0}.chat-shell{height:100dvh;min-height:0}.chat-msg{max-width:86%}.chat-compose .btn{min-width:70px;padding-left:12px;padding-right:12px}}
+
 </style>
 </head>
 <body>
@@ -1013,14 +1040,12 @@ function chatParticipantName(tripId){
   if(tripName) return tripName.slice(0,60);
   const saved=(state.profile&&state.profile.name||'').trim();
   if(saved) return saved.slice(0,60);
-  const existing=(localStorage.getItem('waypoint-chat-name')||'').trim();
-  return existing.slice(0,60);
+  return String(localStorage.getItem('waypoint-chat-name')||'').trim().slice(0,60);
 }
 function ensureChatName(tripId){
   let name=chatParticipantName(tripId);
   if(name) return name;
-  const es=waypointLang()==='es';
-  name=(prompt(es?'Escribe tu nombre para identificarte en este viaje:':'Enter your name so other participants can identify you:','')||'').trim().slice(0,60);
+  name=(prompt('Antes de continuar, escribe tu nombre para identificarte con los demás participantes.\n\nBefore continuing, enter your name so the other participants can identify you.','')||'').trim().slice(0,60);
   if(name){
     localStorage.setItem('waypoint-chat-name',name);
     const tr=tripId?tripById(tripId):null;
@@ -1029,103 +1054,130 @@ function ensureChatName(tripId){
   }
   return name;
 }
+function chatDraftKey(tripId){ return `waypoint-chat-draft-${tripId}`; }
+function getChatDraft(tripId){ return localStorage.getItem(chatDraftKey(tripId))||''; }
+function setChatDraft(tripId,value){
+  const v=String(value||'').slice(0,500);
+  if(v) localStorage.setItem(chatDraftKey(tripId),v); else localStorage.removeItem(chatDraftKey(tripId));
+  ui.chatDraft=v;
+}
 function formatChatTime(iso){
+  try{return new Date(iso).toLocaleTimeString(state.lang==='es'?'es-ES':'en-US',{hour:'numeric',minute:'2-digit',hour12:true});}catch(e){return '';}
+}
+function chatDayLabel(iso){
   try{
-    return new Date(iso).toLocaleTimeString(state.lang==='es'?'es-ES':'en-US',{hour:'numeric',minute:'2-digit',hour12:true});
-  }catch(e){ return ''; }
+    const d=new Date(iso), now=new Date();
+    const a=new Date(d.getFullYear(),d.getMonth(),d.getDate()), b=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+    const diff=Math.round((b-a)/86400000);
+    if(diff===0) return state.lang==='es'?'Hoy':'Today';
+    if(diff===1) return state.lang==='es'?'Ayer':'Yesterday';
+    return d.toLocaleDateString(state.lang==='es'?'es-ES':'en-US',{month:'short',day:'numeric',year:d.getFullYear()!==now.getFullYear()?'numeric':undefined});
+  }catch(e){return '';}
+}
+function chatMessagesHtml(messages,me,es){
+  let lastDay='';
+  return messages.map(m=>{
+    const day=chatDayLabel(m.createdAt); let sep='';
+    if(day!==lastDay){ lastDay=day; sep=`<div class="chat-day">${escapeHtml(day)}</div>`; }
+    return `${sep}<div class="chat-msg ${m.participantId===me?'mine':''}" data-message-id="${escapeHtml(m.id||'')}">
+      <div class="chat-meta"><span>${escapeHtml(m.name||(es?'Participante':'Participant'))}</span><span>·</span><span>${escapeHtml(formatChatTime(m.createdAt))}</span></div>
+      <div class="chat-text">${escapeHtml(m.text||'')}</div>
+      ${m.participantId===me?`<div class="chat-status">${es?'Enviado':'Sent'} ✓</div>`:''}
+    </div>`;
+  }).join('');
+}
+function updateChatComposer(tripId){
+  const input=document.getElementById('chat-input');
+  const btn=document.getElementById('chat-send-btn');
+  const count=document.getElementById('chat-char-count');
+  if(!input) return;
+  const value=String(input.value||''); setChatDraft(tripId,value);
+  if(count) count.textContent=`${value.length}/500`;
+  if(btn) btn.disabled=!value.trim()||Boolean(ui.chatSending);
+  autoGrowChatInput(input);
+  sendChatTyping(tripId,Boolean(value.trim()));
+}
+function autoGrowChatInput(el){ if(!el)return; el.style.height='auto'; el.style.height=Math.min(120,Math.max(44,el.scrollHeight))+'px'; }
+function renderChatMessagesInPlace(){
+  if(ui.modal!=='tripChat') return;
+  const list=document.getElementById('chat-list'); if(!list) return;
+  const es=state.lang==='es'; const me=chatParticipantId();
+  const nearBottom=list.scrollHeight-list.scrollTop-list.clientHeight<90;
+  list.innerHTML=(ui.chatMessages||[]).length?chatMessagesHtml(ui.chatMessages,me,es):`<div class="chat-empty">${es?'Todavía no hay mensajes. Inicia la conversación con los demás participantes del viaje.':'No messages yet. Start the conversation with the other trip participants.'}</div>`;
+  if(nearBottom) list.scrollTop=list.scrollHeight;
 }
 async function loadTripChat(tripId,quiet=false){
   const tr=tripById(tripId);
-  if(!tr||!tr.liveSync||!tr.syncServer||!tr.shareId||!tr.editKey) return;
+  if(!tr||!tr.liveSync||!tr.syncServer||!tr.shareId||!tr.editKey) return false;
   try{
     const r=await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}/chat?key=${encodeURIComponent(tr.editKey)}`,{cache:'no-store'});
+    if(r.status===404){ showToast(state.lang==='es'?'Este viaje ya no se comparte.':'This trip is no longer shared.'); return false; }
     if(!r.ok) throw new Error('chat '+r.status);
     const j=await r.json();
-    ui.chatTripId=tripId;
-    ui.chatMessages=Array.isArray(j.messages)?j.messages:[];
+    ui.chatTripId=tripId; ui.chatMessages=Array.isArray(j.messages)?j.messages:[]; ui.chatLoading=false; ui.chatError='';
     tr.chatUnread=0;
-    ui.chatLoading=false;
-    if(ui.modal==='tripChat') render();
+    if(ui.modal==='tripChat') renderChatMessagesInPlace();
+    return true;
   }catch(e){
-    ui.chatLoading=false;
-    if(!quiet) showToast(state.lang==='es'?'No se pudo cargar el chat':'Could not load chat');
-    if(ui.modal==='tripChat') render();
+    console.error('Waypoint chat load failed:',e);
+    ui.chatLoading=false; ui.chatError=state.lang==='es'?'No se pudo actualizar el chat. Revisa tu conexión e inténtalo nuevamente.':'Could not refresh chat. Check your connection and try again.';
+    if(!quiet&&ui.modal==='tripChat') render();
+    return false;
   }
 }
-function openTripChat(tripId){
+async function openTripChat(tripId){
   const tr=tripById(tripId);
-  if(!tr||!tr.liveSync){
-    showToast(state.lang==='es'?'Activa primero la colaboración en vivo':'Enable live collaboration first');
-    return;
-  }
-  ui.chatTripId=tripId;
-  ui.chatMessages=[];
-  ui.chatLoading=true;
-  tr.chatUnread=0;
-  ui.modal='tripChat';
-  render();
-  loadTripChat(tripId);
+  if(!tr||!tr.liveSync){ showToast(state.lang==='es'?'Activa primero la colaboración en vivo':'Enable live collaboration first'); return; }
+  const name=ensureChatName(tripId); if(!name) return;
+  if(!tr.collabParticipantId) tr.collabParticipantId=chatParticipantId();
+  ui.chatTripId=tripId; ui.chatMessages=[]; ui.chatLoading=true; ui.chatError=''; ui.chatSending=false; ui.chatDraft=getChatDraft(tripId); ui.chatTypingNames=[];
+  tr.chatUnread=0; ui.modal='tripChat'; render();
+  await registerCollabParticipant(tr);
+  await loadTripChat(tripId,true);
 }
 async function sendTripChat(tripId){
-  const tr=tripById(tripId);
-  const input=document.getElementById('chat-input');
-  const btn=document.getElementById('chat-send-btn');
-  if(!tr||!input) return;
-
-  const text=String(input.value||'').trim();
-  if(!text){
-    input.focus();
-    return;
-  }
-  if(text.length>500){
-    showToast(state.lang==='es'?'El mensaje puede tener máximo 500 caracteres':'Messages can be up to 500 characters');
-    input.focus();
-    return;
-  }
-
-  const name=ensureChatName(tripId);
-  if(!name){
-    input.focus();
-    return;
-  }
-
-  input.disabled=true;
-  if(btn) btn.disabled=true;
-
+  const tr=tripById(tripId), input=document.getElementById('chat-input'), btn=document.getElementById('chat-send-btn');
+  if(!tr||!input||ui.chatSending) return;
+  const text=String(input.value||'').trim(); if(!text){input.focus();return;}
+  if(text.length>500){showToast(state.lang==='es'?'El mensaje puede tener máximo 500 caracteres':'Messages can be up to 500 characters');return;}
+  const name=ensureChatName(tripId); if(!name)return;
+  const clientMessageId='c-'+randomKey();
+  ui.chatSending=true; if(btn)btn.disabled=true; input.disabled=true;
   try{
     const r=await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}/chat`,{
-      method:'POST',
-      headers:{'Content-Type':'application/json','X-Edit-Key':tr.editKey},
-      body:JSON.stringify({
-        text,
-        name,
-        participantId:chatParticipantId()
-      })
+      method:'POST',headers:{'Content-Type':'application/json','X-Edit-Key':tr.editKey},
+      body:JSON.stringify({text,name,participantId:tr.collabParticipantId||chatParticipantId(),clientMessageId})
     });
-
-    const j=await r.json().catch(()=>({}));
-    if(!r.ok) throw new Error(j.error||`chat ${r.status}`);
-
-    input.value='';
-    await loadTripChat(tripId,true);
+    const j=await r.json().catch(()=>({})); if(!r.ok) throw new Error(j.error||`chat ${r.status}`);
+    setChatDraft(tripId,''); input.value='';
+    ui.chatMessages=Array.isArray(j.messages)?j.messages:(j.message?[...(ui.chatMessages||[]).filter(x=>x.id!==j.message.id),j.message]:(ui.chatMessages||[]));
+    renderChatMessagesInPlace();
+    sendChatTyping(tripId,false,true);
   }catch(e){
     console.error('Waypoint chat send failed:',e);
-    showToast(state.lang==='es'?'No se pudo enviar el mensaje':'Could not send message');
+    showToast(state.lang==='es'?'No se pudo enviar. Tu mensaje quedó guardado como borrador.':'Could not send. Your message was kept as a draft.');
   }finally{
-    const current=document.getElementById('chat-input');
-    const currentBtn=document.getElementById('chat-send-btn');
-    if(current){
-      current.disabled=false;
-      current.focus();
-    }
-    if(currentBtn) currentBtn.disabled=false;
+    ui.chatSending=false; const cur=document.getElementById('chat-input'), curBtn=document.getElementById('chat-send-btn');
+    if(cur){cur.disabled=false;cur.value=getChatDraft(tripId);autoGrowChatInput(cur);cur.focus();}
+    if(curBtn)curBtn.disabled=!String(cur?.value||'').trim();
   }
 }
 function chatKeydown(e,tripId){
-  if(e.key==='Enter'&&!e.shiftKey){
-    e.preventDefault();
-    sendTripChat(tripId);
-  }
+  if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){ e.preventDefault(); sendTripChat(tripId); }
+}
+let chatTypingTimer=null, chatTypingLast=0;
+async function sendChatTyping(tripId,isTyping,force=false){
+  const tr=tripById(tripId); if(!tr?.liveSync)return;
+  const now=Date.now(); if(!force&&isTyping&&now-chatTypingLast<1200)return; chatTypingLast=now;
+  clearTimeout(chatTypingTimer);
+  try{fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}/typing`,{method:'POST',headers:{'Content-Type':'application/json','X-Edit-Key':tr.editKey},body:JSON.stringify({participantId:tr.collabParticipantId||chatParticipantId(),typing:!!isTyping})}).catch(()=>{});}catch(e){}
+  if(isTyping) chatTypingTimer=setTimeout(()=>sendChatTyping(tripId,false,true),2600);
+}
+function updateTypingLine(names){
+  ui.chatTypingNames=Array.isArray(names)?names:[]; const el=document.getElementById('chat-typing'); if(!el)return;
+  const es=state.lang==='es', clean=ui.chatTypingNames.filter(n=>n&&n!==chatParticipantName(ui.chatTripId));
+  if(!clean.length){el.textContent='';return;}
+  el.textContent=clean.length===1?`${clean[0]} ${es?'está escribiendo…':'is typing…'}`:`${clean.slice(0,2).join(', ')} ${es?'están escribiendo…':'are typing…'}`;
 }
 
 
@@ -1310,12 +1362,16 @@ function ensureLiveStream(tr){
     });
     es.addEventListener('chat',async ev=>{
       try{
-        if(ui.modal==='tripChat'&&ui.chatTripId===tr.id){
-          await loadTripChat(tr.id,true);
-        }else{
-          tr.chatUnread=Number(tr.chatUnread||0)+1;
-          render();
-        }
+        const msg=JSON.parse(ev.data||'{}');
+        const isMine=msg.participantId===(tr.collabParticipantId||chatParticipantId());
+        if(ui.modal==='tripChat'&&ui.chatTripId===tr.id){ await loadTripChat(tr.id,true); }
+        else if(!isMine){ tr.chatUnread=Math.min(99,Number(tr.chatUnread||0)+1); render(); }
+      }catch(e){}
+    });
+    es.addEventListener('typing',ev=>{
+      try{
+        const data=JSON.parse(ev.data||'{}');
+        if(ui.modal==='tripChat'&&ui.chatTripId===tr.id) updateTypingLine(data.names||[]);
       }catch(e){}
     });
     es.addEventListener('participants',async ()=>{
@@ -2769,50 +2825,33 @@ function renderModal(){
       const es=state.lang==='es';
       const messages=Array.isArray(ui.chatMessages)?ui.chatMessages:[];
       const me=chatParticipantId();
-      inner=`
-        <div class="chat-shell">
-          <div class="chat-head">
-            <div>
-              <h3 style="margin-bottom:2px;">💬 ${es?'Chat del viaje':'Trip chat'}</h3>
-              <div class="chat-trip">${escapeHtml(tr.name||'')}${collabParticipantsText(tr)?`<br>👥 ${escapeHtml(collabParticipantsText(tr))}`:''}</div>
-            </div>
-            <button type="button" class="btn btn-ghost btn-sm" onclick="loadTripChat('${tr.id}')">↻ ${es?'Actualizar':'Refresh'}</button>
+      const people=(tr.collabParticipants||[]).map(p=>p.name).filter(Boolean);
+      const draft=ui.chatDraft??getChatDraft(tr.id);
+      inner=`<div class="chat-shell">
+        <div class="chat-head">
+          <div>
+            <div class="chat-title-row"><h3>💬 ${es?'Chat del viaje':'Trip chat'}</h3></div>
+            <div class="chat-presence"><span class="chat-online-dot"></span>${escapeHtml(tr.name||'')}${people.length?` · ${people.length} ${es?(people.length===1?'participante':'participantes'):(people.length===1?'participant':'participants')}`:''}</div>
           </div>
-
-          <div class="chat-list" id="chat-list">
-            ${ui.chatLoading
-              ? `<div class="chat-empty">${es?'Cargando mensajes…':'Loading messages…'}</div>`
-              : messages.length
-                ? messages.map(m=>`
-                    <div class="chat-msg ${m.participantId===me?'mine':''}">
-                      <div class="chat-meta">${escapeHtml(m.name||(es?'Participante':'Participant'))} · ${escapeHtml(formatChatTime(m.createdAt))}</div>
-                      <div class="chat-text">${escapeHtml(m.text||'')}</div>
-                    </div>`).join('')
-                : `<div class="chat-empty">${es?'Todavía no hay mensajes. Escribe el primero.':'No messages yet. Start the conversation.'}</div>`
-            }
-          </div>
-
+          <button type="button" class="btn btn-ghost btn-sm" onclick="loadTripChat('${tr.id}')" aria-label="${es?'Actualizar mensajes':'Refresh messages'}">↻</button>
+        </div>
+        ${ui.chatError?`<div class="chat-error">${escapeHtml(ui.chatError)}</div>`:''}
+        <div class="chat-list" id="chat-list" role="log" aria-live="polite" aria-relevant="additions text">
+          ${ui.chatLoading?`<div class="chat-empty">${es?'Cargando conversación…':'Loading conversation…'}</div>`:messages.length?chatMessagesHtml(messages,me,es):`<div class="chat-empty">${es?'Todavía no hay mensajes. Inicia la conversación con los demás participantes del viaje.':'No messages yet. Start the conversation with the other trip participants.'}</div>`}
+        </div>
+        <div class="chat-typing" id="chat-typing" aria-live="polite"></div>
+        <div class="chat-compose-wrap">
           <div class="chat-compose">
-            <textarea
-              id="chat-input"
-              maxlength="500"
-              autocomplete="off"
-              autocapitalize="sentences"
-              enterkeyhint="send"
-              placeholder="${es?'Escribe un mensaje…':'Write a message…'}"
-              onkeydown="chatKeydown(event,'${tr.id}')"></textarea>
-            <button type="button" id="chat-send-btn" class="btn btn-brass" onclick="sendTripChat('${tr.id}')">${es?'Enviar':'Send'}</button>
+            <textarea id="chat-input" maxlength="500" autocomplete="off" autocapitalize="sentences" enterkeyhint="send" aria-label="${es?'Escribir mensaje':'Write message'}" placeholder="${es?'Escribe un mensaje…':'Write a message…'}" oninput="updateChatComposer('${tr.id}')" onkeydown="chatKeydown(event,'${tr.id}')">${escapeHtml(draft)}</textarea>
+            <button type="button" id="chat-send-btn" class="btn btn-brass" onclick="sendTripChat('${tr.id}')" ${String(draft||'').trim()?'':'disabled'}>${es?'Enviar':'Send'}</button>
           </div>
-
-          <div class="field-hint">${es?'Solo los participantes con acceso al viaje colaborativo pueden ver este chat.':'Only participants with access to this collaborative trip can view this chat.'}</div>
-          <button type="button" class="btn btn-ghost btn-block" onclick="closeModal()">${t.common.close}</button>
-        </div>`;
-
+          <div class="chat-compose-meta"><span>${es?'Enter para enviar · Shift+Enter para nueva línea':'Enter to send · Shift+Enter for new line'}</span><span id="chat-char-count">${String(draft||'').length}/500</span></div>
+        </div>
+      </div>`;
       setTimeout(()=>{
-        const list=document.getElementById('chat-list');
-        if(list) list.scrollTop=list.scrollHeight;
-        const input=document.getElementById('chat-input');
-        if(input && !ui.chatLoading) input.focus();
+        const list=document.getElementById('chat-list'); if(list)list.scrollTop=list.scrollHeight;
+        const input=document.getElementById('chat-input'); if(input&&!ui.chatLoading){autoGrowChatInput(input);input.focus();}
+        updateTypingLine(ui.chatTypingNames||[]);
       },0);
     }
   }

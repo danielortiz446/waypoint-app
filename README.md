@@ -142,3 +142,7 @@ Set `FLIGHTAWARE_API_KEY` in Railway Variables. Waypoint generates and persists 
 On iPhone/iPad, Web Push requires Waypoint to be installed as a Home Screen web app. On Android and supported desktop browsers, permission is requested when the user enables flight alerts.
 
 Flight data is provided by the configured provider and should be verified with the airline/airport for critical travel decisions.
+
+## Waypoint 4.6 professional chat
+
+The collaboration chat now uses registered participant identities on the server, idempotent sends, anti-spam rate limiting, per-trip drafts, typing indicators, date separators, accessible live regions, mobile full-screen layout, and self-aware unread counters. The server no longer trusts a display name supplied with each message; it resolves the sender from the registered participant list.

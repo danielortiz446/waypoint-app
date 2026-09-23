@@ -47,7 +47,7 @@ async function sseNext(id,key){
     r=await fetch(base+'/manifest.webmanifest');
     results.push(['manifest',r.ok&&(await r.json()).name.includes('Waypoint')]);
     r=await fetch(base+'/health');
-    results.push(['health',r.ok&&(await r.json()).version==='4.5.2']);
+    results.push(['health',r.ok&&(await r.json()).version==='4.6.0']);
 
     const id='trip-test',key='secret-edit-key';
     r=await fetch(base+`/api/trips/${id}`,{method:'PUT',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({clientRevision:0,data:{waypointLive:1,trip:{name:'QA Trip'},days:[],bookings:[]}})});
@@ -70,6 +70,9 @@ async function sseNext(id,key){
     const event=await sse;
     results.push(['live SSE event',r.ok&&event.revision===2]);
 
+    r=await fetch(base+`/api/trips/${id}/participants`,{method:'POST',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({name:'QA User',participantId:'qa-user'})});
+    results.push(['participant preregistration',r.ok]);
+
     r=await fetch(base+`/api/trips/${id}/chat`,{method:'POST',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({text:'Hello from QA',name:'QA User',participantId:'qa-user'})});
     const sent=await r.json();
     results.push(['chat send',r.status===201&&sent.message&&sent.message.text==='Hello from QA']);
@@ -87,7 +90,22 @@ async function sseNext(id,key){
 
     r=await fetch(base+`/api/trips/${id}/participants?key=${encodeURIComponent(key)}`);
     const participantList=await r.json();
-    results.push(['participant list',r.ok&&participantList.participants.length===1]);
+    results.push(['participant list',r.ok&&participantList.participants.length===2]);
+
+    r=await fetch(base+`/api/trips/${id}/chat`,{method:'POST',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({text:'Spoof attempt',name:'Fake Name',participantId:'qa-user',clientMessageId:'client-1'})});
+    const trustedNameMsg=await r.json();
+    results.push(['chat trusted participant name',r.ok&&trustedNameMsg.message&&trustedNameMsg.message.name==='QA User']);
+
+    r=await fetch(base+`/api/trips/${id}/chat`,{method:'POST',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({text:'Spoof attempt',name:'Another Name',participantId:'qa-user',clientMessageId:'client-1'})});
+    const duplicateMsg=await r.json();
+    results.push(['chat idempotent duplicate',r.ok&&duplicateMsg.duplicate===true&&duplicateMsg.message&&duplicateMsg.message.id===trustedNameMsg.message.id]);
+
+    r=await fetch(base+`/api/trips/${id}/chat`,{method:'POST',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({text:'Unregistered',participantId:'unknown-user'})});
+    results.push(['chat rejects unregistered sender',r.status===403]);
+
+    r=await fetch(base+`/api/trips/${id}/typing`,{method:'POST',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({participantId:'qa-user',typing:true})});
+    results.push(['typing indicator endpoint',r.ok]);
+
 
 
 

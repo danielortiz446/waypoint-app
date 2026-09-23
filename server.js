@@ -9,6 +9,26 @@ const PUBLIC_DIR=path.join(__dirname,'public');
 const DATA_FILE=process.env.WAYPOINT_DATA_FILE||path.join(__dirname,'data','waypoint-sync-data.json');
 const rooms=loadRooms();
 const eventClients=new Map();
+const chatRate=new Map();
+const typingState=new Map();
+function chatRateAllowed(roomId,participantId){
+  const key=roomId+'|'+participantId, now=Date.now();
+  const arr=(chatRate.get(key)||[]).filter(t=>now-t<60000);
+  if(arr.length>=30) return false;
+  arr.push(now); chatRate.set(key,arr); return true;
+}
+function notifyTyping(id){
+  const set=eventClients.get(id); if(!set)return;
+  const room=rooms[id], active=typingState.get(id)||new Map(), now=Date.now();
+  const names=[];
+  for(const [pid,until] of [...active]){
+    if(until<=now){active.delete(pid);continue;}
+    const p=(room?.participants||[]).find(x=>x.participantId===pid); if(p?.name)names.push(p.name);
+  }
+  const msg=`event: typing\ndata: ${JSON.stringify({names:names.slice(0,5)})}\n\n`;
+  for(const res of [...set]){try{res.write(msg);}catch(e){set.delete(res);}}
+}
+
 const fxCache=new Map();
 
 const FLIGHT_DATA_FILE=process.env.WAYPOINT_FLIGHT_DATA_FILE||path.join(path.dirname(DATA_FILE),'waypoint-flight-watches.json');
@@ -166,7 +186,7 @@ function notifyRevision(id,room){
 function notifyChat(id,message){
   const set=eventClients.get(id);
   if(!set) return;
-  const msg=`event: chat\ndata: ${JSON.stringify({id:message.id,createdAt:message.createdAt,name:message.name})}\n\n`;
+  const msg=`event: chat\ndata: ${JSON.stringify({id:message.id,createdAt:message.createdAt,name:message.name,participantId:message.participantId})}\n\n`;
   for(const res of [...set]){ try{res.write(msg);}catch(e){set.delete(res);} }
 }
 
@@ -191,7 +211,7 @@ const server=http.createServer(async(req,res)=>{
   try{
     const u=new URL(req.url,'http://localhost');
 
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'4.5.2',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'4.6.0',time:new Date().toISOString()});
 
     if(req.method==='GET'&&u.pathname==='/api/fx/rate'){
       const from=String(u.searchParams.get('from')||'').trim().toUpperCase();
@@ -336,6 +356,18 @@ const server=http.createServer(async(req,res)=>{
       return json(res,405,{error:'method not allowed'});
     }
 
+
+    const typingMatch=u.pathname.match(/^\/api\/trips\/([^/]+)\/typing$/);
+    if(typingMatch&&req.method==='POST'){
+      const id=decodeURIComponent(typingMatch[1]), room=rooms[id]; if(!room)return json(res,404,{error:'trip not found'});
+      const editKey=String(req.headers['x-edit-key']||''); if(hash(editKey)!==room.keyHash)return json(res,403,{error:'invalid edit key'});
+      const incoming=await readBody(req), participantId=String(incoming.participantId||'').trim().slice(0,100);
+      if(!participantId||(room.participants||[]).every(p=>p.participantId!==participantId)) return json(res,403,{error:'participant not registered'});
+      if(!typingState.has(id))typingState.set(id,new Map());
+      const map=typingState.get(id); if(incoming.typing)map.set(participantId,Date.now()+3500); else map.delete(participantId);
+      notifyTyping(id); return json(res,200,{ok:true});
+    }
+
     const chatMatch=u.pathname.match(/^\/api\/trips\/([^/]+)\/chat$/);
     if(chatMatch){
       const id=decodeURIComponent(chatMatch[1]);
@@ -351,16 +383,24 @@ const server=http.createServer(async(req,res)=>{
         if(hash(editKey)!==room.keyHash) return json(res,403,{error:'invalid edit key'});
         const incoming=await readBody(req);
         const textValue=String(incoming.text||'').trim();
-        const name=String(incoming.name||'Participant').trim().slice(0,60);
         const participantId=String(incoming.participantId||'').trim().slice(0,100);
+        const clientMessageId=String(incoming.clientMessageId||'').trim().slice(0,100);
         if(!textValue) return json(res,400,{error:'message is empty'});
         if(textValue.length>500) return json(res,400,{error:'message too long'});
-        const message={id:crypto.randomUUID(),text:textValue,name:name||'Participant',participantId,createdAt:new Date().toISOString()};
+        if(!participantId) return json(res,400,{error:'participant identity required'});
+        const participant=(room.participants||[]).find(p=>p.participantId===participantId);
+        if(!participant) return json(res,403,{error:'participant not registered'});
+        if(!chatRateAllowed(id,participantId)) return json(res,429,{error:'too many messages'});
         if(!Array.isArray(room.chat)) room.chat=[];
+        if(clientMessageId){
+          const duplicate=room.chat.find(m=>m.clientMessageId===clientMessageId&&m.participantId===participantId);
+          if(duplicate) return json(res,200,{ok:true,message:duplicate,duplicate:true});
+        }
+        const message={id:crypto.randomUUID(),clientMessageId,text:textValue,name:participant.name,participantId,createdAt:new Date().toISOString()};
         room.chat.push(message);
         if(room.chat.length>200) room.chat=room.chat.slice(-200);
-        persist();
-        notifyChat(id,message);
+        participant.lastSeenAt=new Date().toISOString();
+        persist(); notifyChat(id,message);
         return json(res,201,{ok:true,message});
       }
       return json(res,405,{error:'method not allowed'});
@@ -436,4 +476,4 @@ const server=http.createServer(async(req,res)=>{
   }
 });
 
-server.listen(PORT,HOST,()=>console.log(`Waypoint 4.5.2 listening on http://${HOST}:${PORT}`));
+server.listen(PORT,HOST,()=>console.log(`Waypoint 4.6.0 listening on http://${HOST}:${PORT}`));
