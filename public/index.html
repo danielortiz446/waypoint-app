@@ -1,0 +1,2468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0B1D30">
+<meta name="description" content="Planifica viajes, itinerarios, reservas, presupuesto y equipaje con Waypoint.">
+<meta name="application-name" content="Waypoint">
+<meta name="apple-mobile-web-app-title" content="Waypoint">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/icon-192.png">
+
+<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAACXBIWXMAAAsTAAALEwEAmpwYAAACvUlEQVR4nMXV60tTYRwH8Od9QREEURgiRGpqu+h2Ns/c5tbm1FZZWVpRL4KIoMgiIjCFKCgwXwoSEd5v5eact0wzM21emi7zbpqmpum/8I0zW3TYxUknnxfft+fz5fec5/cQR3E4HMUR6C2JRG9pJPpKD6G/LAr9ZdEYKI/BQMVhfKoQwVkpgrNKjMEqCQarpRiqiYWrJg6ulzJ8fsVFjuFaBsO1CnyxKDFijceIlcVoHYtRmwpjtgSM16sxbtdgwq7FREMiJht1IDTxKa4ATXyqSQ9CE59uOgJCE59uNoDQxL+2GLkC9PCZliQQmvjMaxMITXy21QRCE59tTQbZSryv2sDDv71JAdkK3P4sERnpDG5ciefhc22pIP8Ln2zU4/kTNXRGGbaFiLDnoASDliQePtd2FERo3GXV4fE9FlFxUjfsyf0slRc+324GEQp3VGpx+5oS+yLEPJhLWIwUow0mL3y+/RjIv+L2Qg0uZjLYFcZH/05+jsYn/v0tVyAA3lfJQqmWupObxaC7XOXGx+u1KMlTITlFhu37/cNcomWxmG7xjS90HAcJhCvUEt7Hdh8Qo+ABi+ybSuz1MWpfKXqq84svdJzgCmyMh0SKkXWVgaNC8+fMx+p1KMpLgNks94ur9bKA+OK7NBBfOJOwjodLJci9pcCQxf89d9bqsTPU9zTqCg0B8cXOk1wBb5w788JHCozZgttwBpP3FNLSFBviS52nQDy4s4bFwzty1BXEb3q352VrePiOUBE6y0wb4kvvT4MI8bC4rEbeMVy+xAaF/+hyFxDmVTMmM79vigROS2pQ+HJXOogQOLdk8nO07gJ3r6uDxpc/nAERAueu2rAtZX3lNpqDxle6z4IIgXv+9uYXpk3hK90ZIELhmxm7B//ZkwlCE1/tOQdCE1/9yBWgiK85zoPQxNccF/ALAve/9DU7YngAAAAASUVORK5CYII=">
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<link rel="apple-touch-icon" sizes="192x192" href="data:image/png;base64,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">
+<title>Waypoint — Trip Planner</title>
+<meta name="waypoint-version" content="4.3.5">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0B1D30; --ink-2:#081525; --teal:#123B3B;
+  --brass:#C9A227; --brass-light:#EFCB5E; --paper:#F6EFDF; --paper-dim:#EAE0C8;
+  --coral:#C1502E; --green:#4C9A6A;
+  --ink-text:#EDF1F4; --muted:rgba(237,241,244,0.56);
+  --paper-text:#20261F; --paper-muted:#5b5646;
+  --radius:16px;
+  --font-display:'Big Shoulders Display',sans-serif;
+  --font-body:'IBM Plex Sans',sans-serif;
+  --font-mono:'IBM Plex Mono',monospace;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{background:var(--ink);color:var(--ink-text);font-family:var(--font-body);min-height:100vh;-webkit-font-smoothing:antialiased;}
+body::before{content:"";position:fixed;inset:0;
+  background:radial-gradient(circle at 12% 6%, rgba(201,162,39,0.12), transparent 38%),
+             radial-gradient(circle at 92% 18%, rgba(76,154,106,0.07), transparent 40%),
+             radial-gradient(circle at 50% 100%, rgba(18,59,59,0.55), transparent 55%),
+             linear-gradient(180deg, #0B1D30 0%, #081525 100%);
+  pointer-events:none;z-index:0;}
+#app{position:relative;z-index:1;max-width:720px;margin:0 auto;padding-bottom:40px;min-height:100vh;}
+h1,h2,h3,.display{font-family:var(--font-display);font-weight:700;letter-spacing:0.01em;}
+button{font-family:var(--font-body);cursor:pointer;}
+input,select,textarea{font-family:var(--font-body);}
+main{padding:0 18px 24px;animation:fadeIn .25s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+/* ---------- splash ---------- */
+#splash{position:fixed;inset:0;z-index:200;background:radial-gradient(circle at 50% 40%, #163049, #081525 75%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  animation:splashOut .5s ease .9s forwards;}
+#splash .smark{width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,var(--brass),var(--brass-light));
+  display:flex;align-items:center;justify-content:center;animation:splashPop .5s cubic-bezier(.2,1.4,.4,1);box-shadow:0 14px 40px rgba(201,162,39,0.35);}
+#splash .sname{font-family:var(--font-display);font-size:25px;letter-spacing:0.08em;color:var(--paper);}
+@keyframes splashPop{0%{transform:scale(0.4) rotate(-14deg);opacity:0;}100%{transform:scale(1) rotate(-6deg);opacity:1;}}
+@keyframes splashOut{to{opacity:0;visibility:hidden;pointer-events:none;}}
+
+/* ---------- header ---------- */
+.topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;row-gap:8px;
+  padding:14px 16px;background:rgba(11,29,48,0.85);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-bottom:1px solid rgba(255,255,255,0.07);}
+.brand{display:flex;align-items:center;gap:10px;min-width:0;}
+.brand-mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--brass),var(--brass-light));
+  display:flex;align-items:center;justify-content:center;transform:rotate(-6deg);flex:0 0 auto;}
+.brand-mark svg{width:18px;height:18px;}
+.brand h1{font-size:20px;margin:0;line-height:1;color:var(--paper);}
+.header-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto;}
+.icon-btn{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);
+  display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--ink-text);overflow:hidden;}
+.icon-btn:hover{background:rgba(255,255,255,0.13);}
+.lang-toggle{display:flex;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:999px;padding:3px;gap:2px;}
+.lang-toggle button{border:none;background:transparent;color:var(--muted);padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600;}
+.lang-toggle button.active{background:var(--brass);color:var(--ink);}
+@media(max-width:380px){.lang-toggle button{padding:5px 9px;font-size:10.5px;}.brand h1{font-size:17px;}}
+
+.back-row{display:flex;align-items:center;gap:10px;padding:14px 16px 0;}
+.back-btn{display:flex;align-items:center;gap:6px;background:none;border:none;color:var(--brass-light);font-size:13px;font-weight:600;padding:6px 4px;}
+
+.section-head{display:flex;align-items:baseline;justify-content:space-between;margin:18px 0 14px;flex-wrap:wrap;gap:10px;}
+.section-head h2{font-size:26px;margin:0;color:var(--paper);}
+.section-head p.sub{font-family:var(--font-mono);font-size:11px;color:var(--muted);margin:2px 0 0;letter-spacing:0.03em;}
+
+.btn{border-radius:9px;padding:10px 18px;font-weight:600;font-size:13.5px;border:none;display:inline-flex;align-items:center;gap:6px;transition:transform .12s, background .15s;}
+.btn:active{transform:scale(0.96);}
+.btn-brass{background:var(--brass);color:var(--ink);}
+.btn-brass:hover{background:var(--brass-light);}
+.btn-ghost{background:rgba(255,255,255,0.07);color:var(--ink-text);border:1px solid rgba(255,255,255,0.15);}
+.btn-ghost:hover{background:rgba(255,255,255,0.13);}
+.btn-danger{background:rgba(193,80,46,0.16);color:#E8A186;border:1px solid rgba(193,80,46,0.4);}
+.btn-sm{padding:7px 12px;font-size:12px;}
+.btn-block{width:100%;justify-content:center;}
+
+.panel{background:var(--teal);border:1px solid rgba(255,255,255,0.08);border-radius:var(--radius);padding:16px;margin-bottom:14px;}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+@media(max-width:560px){.grid3{grid-template-columns:1fr 1fr;}}
+.stat{background:var(--teal);border:1px solid rgba(255,255,255,0.08);border-radius:var(--radius);padding:14px 16px;}
+.stat .label{font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);}
+.stat .value{font-family:var(--font-display);font-size:28px;color:var(--paper);margin-top:3px;line-height:1;}
+.stat .value.green{color:var(--green);} .stat .value.coral{color:var(--coral);}
+.stat .foot{font-size:11px;color:var(--muted);margin-top:5px;}
+
+/* trip card */
+.pass{display:flex;background:linear-gradient(180deg,var(--paper),var(--paper-dim));border-radius:var(--radius);overflow:hidden;
+  margin-bottom:14px;box-shadow:0 10px 24px rgba(0,0,0,0.26);transition:transform .15s;cursor:pointer;}
+.pass:hover{transform:translateY(-2px);}
+.pass-main{flex:1;padding:16px 18px;position:relative;color:var(--paper-text);min-width:0;}
+.trip-header{background:linear-gradient(180deg,var(--paper),var(--paper-dim));box-shadow:0 10px 24px rgba(0,0,0,0.26);}
+.pass-main.has-cover{color:#fff;background-size:cover;background-position:center;}
+.pass-main.has-cover .route,.pass-main.has-cover .dates{color:rgba(246,239,223,0.8);}
+.pass-main.has-cover h3{color:#fff;text-shadow:0 1px 4px rgba(0,0,0,0.4);}
+.pass-main.has-cover .kebab-btn{background:rgba(0,0,0,0.35);color:#fff;}
+.route{font-family:var(--font-mono);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--paper-muted);margin-bottom:3px;}
+.shared-badge{background:rgba(76,154,106,0.16);color:#3f8f60;border:1px solid rgba(76,154,106,0.35);border-radius:5px;padding:2px 6px;font-size:9.5px;letter-spacing:0.04em;}
+.pass-main.has-cover .shared-badge{background:rgba(76,154,106,0.85);color:#fff;border-color:transparent;}
+.pass-main h3{font-size:23px;margin:0 0 5px;}
+.dates{font-family:var(--font-mono);font-size:11.5px;color:var(--paper-muted);}
+.kebab-btn{position:absolute;top:10px;right:10px;z-index:5;width:28px;height:28px;border-radius:8px;background:rgba(0,0,0,0.07);
+  border:none;color:var(--paper-muted);font-size:15px;display:flex;align-items:center;justify-content:center;}
+.pass-stub{width:120px;flex:0 0 120px;background:var(--brass);color:var(--ink);padding:14px 12px;display:flex;flex-direction:column;justify-content:center;position:relative;}
+.pass-stub::before{content:"";position:absolute;left:-8px;top:0;bottom:0;width:16px;
+  background-image:radial-gradient(circle,var(--ink) 4px,transparent 4.1px);background-size:16px 16px;background-position:center;}
+.countdown-num{font-family:var(--font-display);font-size:32px;line-height:0.9;font-weight:800;}
+.countdown-label{font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:0.08em;margin-top:3px;}
+.passport-warn{margin-top:6px;font-size:10.5px;font-weight:600;color:#C1502E;background:rgba(193,80,46,0.12);
+  border:1px solid rgba(193,80,46,0.3);border-radius:6px;padding:4px 7px;display:inline-block;}
+.pass-main.has-cover .passport-warn{background:rgba(193,80,46,0.85);color:#fff;border-color:transparent;}
+
+.pbar{height:8px;border-radius:5px;background:rgba(255,255,255,0.1);overflow:hidden;}
+.pbar > div{height:100%;border-radius:5px;background:var(--green);transition:width .4s;}
+.pbar.over > div{background:var(--coral);}
+
+.field{margin-bottom:12px;}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;letter-spacing:0.03em;text-transform:uppercase;font-family:var(--font-mono);}
+.field input,.field select,.field textarea{width:100%;background:rgba(255,255,255,0.09);border:1px solid rgba(255,255,255,0.22);border-radius:8px;padding:10px 11px;color:var(--ink-text);font-size:14px;}
+.field select{-webkit-appearance:none;appearance:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23EDF1F4'><path d='M5.5 7.5l4.5 4.5 4.5-4.5' stroke='%23EDF1F4' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat:no-repeat;background-position:right 12px center;background-size:15px;padding-right:34px;}
+.field select option{background:#132A42;color:#EDF1F4;}
+.field textarea{resize:vertical;min-height:56px;}
+.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--brass);outline-offset:1px;}
+.field-hint{font-size:10.5px;color:var(--muted);margin:4px 0 0;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:520px){.form-row{grid-template-columns:1fr;}}
+.form-actions{display:flex;gap:10px;margin-top:6px;}
+
+.row-list{display:flex;flex-direction:column;gap:2px;}
+.li{display:flex;align-items:center;justify-content:space-between;padding:10px 4px;border-bottom:1px solid rgba(255,255,255,0.07);}
+.li:last-child{border-bottom:none;}
+.li .main{display:flex;flex-direction:column;min-width:0;}
+.li .main .t{font-size:13.5px;font-weight:600;}
+.li .main .s{font-family:var(--font-mono);font-size:10.5px;color:var(--muted);}
+.li .amt{font-family:var(--font-mono);font-weight:600;font-size:13.5px;white-space:nowrap;}
+.li .amt.neg{color:var(--coral);}
+.li button.del{background:none;border:none;color:var(--muted);font-size:15px;padding:2px 6px;}
+.li button.del:hover{color:var(--coral);}
+
+.empty{padding:34px 18px;text-align:center;color:var(--muted);}
+.empty .ic{font-size:32px;display:block;margin-bottom:10px;}
+.empty h3{color:var(--paper);font-size:18px;margin:0 0 6px;}
+.empty p{font-size:13px;margin:0 0 16px;}
+
+.chk{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid rgba(255,255,255,0.07);}
+.chk input[type=checkbox]{width:18px;height:18px;accent-color:var(--brass);}
+.chk .txt{flex:1;font-size:13.5px;}
+.chk .txt.done{text-decoration:line-through;color:var(--muted);}
+
+.seg{display:flex;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);border-radius:11px;padding:3px;gap:2px;}
+.seg button{flex:1;border:none;background:transparent;color:var(--muted);padding:9px 6px;border-radius:8px;font-size:12px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:2px;}
+.seg button .ic{font-size:15px;}
+.seg button.active{background:var(--brass);color:var(--ink);}
+
+.trip-cover-preview{width:76px;height:52px;border-radius:9px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.16);
+  display:flex;align-items:center;justify-content:center;font-size:20px;overflow:hidden;flex:0 0 auto;}
+.trip-cover-preview img{width:100%;height:100%;object-fit:cover;display:block;}
+.hidden-file{display:none;}
+
+.day-card{background:var(--teal);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:13px 15px;margin-bottom:11px;}
+.day-card .dh{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;gap:8px;}
+.day-card .dh .lbl{font-family:var(--font-display);font-size:18px;color:var(--paper);}
+.day-card .dh .ctl{display:flex;gap:4px;flex:0 0 auto;}
+.day-card .dh .ctl button{width:26px;height:26px;padding:0;border-radius:7px;justify-content:center;}
+.act-row{display:flex;align-items:center;gap:9px;padding:7px 2px;border-bottom:1px solid rgba(255,255,255,0.06);}
+.act-row:last-child{border-bottom:none;}
+.act-row .time{font-family:var(--font-mono);font-size:11px;color:var(--brass-light);min-width:48px;}
+.act-row .title{flex:1;font-size:13px;}
+.add-act-row{display:flex;gap:7px;margin-top:7px;flex-wrap:wrap;}
+.add-act-row input{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.16);border-radius:7px;color:var(--ink-text);padding:7px 9px;font-size:12px;min-width:0;}
+.add-act-row input.time-in{width:68px;flex:0 0 68px;}
+.add-act-row input.title-in{flex:1 1 120px;min-width:0;}
+.add-act-row button{flex:0 0 auto;}
+.time12-picker{display:flex;align-items:center;gap:5px;flex:0 0 auto;}
+.time12-picker select{
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.16);
+  border-radius:7px;
+  color:var(--ink-text);
+  padding:7px 6px;
+  font-size:12px;
+  min-width:0;
+}
+.time12-picker select option{background:#132A42;color:#EDF1F4;}
+.time12-picker .hour{width:52px;}
+.time12-picker .minute{width:56px;}
+.time12-picker .ampm{width:58px;}
+@media(max-width:520px){
+  .time12-picker{width:100%;}
+  .time12-picker select{flex:1;}
+}
+
+
+.chip{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:999px;padding:6px 11px;font-size:12px;display:inline-flex;align-items:center;gap:7px;margin:0 6px 6px 0;}
+.chip button{background:none;border:none;color:var(--muted);font-size:12px;}
+.chip button:hover{color:var(--coral);}
+.chips-wrap{display:flex;flex-wrap:wrap;}
+
+.theme-grid{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;}
+.theme-opt{width:70px;text-align:center;cursor:pointer;}
+.theme-swatch{width:70px;height:42px;border-radius:9px;border:2px solid transparent;margin-bottom:5px;}
+.theme-opt.sel .theme-swatch{border-color:var(--paper);}
+.theme-opt .lbl{font-size:10px;color:var(--muted);}
+
+.avatar-grid{display:flex;gap:9px;flex-wrap:wrap;margin:6px 0;}
+.avatar-opt{width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,0.06);border:2px solid transparent;
+  display:flex;align-items:center;justify-content:center;font-size:18px;}
+.avatar-opt.sel{border-color:var(--brass);background:rgba(201,162,39,0.16);}
+.photo-circle{width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.16);
+  display:flex;align-items:center;justify-content:center;font-size:24px;overflow:hidden;flex:0 0 auto;}
+.photo-circle img{width:100%;height:100%;object-fit:cover;}
+
+.fab{position:fixed;bottom:24px;right:20px;z-index:40;width:54px;height:54px;border-radius:50%;
+  background:linear-gradient(135deg,var(--brass),var(--brass-light));color:var(--ink);border:none;font-size:25px;font-weight:700;
+  box-shadow:0 10px 26px rgba(201,162,39,0.42);display:flex;align-items:center;justify-content:center;}
+.fab:active{transform:scale(0.94);}
+
+#toast-container{position:fixed;left:0;right:0;bottom:22px;display:flex;flex-direction:column;align-items:center;gap:8px;z-index:80;pointer-events:none;}
+.toast{pointer-events:auto;background:var(--ink-2);border:1px solid rgba(255,255,255,0.15);color:var(--ink-text);
+  padding:11px 14px;border-radius:10px;font-size:13px;display:flex;align-items:center;gap:14px;box-shadow:0 8px 22px rgba(0,0,0,0.35);animation:toastIn .2s ease;}
+.toast.out{animation:toastOut .3s ease forwards;}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+@keyframes toastOut{to{opacity:0;transform:translateY(10px);}}
+.toast button{background:none;border:none;color:var(--brass-light);font-weight:700;font-size:12px;}
+
+.modal-bg{position:fixed;inset:0;background:rgba(6,15,25,0.72);z-index:60;display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .15s ease;}
+@media(min-width:640px){.modal-bg{align-items:center;}}
+.modal{background:var(--ink-2);border:1px solid rgba(255,255,255,0.12);border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;}
+@media(min-width:640px){.modal{border-radius:16px;}}
+.modal h3{margin:0 0 14px;font-size:20px;color:var(--paper);}
+
+.hero-path{width:100%;height:36px;margin-top:10px;display:block;}
+.hero-path .dash{stroke-dasharray:5 7;animation:dashMove 3.2s linear infinite;}
+@keyframes dashMove{to{stroke-dashoffset:-24;}}
+
+/* themes */
+[data-theme="sunset"]{--ink:#2B1710;--ink-2:#20110C;--teal:#4A2A1C;--brass:#E07A3F;--brass-light:#F4A15F;--green:#4C9A6A;--coral:#D9432B;}
+[data-theme="sunset"] body::before{background:radial-gradient(circle at 12% 6%, rgba(224,122,63,0.15), transparent 38%),radial-gradient(circle at 92% 18%, rgba(76,154,106,0.08), transparent 40%),radial-gradient(circle at 50% 100%, rgba(74,42,28,0.6), transparent 55%),linear-gradient(180deg,#2B1710 0%,#20110C 100%);}
+[data-theme="forest"]{--ink:#0E1F16;--ink-2:#0A1710;--teal:#1B3A29;--brass:#B7A345;--brass-light:#D8C56B;--green:#5EAE7C;--coral:#C1502E;}
+[data-theme="forest"] body::before{background:radial-gradient(circle at 12% 6%, rgba(183,163,69,0.13), transparent 38%),radial-gradient(circle at 92% 18%, rgba(94,174,124,0.09), transparent 40%),radial-gradient(circle at 50% 100%, rgba(27,58,41,0.6), transparent 55%),linear-gradient(180deg,#0E1F16 0%,#0A1710 100%);}
+[data-theme="rose"]{--ink:#2A1930;--ink-2:#1E1224;--teal:#432A4E;--brass:#D68FB0;--brass-light:#F0B8D0;--green:#4C9A6A;--coral:#C1502E;}
+[data-theme="rose"] body::before{background:radial-gradient(circle at 12% 6%, rgba(214,143,176,0.14), transparent 38%),radial-gradient(circle at 92% 18%, rgba(76,154,106,0.06), transparent 40%),radial-gradient(circle at 50% 100%, rgba(67,42,78,0.6), transparent 55%),linear-gradient(180deg,#2A1930 0%,#1E1224 100%);}
+body{transition:background .3s;}
+
+/* collaboration */
+.collab-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:rgba(76,154,106,.12);border:1px solid rgba(76,154,106,.3);border-radius:12px;padding:10px 12px;margin:0 0 14px;}
+.collab-status{font-size:12px;color:var(--ink-text);display:flex;align-items:center;gap:7px;}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 4px rgba(76,154,106,.12);}
+.sync-dot.off{background:var(--muted);box-shadow:none;}
+
+/* enhanced preparation + packing */
+.prep-list{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
+.prep-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid rgba(255,255,255,.08);border-radius:10px;background:rgba(255,255,255,.035);}
+.prep-item .prep-icon{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;flex:0 0 24px;font-size:12px;font-weight:800;background:rgba(255,255,255,.08);color:var(--muted);}
+.prep-item.done .prep-icon{background:rgba(76,154,106,.2);color:#8fd1a7;}
+.prep-item.partial .prep-icon{background:rgba(201,162,39,.18);color:var(--brass-light);}
+.prep-item .prep-copy{flex:1;min-width:0;}
+.prep-item .prep-title{font-size:12.5px;font-weight:650;}
+.prep-item .prep-sub{font-size:10.5px;color:var(--muted);margin-top:2px;}
+.prep-item button{border:0;background:none;color:var(--brass-light);font-size:11px;font-weight:700;padding:4px 0;}
+.packing-summary{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px;}
+.packing-count{font-family:var(--font-display);font-size:28px;color:var(--paper);line-height:1;}
+.packing-group{margin-bottom:12px;}
+.packing-group-head{display:flex;align-items:center;justify-content:space-between;margin:0 2px 7px;}
+.packing-group-title{font-size:12px;font-weight:700;color:var(--paper);}
+.packing-group-count{font-family:var(--font-mono);font-size:10px;color:var(--muted);}
+.packing-item{display:flex;align-items:center;gap:9px;padding:9px 4px;border-bottom:1px solid rgba(255,255,255,.07);}
+.packing-item:last-child{border-bottom:none;}
+.packing-item input[type=checkbox]{width:18px;height:18px;accent-color:var(--brass);}
+.packing-item .packing-text{flex:1;font-size:13.5px;min-width:0;}
+.packing-item .packing-text.done{text-decoration:line-through;color:var(--muted);}
+.qty-badge{font-family:var(--font-mono);font-size:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);border-radius:999px;padding:3px 7px;color:var(--muted);}
+.packing-add-grid{display:grid;grid-template-columns:minmax(0,1fr) 130px 72px auto;gap:8px;align-items:end;}
+@media(max-width:600px){.packing-add-grid{grid-template-columns:1fr 1fr;}.packing-add-grid .packing-name{grid-column:1/-1;}.packing-add-grid .packing-add-btn{grid-column:1/-1;}}
+
+/* ---------- printable itinerary preview ---------- */
+#print-preview-root{position:fixed;inset:0;z-index:150;background:#eef1f4;color:#16202a;display:flex;flex-direction:column;}
+.print-preview-toolbar{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:12px 14px;background:var(--ink-2);color:var(--ink-text);border-bottom:1px solid rgba(255,255,255,.12);flex-wrap:wrap;}
+.print-preview-title{font-family:var(--font-display);font-size:20px;color:var(--paper);}
+.print-preview-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.print-preview-scroll{overflow:auto;flex:1;padding:20px;}
+.print-sheet{background:#fff;max-width:820px;margin:0 auto;padding:36px 42px;box-shadow:0 8px 30px rgba(0,0,0,.16);min-height:90vh;}
+.print-hero{border-bottom:3px solid #C9A227;padding-bottom:18px;margin-bottom:22px}.print-brand{font-size:12px;letter-spacing:.18em;font-weight:700;color:#8a6d10}.print-hero h1{font-family:Arial,sans-serif;font-size:30px;margin:6px 0}.print-meta{font-size:14px;color:#59636d;display:flex;gap:16px;flex-wrap:wrap}.print-section{break-inside:avoid;margin:0 0 24px}.print-section h2{font-family:Arial,sans-serif;font-size:18px;margin:0 0 6px;border-bottom:1px solid #ddd;padding-bottom:6px}.print-date,.print-muted,.print-loc{color:#68737d;font-size:12px}.print-date{margin-bottom:8px}.print-sheet table{width:100%;border-collapse:collapse}.print-sheet td{padding:8px 6px;border-bottom:1px solid #ececec;vertical-align:top;font-size:13px}.print-time{width:78px;font-weight:700;color:#8a6d10}.print-footer{margin-top:30px;padding-top:12px;border-top:1px solid #ddd;font-size:10px;color:#7a838c;text-align:center}
+@media(max-width:600px){.print-preview-toolbar{align-items:stretch}.print-preview-title{order:-1;width:100%}.print-preview-actions{width:100%}.print-preview-actions .btn{flex:1}.print-preview-scroll{padding:10px}.print-sheet{padding:24px 18px}.print-hero h1{font-size:25px}}
+
+/* print */
+@media print{
+  body.print-preview-active{background:#fff !important;}
+  body.print-preview-active::before, body.print-preview-active #app, body.print-preview-active #toast-container, body.print-preview-active .print-preview-toolbar{display:none !important;}
+  body.print-preview-active #print-preview-root{display:block !important;position:static !important;background:#fff !important;}
+  body.print-preview-active .print-preview-scroll{display:block !important;overflow:visible !important;padding:0 !important;}
+  body.print-preview-active .print-sheet{display:block !important;max-width:none !important;margin:0 !important;padding:0 !important;box-shadow:none !important;min-height:0 !important;}
+  body:not(.print-preview-active)::before, body:not(.print-preview-active) .topbar, body:not(.print-preview-active) .fab, body:not(.print-preview-active) #toast-container, body:not(.print-preview-active) .kebab-btn, body:not(.print-preview-active) .add-act-row{display:none !important;}
+}
+
+/* ===== Waypoint V2 enhancements ===== */
+.seg{overflow-x:auto;justify-content:flex-start;scrollbar-width:none;}
+.seg::-webkit-scrollbar{display:none;}
+.seg button{min-width:86px;flex:1 0 auto;}
+.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+@media(max-width:620px){.metric-grid{grid-template-columns:1fr 1fr;}}
+.metric-card{background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.1);border-radius:13px;padding:13px;}
+.metric-card .k{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
+.metric-card .v{font-family:var(--font-display);font-size:24px;color:var(--paper);margin-top:3px;}
+.overview-grid{display:grid;grid-template-columns:1.25fr .75fr;gap:14px;}
+@media(max-width:620px){.overview-grid{grid-template-columns:1fr;}}
+.quick-actions{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+.quick-actions .btn{justify-content:flex-start;}
+.readiness{display:flex;align-items:center;gap:14px;}
+.readiness-ring{width:66px;height:66px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--brass) var(--ready),rgba(255,255,255,.08) 0);}
+.readiness-ring::after{content:"";width:52px;height:52px;border-radius:50%;background:var(--teal);position:absolute;}
+.readiness-ring{position:relative;}
+.readiness-ring span{position:relative;z-index:1;font-family:var(--font-display);font-size:18px;color:var(--paper);}
+.booking-card{background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.1);border-radius:13px;padding:14px;margin-bottom:10px;}
+.booking-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;}
+.booking-type{font-family:var(--font-mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--brass-light);}
+.booking-title{font-weight:700;margin-top:3px;}
+.booking-meta{font-size:11.5px;color:var(--muted);margin-top:5px;line-height:1.5;}
+.activity-meta{font-family:var(--font-mono);font-size:10px;color:var(--muted);margin-top:2px;}
+.activity-meta a{color:var(--brass-light);text-decoration:none;}
+.add-act-row .place-in{flex:1 1 150px;}
+.progress-line{height:7px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden;margin-top:8px;}
+.progress-line > div{height:100%;background:var(--brass);border-radius:999px;}
+
+
+.readiness-card{background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.025));border:1px solid rgba(255,255,255,.09);border-radius:18px;padding:16px;margin-bottom:14px;}
+.readiness-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px;}
+.readiness-score-wrap{display:flex;align-items:center;gap:14px;}
+.readiness-ring{--p:0;position:relative;width:72px;height:72px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--brass) calc(var(--p)*1%),rgba(255,255,255,.08) 0);}
+.readiness-ring::before{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--ink-2);}
+.readiness-ring strong{position:relative;z-index:1;font-family:var(--font-display);font-size:24px;color:var(--paper);}
+.readiness-meta .eyebrow{font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);}
+.readiness-meta .status{font-family:var(--font-display);font-size:22px;color:var(--paper);margin-top:2px;}
+.readiness-meta .caption{font-size:12px;color:var(--muted);margin-top:3px;max-width:420px;}
+.readiness-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+@media(max-width:560px){.readiness-grid{grid-template-columns:1fr;}.readiness-head{align-items:flex-start;}.readiness-ring{width:64px;height:64px;}}
+.readiness-item{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:12px;}
+.readiness-item-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px;}
+.readiness-item-title{font-size:13px;font-weight:700;color:var(--ink-text);}
+.readiness-item-pct{font-family:var(--font-mono);font-size:11px;color:var(--brass-light);}
+.readiness-item-sub{font-size:11px;color:var(--muted);line-height:1.4;margin-top:7px;}
+.readiness-item .pbar{height:6px;}
+.readiness-item-actions{margin-top:9px;}
+.readiness-item-actions button{padding:5px 9px;font-size:10.5px;}
+.readiness-next{margin-top:12px;padding:12px;border-radius:12px;background:rgba(201,162,39,.08);border:1px solid rgba(201,162,39,.18);}
+.readiness-next .title{font-size:11px;font-weight:700;color:var(--brass-light);text-transform:uppercase;letter-spacing:.05em;}
+.readiness-next .text{font-size:12px;color:var(--ink-text);margin-top:4px;line-height:1.4;}
+
+</style>
+</head>
+<body>
+<div id="splash">
+  <div class="smark"><svg viewBox="0 0 24 24" fill="none"><path d="M2 16.5 21 8l-6.5 12-2-6-6-2Z" fill="#0B1D30"/></svg></div>
+  <div class="sname">WAYPOINT</div>
+</div>
+<div id="app"></div>
+<div id="toast-container"></div>
+
+<script>
+/* ===================== i18n ===================== */
+const T = {
+en:{
+  appName:"Waypoint",
+  common:{add:"Add",save:"Save",cancel:"Cancel",delete:"Delete",edit:"Edit",close:"Close",none:"—",up:"↑",down:"↓",remove:"Remove",
+    confirmDeleteItem:"Delete this?",undo:"UNDO",back:"Back",pleaseConfirm:"Please confirm",continueLabel:"Continue"},
+  home:{title:"Your trips",sub:"Tap a trip to open it",newTrip:"New trip",empty:"No trips yet",
+    emptySub:"Create your first trip to start planning — flights, hotels, budget, packing list, all in one place.",
+    search:"Search trips…",viewUpcoming:"Upcoming",viewPast:"Past",viewAll:"All",noneInView:"Nothing here yet.",
+    daysTo:"days to go",today:"Departs today",past:"Completed",inProgress:"Happening now",
+    confirmDelete:"Delete this trip and everything in it (itinerary, budget, checklist, notes)?",deleted:"Trip deleted",
+    duplicate:"Duplicate",share:"Share",copied:"Trip summary copied",openMaps:"Open in Maps",checkWeather:"Check weather",
+    importItinerary:"Import itinerary",sharedBadge:"Shared"},
+  trip:{name:"Trip name",namePlaceholder:"e.g. Summer in Colombia",destination:"Destination",destPlaceholder:"e.g. Cartagena, Colombia",
+    tripType:"Trip type",tripTypeNone:"Not set",start:"Start date",end:"End date",budgetGoal:"Total budget",currency:"Currency",
+    passportExpiry:"Passport expiry (optional)",passportHint:"Most countries require 6 months validity past your return date.",
+    passportExpired:"Passport expires before this trip ends",passportSoon:"Passport expires within 6 months of this trip",
+    notes:"Notes",coverPhoto:"Cover photo",uploadPhoto:"Upload photo",newTripTitle:"New trip",editTripTitle:"Edit trip"},
+  tabs:{itinerary:"Itinerary",budget:"Budget",checklist:"Packing",notes:"Notes"},
+  itinerary:{generate:"Generate days",addDay:"Add day",dayLabel:"Day label",noDays:"No days planned yet.",
+    addActivity:"Add",time:"Time",activity:"Activity",deleteDay:"Delete",empty:"No activities yet.",print:"Print",
+    share:"Share itinerary",shareTitle:"{name} — itinerary",shareText:"Here's the itinerary — open it in Waypoint to import it.",
+    fileSaved:"Itinerary file saved — send it however you like (WhatsApp, email, AirDrop…)",
+    sharedHint:"This trip is linked to a shared file. Share it again anytime to send your latest changes.",
+    importUpdateConfirm:"This updates \"{name}\" with the shared itinerary you just opened. Continue?",
+    importUpdated:"Itinerary updated",importAdded:"Shared itinerary imported as a new trip",importError:"Couldn't read that itinerary file."},
+  budget:{planned:"Budget",spent:"Spent",remaining:"Left",overBy:"Over by",addExpense:"Add expense",category:"Category",
+    desc:"Description",amount:"Amount",date:"Date",log:"Expenses",empty:"No expenses logged yet.",deleted:"Expense deleted",
+    convert:"Currency converter",convertAmount:"Amount",convertFrom:"From",convertTo:"To",convertRate:"Rate (1 {from} = ? {to})",convertBtn:"Convert",convertResult:"Result",fxToday:"Today’s rate",fxManual:"Manual rate",fxAuto:"Automatic daily rate",fxLoading:"Getting today’s rate…",fxUnavailable:"Daily rate unavailable. You can enter a rate manually.",fxUpdated:"Rate date",fxRefresh:"Refresh rate",fxSwap:"Swap",
+    cats:{flights:"Flights",lodging:"Lodging",food:"Food & drink",activities:"Activities",transport:"Transport",shopping:"Shopping",misc:"Misc"}},
+  checklist:{addItem:"Add item",itemPlaceholder:"e.g. Passport, charger…",presets:"Add common items",empty:"No items yet."},
+  notes:{sub:"Confirmation numbers, passport info, anything else — stays on this device.",label:"Label",labelPlaceholder:"e.g. Flight confirmation",
+    value:"Info",valuePlaceholder:"e.g. AB1234",addEntry:"Add",presets:"Quick add",empty:"No notes yet."},
+  settings:{title:"Settings",sub:"Make Waypoint yours",account:"Profile",name:"Your name",namePlaceholder:"e.g. Alex",
+    uploadPhoto:"Upload photo",orAvatar:"or pick an avatar",theme:"Color theme",
+    themes:{brass:"Brass Night",sunset:"Sunset Coral",forest:"Forest Ledger",rose:"Rose Gold"},
+    defaultCurrency:"Default currency",data:"Backup your data",dataSub:"Everything stays on this device — export a copy to keep it safe.",
+    exportBtn:"Export backup",importBtn:"Import backup",importConfirm:"This replaces all current data with the backup. Continue?",
+    exported:"Backup downloaded",imported:"Backup restored",importError:"Couldn't read that file.",
+    resetAll:"Erase all data",resetConfirm:"This permanently deletes every trip and setting. This cannot be undone.",resetDone:"All data erased",saved:"Saved"}
+},
+es:{
+  appName:"Waypoint",
+  common:{add:"Agregar",save:"Guardar",cancel:"Cancelar",delete:"Eliminar",edit:"Editar",close:"Cerrar",none:"—",up:"↑",down:"↓",remove:"Quitar",
+    confirmDeleteItem:"¿Eliminar esto?",undo:"DESHACER",back:"Atrás",pleaseConfirm:"Por favor confirma",continueLabel:"Continuar"},
+  home:{title:"Tus viajes",sub:"Toca un viaje para abrirlo",newTrip:"Nuevo viaje",empty:"Aún no hay viajes",
+    emptySub:"Crea tu primer viaje para empezar a planificar — vuelos, hoteles, presupuesto, equipaje, todo en un solo lugar.",
+    search:"Buscar viajes…",viewUpcoming:"Próximos",viewPast:"Pasados",viewAll:"Todos",noneInView:"Aún no hay nada aquí.",
+    daysTo:"días para salir",today:"Sale hoy",past:"Completado",inProgress:"Sucediendo ahora",
+    confirmDelete:"¿Eliminar este viaje y todo lo que tiene (itinerario, presupuesto, equipaje, notas)?",deleted:"Viaje eliminado",
+    duplicate:"Duplicar",share:"Compartir",copied:"Resumen del viaje copiado",openMaps:"Abrir en Mapas",checkWeather:"Ver clima",
+    importItinerary:"Importar itinerario",sharedBadge:"Compartido"},
+  trip:{name:"Nombre del viaje",namePlaceholder:"ej. Verano en Colombia",destination:"Destino",destPlaceholder:"ej. Cartagena, Colombia",
+    tripType:"Tipo de viaje",tripTypeNone:"Sin definir",start:"Fecha de inicio",end:"Fecha de fin",budgetGoal:"Presupuesto total",currency:"Moneda",
+    passportExpiry:"Vencimiento de pasaporte (opcional)",passportHint:"La mayoría de países exigen 6 meses de validez después de tu regreso.",
+    passportExpired:"El pasaporte vence antes de que termine este viaje",passportSoon:"El pasaporte vence dentro de los 6 meses de este viaje",
+    notes:"Notas",coverPhoto:"Foto de portada",uploadPhoto:"Subir foto",newTripTitle:"Nuevo viaje",editTripTitle:"Editar viaje"},
+  tabs:{itinerary:"Itinerario",budget:"Presupuesto",checklist:"Equipaje",notes:"Notas"},
+  itinerary:{generate:"Generar días",addDay:"Agregar día",dayLabel:"Etiqueta del día",noDays:"Aún no hay días planificados.",
+    addActivity:"Agregar",time:"Hora",activity:"Actividad",deleteDay:"Eliminar",empty:"Aún no hay actividades.",print:"Imprimir",
+    share:"Compartir itinerario",shareTitle:"{name} — itinerario",shareText:"Aquí está el itinerario — ábrelo en Waypoint para importarlo.",
+    fileSaved:"Archivo del itinerario guardado — envíalo como quieras (WhatsApp, correo, AirDrop…)",
+    sharedHint:"Este viaje está vinculado a un archivo compartido. Vuelve a compartirlo cuando quieras para enviar tus últimos cambios.",
+    importUpdateConfirm:"Esto actualiza \"{name}\" con el itinerario compartido que acabas de abrir. ¿Continuar?",
+    importUpdated:"Itinerario actualizado",importAdded:"Itinerario compartido importado como nuevo viaje",importError:"No se pudo leer ese archivo de itinerario."},
+  budget:{planned:"Presupuesto",spent:"Gastado",remaining:"Resta",overBy:"Excedido por",addExpense:"Agregar gasto",category:"Categoría",
+    desc:"Descripción",amount:"Monto",date:"Fecha",log:"Gastos",empty:"Aún no hay gastos registrados.",deleted:"Gasto eliminado",
+    convert:"Conversor de moneda",convertAmount:"Monto",convertFrom:"De",convertTo:"A",convertRate:"Tasa (1 {from} = ? {to})",convertBtn:"Convertir",convertResult:"Resultado",fxToday:"Tasa del día",fxManual:"Tasa manual",fxAuto:"Tasa diaria automática",fxLoading:"Buscando la tasa del día…",fxUnavailable:"No se pudo obtener la tasa del día. Puedes escribir una tasa manual.",fxUpdated:"Fecha de la tasa",fxRefresh:"Actualizar tasa",fxSwap:"Invertir",
+    cats:{flights:"Vuelos",lodging:"Alojamiento",food:"Comida y bebida",activities:"Actividades",transport:"Transporte",shopping:"Compras",misc:"Varios"}},
+  checklist:{addItem:"Agregar artículo",itemPlaceholder:"ej. Pasaporte, cargador…",presets:"Agregar artículos comunes",empty:"Aún no hay artículos."},
+  notes:{sub:"Números de confirmación, datos de pasaporte, lo que necesites — se queda en este dispositivo.",label:"Etiqueta",labelPlaceholder:"ej. Confirmación de vuelo",
+    value:"Info",valuePlaceholder:"ej. AB1234",addEntry:"Agregar",presets:"Agregar rápido",empty:"Aún no hay notas."},
+  settings:{title:"Ajustes",sub:"Haz que Waypoint sea tuyo",account:"Perfil",name:"Tu nombre",namePlaceholder:"ej. Alex",
+    uploadPhoto:"Subir foto",orAvatar:"o elige un avatar",theme:"Tema de color",
+    themes:{brass:"Noche de Bronce",sunset:"Atardecer Coral",forest:"Bosque y Oro",rose:"Oro Rosa"},
+    defaultCurrency:"Moneda predeterminada",data:"Respalda tus datos",dataSub:"Todo se queda en este dispositivo — exporta una copia para guardarla.",
+    exportBtn:"Exportar respaldo",importBtn:"Importar respaldo",importConfirm:"Esto reemplaza todos los datos actuales con el respaldo. ¿Continuar?",
+    exported:"Respaldo descargado",imported:"Respaldo restaurado",importError:"No se pudo leer ese archivo.",
+    resetAll:"Borrar todos los datos",resetConfirm:"Esto elimina permanentemente cada viaje y ajuste. No se puede deshacer.",resetDone:"Todos los datos fueron borrados",saved:"Guardado"}
+}
+};
+const CATS = ["flights","lodging","food","activities","transport","shopping","misc"];
+const AVATARS = ["✈","🌍","🗺","🧳","⛰","🏖","🚆","🧭"];
+const THEME_LIST = ["brass","sunset","forest","rose"];
+const TRIP_TYPES = ["beach","city","business","adventure","winter"];
+const TRIP_TYPE_LABELS = {
+  en:{beach:"🏖 Beach",city:"🏙 City",business:"💼 Business",adventure:"⛰ Adventure",winter:"❄ Winter/Ski"},
+  es:{beach:"🏖 Playa",city:"🏙 Ciudad",business:"💼 Negocios",adventure:"⛰ Aventura",winter:"❄ Invierno/Nieve"}
+};
+const PACKING_CATEGORIES = ["documents","clothing","toiletries","electronics","health","essentials","other"];
+const PACKING_CATEGORY_LABELS = {
+  en:{documents:"📄 Documents",clothing:"👕 Clothing",toiletries:"🧴 Toiletries",electronics:"🔌 Electronics",health:"💊 Health",essentials:"🎒 Essentials",other:"📦 Other"},
+  es:{documents:"📄 Documentos",clothing:"👕 Ropa",toiletries:"🧴 Higiene",electronics:"🔌 Electrónica",health:"💊 Salud",essentials:"🎒 Esenciales",other:"📦 Otros"}
+};
+const TRIP_TYPE_PACKING = {
+  beach:{en:[{text:"Swimsuit",category:"clothing"},{text:"Flip-flops",category:"clothing"},{text:"Beach towel",category:"essentials"},{text:"After-sun lotion",category:"toiletries"},{text:"Hat",category:"clothing"}],es:[{text:"Traje de baño",category:"clothing"},{text:"Sandalias",category:"clothing"},{text:"Toalla de playa",category:"essentials"},{text:"Loción after-sun",category:"toiletries"},{text:"Sombrero",category:"clothing"}]},
+  city:{en:[{text:"Comfortable walking shoes",category:"clothing"},{text:"Day backpack",category:"essentials"},{text:"Portable charger",category:"electronics"},{text:"Light jacket",category:"clothing"}],es:[{text:"Zapatos cómodos",category:"clothing"},{text:"Mochila de día",category:"essentials"},{text:"Cargador portátil",category:"electronics"},{text:"Chaqueta ligera",category:"clothing"}]},
+  business:{en:[{text:"Business attire",category:"clothing"},{text:"Laptop & charger",category:"electronics"},{text:"Business cards",category:"documents"},{text:"Dress shoes",category:"clothing"}],es:[{text:"Ropa formal",category:"clothing"},{text:"Laptop y cargador",category:"electronics"},{text:"Tarjetas de presentación",category:"documents"},{text:"Zapatos formales",category:"clothing"}]},
+  adventure:{en:[{text:"Hiking boots",category:"clothing"},{text:"Rain jacket",category:"clothing"},{text:"First-aid kit",category:"health"},{text:"Water bottle",category:"essentials"},{text:"Headlamp",category:"electronics"}],es:[{text:"Botas de senderismo",category:"clothing"},{text:"Chaqueta impermeable",category:"clothing"},{text:"Botiquín",category:"health"},{text:"Botella de agua",category:"essentials"},{text:"Linterna frontal",category:"electronics"}]},
+  winter:{en:[{text:"Winter coat",category:"clothing"},{text:"Gloves & beanie",category:"clothing"},{text:"Thermal layers",category:"clothing"},{text:"Snow boots",category:"clothing"}],es:[{text:"Abrigo de invierno",category:"clothing"},{text:"Guantes y gorro",category:"clothing"},{text:"Ropa térmica",category:"clothing"},{text:"Botas para nieve",category:"clothing"}]}
+};
+const PRESET_ITEMS = {
+  en:[{text:"Passport / ID",category:"documents"},{text:"Travel insurance docs",category:"documents"},{text:"Phone charger",category:"electronics"},{text:"Universal adapter",category:"electronics"},{text:"Medications",category:"health"},{text:"Sunscreen",category:"toiletries"},{text:"Comfortable shoes",category:"clothing"},{text:"Reusable water bottle",category:"essentials"}],
+  es:[{text:"Pasaporte / identificación",category:"documents"},{text:"Documentos de seguro de viaje",category:"documents"},{text:"Cargador de teléfono",category:"electronics"},{text:"Adaptador universal",category:"electronics"},{text:"Medicamentos",category:"health"},{text:"Bloqueador solar",category:"toiletries"},{text:"Zapatos cómodos",category:"clothing"},{text:"Botella de agua reutilizable",category:"essentials"}]
+};
+const DOC_PRESETS = {
+  en:["Passport number","Flight confirmation","Hotel confirmation","Insurance policy #","Emergency contact"],
+  es:["Número de pasaporte","Confirmación de vuelo","Confirmación de hotel","N° de póliza de seguro","Contacto de emergencia"]
+};
+const CURRENCIES = [
+  {code:"USD",flag:"🇺🇸",en:"US Dollar",es:"Dólar estadounidense"},{code:"EUR",flag:"🇪🇺",en:"Euro",es:"Euro"},
+  {code:"COP",flag:"🇨🇴",en:"Colombian Peso",es:"Peso colombiano"},{code:"VES",flag:"🇻🇪",en:"Venezuelan Bolívar",es:"Bolívar venezolano"},
+  {code:"MXN",flag:"🇲🇽",en:"Mexican Peso",es:"Peso mexicano"},{code:"ARS",flag:"🇦🇷",en:"Argentine Peso",es:"Peso argentino"},
+  {code:"CLP",flag:"🇨🇱",en:"Chilean Peso",es:"Peso chileno"},{code:"PEN",flag:"🇵🇪",en:"Peruvian Sol",es:"Sol peruano"},
+  {code:"BRL",flag:"🇧🇷",en:"Brazilian Real",es:"Real brasileño"},{code:"UYU",flag:"🇺🇾",en:"Uruguayan Peso",es:"Peso uruguayo"},
+  {code:"BOB",flag:"🇧🇴",en:"Bolivian Boliviano",es:"Boliviano"},{code:"PYG",flag:"🇵🇾",en:"Paraguayan Guaraní",es:"Guaraní paraguayo"},
+  {code:"GTQ",flag:"🇬🇹",en:"Guatemalan Quetzal",es:"Quetzal guatemalteco"},{code:"CRC",flag:"🇨🇷",en:"Costa Rican Colón",es:"Colón costarricense"},
+  {code:"DOP",flag:"🇩🇴",en:"Dominican Peso",es:"Peso dominicano"},{code:"HNL",flag:"🇭🇳",en:"Honduran Lempira",es:"Lempira hondureño"},
+  {code:"NIO",flag:"🇳🇮",en:"Nicaraguan Córdoba",es:"Córdoba nicaragüense"},{code:"PAB",flag:"🇵🇦",en:"Panamanian Balboa",es:"Balboa panameño"},
+  {code:"GBP",flag:"🇬🇧",en:"British Pound",es:"Libra esterlina"},{code:"CAD",flag:"🇨🇦",en:"Canadian Dollar",es:"Dólar canadiense"},
+  {code:"JPY",flag:"🇯🇵",en:"Japanese Yen",es:"Yen japonés"},{code:"CNY",flag:"🇨🇳",en:"Chinese Yuan",es:"Yuan chino"},
+  {code:"AUD",flag:"🇦🇺",en:"Australian Dollar",es:"Dólar australiano"},{code:"INR",flag:"🇮🇳",en:"Indian Rupee",es:"Rupia india"}
+];
+
+/* ===================== state ===================== */
+let state = {lang:"en", trips:[], expenses:[], checklists:{}, itineraries:{}, tripDocs:{}, bookings:{},
+  profile:{name:"", avatar:"✈", photo:"", currency:"USD", theme:"brass"}};
+let ui = {screen:"home", currentTripId:null, tripSubTab:"overview", modal:null, editingTrip:null,
+  tripSearch:"", tripView:"upcoming", newTripCover:"", expenseDraft:null,
+  confirmMessage:"", confirmAction:null, confirmDanger:false, confirmLabel:null,
+  convDraft:{amount:"100", from:"", to:"", rate:"1", mode:"auto", rateDate:"", loading:false, error:"", rateSource:""}, convResult:null};
+
+function tt(){ return T[state.lang]; }
+function fmt(n){
+  const value=Number(n);
+  const safe=Number.isFinite(value)?Math.round((value+Number.EPSILON)*100)/100:0;
+  return safe.toLocaleString(state.lang==='es'?'es-ES':'en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function money(n,cur){ return (cur||"USD")+" "+fmt(n); }
+
+function roundMoney(n){
+  const value=Number(n);
+  if(!Number.isFinite(value)) return 0;
+  return Math.round((value+Number.EPSILON)*100)/100;
+}
+function parseMoneyInput(value){
+  if(value===null||value===undefined||value==='') return 0;
+  const normalized=String(value).replace(/,/g,'').trim();
+  return roundMoney(Number(normalized));
+}
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ===================== storage ===================== */
+if (typeof window.storage === 'undefined') {
+  window.storage = {
+    async get(key, shared){
+      const k = (shared?'shared:':'priv:') + key;
+      const v = window.localStorage.getItem(k);
+      if (v === null) throw new Error('not found');
+      return {key, value: v, shared: !!shared};
+    },
+    async set(key, value, shared){
+      const k = (shared?'shared:':'priv:') + key;
+      window.localStorage.setItem(k, value);
+      return {key, value, shared: !!shared};
+    },
+    async delete(key, shared){
+      const k = (shared?'shared:':'priv:') + key;
+      window.localStorage.removeItem(k);
+      return {key, deleted: true, shared: !!shared};
+    },
+    async list(prefix, shared){
+      const pfx = (shared?'shared:':'priv:') + (prefix||'');
+      const keys = Object.keys(window.localStorage).filter(k=>k.startsWith(pfx)).map(k=>k.slice((shared?'shared:':'priv:').length));
+      return {keys};
+    }
+  };
+}
+async function loadState(){
+  try{
+    const r = await window.storage.get('waypoint-simple-data', false);
+    if(r && r.value){ state = Object.assign(state, JSON.parse(r.value)); }
+    if(!state.bookings) state.bookings={};
+  }catch(e){ /* first run */ }
+  render();
+  setTimeout(handleCollabLink,50);
+  if(!syncPoll) syncPoll=setInterval(syncAllLiveTrips,15000);
+  setTimeout(refreshLiveStreams,150);
+}
+async function saveState(){
+  try{ await window.storage.set('waypoint-simple-data', JSON.stringify(state), false); }catch(e){ console.error('save failed', e); }
+  clearTimeout(syncDebounce);
+  syncDebounce=setTimeout(()=>{ state.trips.filter(x=>x.liveSync).forEach(tr=>pushTripToCloud(tr)); },700);
+}
+
+/* ===================== helpers ===================== */
+function daysBetween(d1,d2){ return Math.ceil((new Date(d2)-new Date(d1))/86400000); }
+function tripById(id){ return state.trips.find(t=>t.id===id); }
+function tripSpent(tripId){ return state.expenses.filter(e=>e.tripId===tripId).reduce((s,e)=>s+Number(e.amount),0); }
+function catSpent(tripId,cat){ return state.expenses.filter(e=>e.tripId===tripId&&e.category===cat).reduce((s,e)=>s+Number(e.amount),0); }
+function passportWarning(tr){
+  if(!tr.passportExpiry) return null;
+  const t=tt();
+  const end = new Date(tr.end||tr.start);
+  const expiry = new Date(tr.passportExpiry);
+  const sixBefore = new Date(expiry); sixBefore.setMonth(sixBefore.getMonth()-6);
+  if(expiry < end) return t.home.passportExpired || t.trip.passportExpired;
+  if(sixBefore < end) return t.trip.passportSoon;
+  return null;
+}
+function avatarInner(size){
+  if(state.profile.photo) return `<img src="${state.profile.photo}" alt="" style="width:100%;height:100%;object-fit:cover;">`;
+  return escapeHtml(state.profile.avatar||'✈');
+}
+function applyTheme(){ document.documentElement.setAttribute('data-theme', state.profile.theme||'brass'); }
+
+/* ===================== toast ===================== */
+function showToast(msg, undoFn){
+  const t=tt();
+  const c = document.getElementById('toast-container');
+  const el = document.createElement('div'); el.className='toast';
+  el.innerHTML = `<span>${msg}</span>` + (undoFn? `<button class="toast-undo">${t.common.undo}</button>`:'');
+  if(undoFn){ el.querySelector('.toast-undo').onclick=()=>{ undoFn(); el.remove(); }; }
+  c.appendChild(el);
+  setTimeout(()=>{ el.classList.add('out'); setTimeout(()=>el.remove(),300); }, 5000);
+}
+
+/* ===================== confirm modal ===================== */
+function askConfirm(message, onConfirm, danger, confirmLabel){
+  ui.modal='confirm'; ui.confirmMessage=message; ui.confirmAction=onConfirm; ui.confirmDanger=!!danger; ui.confirmLabel=confirmLabel||null;
+  render();
+}
+function cancelConfirm(){ ui.modal=null; ui.confirmAction=null; render(); }
+function runConfirmAction(){ const fn=ui.confirmAction; ui.modal=null; ui.confirmAction=null; if(fn) fn(); else render(); }
+
+/* ===================== image resize ===================== */
+function resizeImageFile(file, maxSize, cb){
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      let w=img.width, h=img.height;
+      if(w>=h){ if(w>maxSize){ h=Math.round(h*maxSize/w); w=maxSize; } } else { if(h>maxSize){ w=Math.round(w*maxSize/h); h=maxSize; } }
+      const canvas = document.createElement('canvas'); canvas.width=w; canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      cb(canvas.toDataURL('image/jpeg',0.85));
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ===================== render root ===================== */
+function render(){
+  applyTheme();
+  const app = document.getElementById('app');
+  const t = tt();
+  app.innerHTML = `
+    <div class="topbar">
+      <div class="brand"><div class="brand-mark"><svg viewBox="0 0 24 24" fill="none"><path d="M2 16.5 21 8l-6.5 12-2-6-6-2Z" fill="#0B1D30"/></svg></div><h1>${t.appName}</h1></div>
+      <div class="header-actions">
+        <button class="icon-btn" onclick="goSettings()">${state.profile.photo||state.profile.avatar? `<span style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:50%;">${avatarInner()}</span>` : '⚙'}</button>
+        <div class="lang-toggle">
+          <button onclick="setLang('en')" class="${state.lang==='en'?'active':''}">EN</button>
+          <button onclick="setLang('es')" class="${state.lang==='es'?'active':''}">ES</button>
+        </div>
+      </div>
+    </div>
+    ${ui.screen!=='home'? `<div class="back-row"><button class="back-btn" onclick="goHome()">← ${t.common.back}</button></div>`:''}
+    <main id="main"></main>
+  `;
+  const main = document.getElementById('main');
+  if(ui.screen==='home') main.innerHTML = viewHome();
+  else if(ui.screen==='trip') main.innerHTML = viewTripDetail();
+  else if(ui.screen==='settings') main.innerHTML = viewSettings();
+  renderModal();
+  renderFab();
+}
+function setLang(l){ state.lang=l; document.documentElement.lang=l; saveState(); render(); }
+function goHome(){ ui.screen='home'; ui.currentTripId=null; render(); }
+function goSettings(){ ui.screen='settings'; render(); }
+function openTrip(id){ ui.currentTripId=id; ui.screen='trip'; ui.tripSubTab='overview'; render(); }
+
+/* ===================== FAB ===================== */
+function renderFab(){
+  let old = document.querySelector('.fab'); if(old) old.remove();
+  let action = null;
+  if(ui.screen==='home') action = ()=>openTripForm();
+  else if(ui.screen==='trip'){
+    if(ui.tripSubTab==='itinerary') action = ()=>openDayForm();
+    else if(ui.tripSubTab==='bookings') action = ()=>openBookingForm();
+    else if(ui.tripSubTab==='budget') action = ()=>openExpenseForm();
+    else if(ui.tripSubTab==='checklist') action = ()=>{ const el=document.getElementById('ck-item'); if(el) el.focus(); };
+    else if(ui.tripSubTab==='notes') action = ()=>{ const el=document.getElementById('doc-label'); if(el) el.focus(); };
+  }
+  if(!action) return;
+  const btn = document.createElement('button');
+  btn.className='fab'; btn.textContent='+'; btn.setAttribute('aria-label','add');
+  btn.onclick = action;
+  document.body.appendChild(btn);
+}
+
+/* ===================== HOME ===================== */
+function viewHome(){
+  const t=tt();
+  const today = new Date(new Date().toDateString());
+  let list = state.trips.slice();
+  if(ui.tripView==='upcoming') list = list.filter(tr=> new Date(tr.end||tr.start) >= today);
+  if(ui.tripView==='past') list = list.filter(tr=> new Date(tr.end||tr.start) < today);
+  if(ui.tripSearch){
+    const q = ui.tripSearch.toLowerCase();
+    list = list.filter(tr=>(tr.name||'').toLowerCase().includes(q) || (tr.destination||'').toLowerCase().includes(q));
+  }
+  list.sort((a,b)=>new Date(a.start)-new Date(b.start));
+  return `
+    <div class="section-head">
+      <div><h2>${t.home.title}</h2><p class="sub">${t.home.sub}</p></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-ghost" onclick="triggerImportItinerary()">📥 ${t.home.importItinerary}</button>
+        <input type="file" id="import-itinerary-file" accept="application/json,.json" class="hidden-file" onchange="importItineraryFile(event)">
+        <button class="btn btn-brass" onclick="openTripForm()">+ ${t.home.newTrip}</button>
+      </div>
+    </div>
+    ${state.trips.length? `
+    <div class="seg" style="margin-bottom:12px;">
+      <button class="${ui.tripView==='upcoming'?'active':''}" onclick="setTripView('upcoming')">${t.home.viewUpcoming}</button>
+      <button class="${ui.tripView==='past'?'active':''}" onclick="setTripView('past')">${t.home.viewPast}</button>
+      <button class="${ui.tripView==='all'?'active':''}" onclick="setTripView('all')">${t.home.viewAll}</button>
+    </div>
+    <input class="field" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.16);border-radius:8px;padding:10px 11px;color:var(--ink-text);font-size:14px;width:100%;margin-bottom:14px;"
+      placeholder="${t.home.search}" value="${escapeHtml(ui.tripSearch)}" oninput="ui.tripSearch=this.value;render();">
+    ` : ''}
+    ${list.length? list.map(tripCard).join('') : (state.trips.length? `<div class="panel empty"><p>${t.home.noneInView}</p></div>` : emptyHome())}
+  `;
+}
+function setTripView(v){ ui.tripView=v; render(); }
+function emptyHome(){
+  const t=tt();
+  return `<div class="panel empty"><span class="ic">✈</span><h3>${t.home.empty}</h3><p>${t.home.emptySub}</p>
+    <button class="btn btn-brass" onclick="openTripForm()">+ ${t.home.newTrip}</button></div>`;
+}
+function tripCard(tr){
+  const t=tt();
+  const today = new Date(new Date().toDateString());
+  const start = new Date(tr.start), end = new Date(tr.end||tr.start);
+  let num, lbl;
+  if(end<today){ num='✓'; lbl=t.home.past; }
+  else if(start<=today && end>=today){ num='●'; lbl=t.home.inProgress; }
+  else { num=daysBetween(today,start); lbl=t.home.daysTo; }
+  const coverStyle = tr.coverPhoto? `style="background-image:linear-gradient(180deg, rgba(20,20,15,0.2), rgba(10,10,8,0.72)), url('${tr.coverPhoto}');"` : '';
+  const passportMsg = passportWarning(tr);
+  return `
+    <div class="pass" onclick="openTrip('${tr.id}')">
+      <div class="pass-main ${tr.coverPhoto?'has-cover':''}" ${coverStyle}>
+        <button class="kebab-btn" onclick="event.stopPropagation();openTripActions('${tr.id}')">⋮</button>
+        <div class="route">${escapeHtml(tr.destination||'')}${tr.shareId? ` <span class="shared-badge">🔗 ${t.home.sharedBadge}</span>`:''}</div>
+        <h3>${escapeHtml(tr.name)}</h3>
+        <div class="dates">${tr.start||'—'} → ${tr.end||'—'}</div>
+        ${passportMsg? `<div class="passport-warn">⚠ ${passportMsg}</div>`:''}
+      </div>
+      <div class="pass-stub">
+        <div class="countdown-num">${num}</div>
+        <div class="countdown-label">${lbl}</div>
+      </div>
+    </div>`;
+}
+function openTripActions(id){ ui.actionsTripId=id; ui.modal='tripActions'; render(); }
+
+/* ===================== TRIP FORM ===================== */
+function openTripForm(id){
+  if(!id) ui.newTripCover = '';
+  ui.modal='trip'; ui.editingTrip = id||null; render();
+}
+function handleTripCoverUpload(evt, tripId){
+  const file = evt.target.files[0]; if(!file) return;
+  resizeImageFile(file, 640, (dataUrl)=>{
+    if(tripId){ const tr=tripById(tripId); if(tr){ tr.coverPhoto=dataUrl; saveState(); } }
+    else { ui.newTripCover = dataUrl; }
+    render();
+  });
+}
+function removeTripCover(tripId){
+  if(tripId){ const tr=tripById(tripId); if(tr){ tr.coverPhoto=''; saveState(); } }
+  else { ui.newTripCover=''; }
+  render();
+}
+function saveTripForm(){
+  const g = id=>document.getElementById(id).value;
+  const data = {
+    name: g('f-name').trim() || (state.lang==='es'?'Viaje sin nombre':'Untitled trip'),
+    destination: g('f-dest').trim(),
+    tripType: g('f-type'),
+    start: g('f-start'), end: g('f-end'),
+    budgetGoal: parseFloat(g('f-budget'))||0,
+    currency: readCurrencyField('f-currency') || 'USD',
+    passportExpiry: g('f-passport'),
+    notes: g('f-notes').trim()
+  };
+  if(ui.editingTrip){ Object.assign(tripById(ui.editingTrip), data); }
+  else { data.id = uid(); data.coverPhoto = ui.newTripCover||''; state.trips.push(data); ui.newTripCover=''; }
+  ui.modal=null; ui.editingTrip=null;
+  saveState(); render();
+}
+function duplicateTrip(id){
+  ui.modal=null;
+  const tr = tripById(id);
+  const copy = Object.assign({}, tr, {id:uid(), name: tr.name + (state.lang==='es'?' (copia)':' (copy)')});
+  state.trips.push(copy);
+  saveState(); render();
+  showToast(state.lang==='es'?'Viaje duplicado':'Trip duplicated');
+}
+async function copyTextRobust(text){
+  try{
+    if(navigator.clipboard && window.isSecureContext){
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  }catch(e){}
+  try{
+    const ta=document.createElement('textarea');
+    ta.value=text; ta.setAttribute('readonly','');
+    ta.style.position='fixed'; ta.style.left='-9999px'; ta.style.top='0';
+    document.body.appendChild(ta); ta.focus(); ta.select(); ta.setSelectionRange(0,ta.value.length);
+    const ok=document.execCommand('copy'); ta.remove();
+    return !!ok;
+  }catch(e){ return false; }
+}
+function openShareFallback(title,text){
+  ui.shareFallback={title,text};
+  ui.modal='shareFallback';
+  render();
+}
+async function copyShareFallback(){
+  const el=document.getElementById('share-fallback-text');
+  if(!el) return;
+  const ok=await copyTextRobust(el.value);
+  showToast(ok ? (state.lang==='es'?'Copiado':'Copied') : (state.lang==='es'?'Selecciona el texto y cópialo manualmente':'Select the text and copy it manually'));
+}
+function tripShareText(tr){
+  const t=tt();
+  const spent=tripSpent(tr.id);
+  const days=state.itineraries[tr.id]||[];
+  const acts=days.reduce((n,d)=>n+(d.activities||[]).length,0);
+  const lines=[
+    `✈️ ${tr.name}`,
+    tr.destination?`📍 ${tr.destination}`:'',
+    (tr.start||tr.end)?`📅 ${tr.start||'—'} → ${tr.end||'—'}`:'',
+    acts?`${state.lang==='es'?'🗓 Actividades':'🗓 Activities'}: ${acts}`:'',
+    Number(tr.budgetGoal||0)>0?`${t.budget.planned}: ${money(tr.budgetGoal,tr.currency)} · ${t.budget.spent}: ${money(spent,tr.currency)}`:'',
+    '',
+    state.lang==='es'?'Creado con Waypoint':'Created with Waypoint'
+  ].filter(x=>x!==null&&x!==undefined);
+  return lines.join('\n').replace(/\n{3,}/g,'\n\n');
+}
+function openShareCenter(id){
+  const tr=tripById(id); if(!tr) return;
+  ui.actionsTripId=id;
+  ui.modal='shareCenter';
+  render();
+}
+async function shareTrip(id){ openShareCenter(id); }
+async function nativeShareTrip(id){
+  const tr=tripById(id); if(!tr) return;
+  const text=tripShareText(tr);
+  try{
+    if(navigator.share){
+      await navigator.share({title:tr.name,text});
+      return;
+    }
+    showToast(state.lang==='es'?'Compartir del sistema no está disponible aquí':'System sharing is not available here');
+  }catch(e){
+    if(e && e.name==='AbortError') return;
+    showToast(state.lang==='es'?'No se pudo abrir el menú del sistema. Usa una de las opciones de abajo.':'Could not open the system share menu. Use one of the options below.');
+  }
+}
+function shareViaWhatsApp(id){
+  const tr=tripById(id); if(!tr) return;
+  const url='https://wa.me/?text='+encodeURIComponent(tripShareText(tr));
+  window.open(url,'_blank','noopener');
+}
+function shareViaEmail(id){
+  const tr=tripById(id); if(!tr) return;
+  const subject=encodeURIComponent((state.lang==='es'?'Itinerario: ':'Itinerary: ')+tr.name);
+  const body=encodeURIComponent(tripShareText(tr));
+  location.href=`mailto:?subject=${subject}&body=${body}`;
+}
+function shareViaSMS(id){
+  const tr=tripById(id); if(!tr) return;
+  const body=encodeURIComponent(tripShareText(tr));
+  // Works on most modern iOS/Android browsers; exact handoff is controlled by the OS.
+  location.href=`sms:?body=${body}`;
+}
+async function copyTripShare(id){
+  const tr=tripById(id); if(!tr) return;
+  const ok=await copyTextRobust(tripShareText(tr));
+  if(ok) showToast(state.lang==='es'?'Resumen copiado':'Summary copied');
+  else openShareFallback(tr.name,tripShareText(tr));
+}
+function downloadEditableItinerary(id){
+  const tr=tripById(id); if(!tr) return;
+  const payload=buildItineraryPayload(tr);
+  const json=JSON.stringify(payload,null,2);
+  const slug=(tr.name||'trip').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'')||'trip';
+  const blob=new Blob([json],{type:'application/json'});
+  downloadItineraryBlob(blob,`${slug}-itinerary.json`,true);
+}
+function ensureShareId(tr){
+  if(!tr.shareId){ tr.shareId = 'wp-'+uid(); saveState(); }
+  return tr.shareId;
+}
+function buildItineraryPayload(tr){
+  return {
+    waypointShare: 2,
+    shareId: ensureShareId(tr),
+    updatedAt: new Date().toISOString(),
+    trip: {name:tr.name,destination:tr.destination,tripType:tr.tripType||'',start:tr.start,end:tr.end},
+    name: tr.name, destination: tr.destination, tripType: tr.tripType||'', start: tr.start, end: tr.end,
+    days: state.itineraries[tr.id]||[],
+    bookings: state.bookings[tr.id]||[]
+  };
+}
+function buildPrintableItinerary(tripId){
+  const tr=tripById(tripId); if(!tr) return null;
+  const days=state.itineraries[tripId]||[];
+  const bookings=state.bookings[tripId]||[];
+  const es=state.lang==='es';
+  const dayHtml=days.map((d,i)=>`<section class="print-section"><h2>${escapeHtml(displayDayLabel(d,i))}</h2>${d.date?`<div class="print-date">${escapeHtml(localizedDateLabel(d.date))}</div>`:''}${(d.activities||[]).length?`<table><tbody>${d.activities.map(a=>`<tr><td class="print-time">${escapeHtml(formatTime12(a.time||''))}</td><td><strong>${escapeHtml(a.title||'')}</strong>${a.location?`<div class="print-loc">📍 ${escapeHtml(a.location)}</div>`:''}</td></tr>`).join('')}</tbody></table>`:`<p class="print-muted">${es?'Sin actividades.':'No activities.'}</p>`}</section>`).join('');
+  const bookHtml=bookings.length?`<section class="print-section"><h2>${es?'Reservas':'Bookings'}</h2><table><tbody>${bookings.map(b=>`<tr><td>${escapeHtml(b.date||'')} ${escapeHtml(formatTime12(b.time||''))}</td><td><strong>${escapeHtml(b.title||'')}</strong>${b.provider?`<div class="print-loc">${escapeHtml(b.provider)}</div>`:''}${b.confirmation?`<div class="print-loc">${es?'Confirmación':'Confirmation'}: ${escapeHtml(b.confirmation)}</div>`:''}${b.location?`<div class="print-loc">📍 ${escapeHtml(b.location)}</div>`:''}</td></tr>`).join('')}</tbody></table></section>`:'';
+  const html=`<div class="print-sheet"><div class="print-hero"><div class="print-brand">WAYPOINT</div><h1>${escapeHtml(tr.name)}</h1><div class="print-meta"><span>📍 ${escapeHtml(tr.destination||'')}</span><span>${escapeHtml(tr.start||'')} → ${escapeHtml(tr.end||'')}</span></div></div>${dayHtml||`<p class="print-muted">${es?'Aún no hay actividades.':'No activities yet.'}</p>`}${bookHtml}<div class="print-footer">${es?'Creado con Waypoint':'Created with Waypoint'}</div></div>`;
+  return {tr,html,es};
+}
+function printItinerary(tripId){ openPrintPreview(tripId); }
+function openPrintPreview(tripId){
+  const data=buildPrintableItinerary(tripId); if(!data) return;
+  closePrintPreview();
+  const root=document.createElement('div');
+  root.id='print-preview-root';
+  root.innerHTML=`<div class="print-preview-toolbar"><button class="btn btn-ghost" onclick="closePrintPreview()">← ${data.es?'Volver':'Back'}</button><div class="print-preview-title">🖨 ${data.es?'Vista de impresión':'Print preview'}</div><div class="print-preview-actions"><button class="btn btn-ghost" onclick="downloadPrintableHtml('${tripId}')">⬇ ${data.es?'Guardar archivo':'Save file'}</button><button class="btn btn-brass" onclick="printCurrentPreview()">🖨 ${data.es?'Imprimir / Guardar PDF':'Print / Save PDF'}</button></div></div><div class="print-preview-scroll">${data.html}</div>`;
+  document.body.appendChild(root);
+  document.body.classList.add('print-preview-active');
+}
+function closePrintPreview(){
+  document.getElementById('print-preview-root')?.remove();
+  document.body.classList.remove('print-preview-active');
+}
+function printCurrentPreview(){
+  const es=state.lang==='es';
+  if(typeof window.print==='function'){
+    try{ window.print(); return; }catch(e){}
+  }
+  showToast(es?'Tu navegador no permite imprimir directamente. Usa “Guardar archivo”.':'Your browser cannot print directly. Use “Save file”.');
+}
+function downloadPrintableHtml(tripId){
+  const data=buildPrintableItinerary(tripId); if(!data) return;
+  const css=`@page{margin:16mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#16202a;margin:0;padding:20px}.print-hero{border-bottom:3px solid #C9A227;padding-bottom:18px;margin-bottom:22px}.print-brand{font-size:12px;letter-spacing:.18em;font-weight:700;color:#8a6d10}.print-hero h1{font-size:30px;margin:6px 0}.print-meta{font-size:14px;color:#59636d;display:flex;gap:16px;flex-wrap:wrap}.print-section{break-inside:avoid;margin:0 0 24px}.print-section h2{font-size:18px;margin:0 0 6px;border-bottom:1px solid #ddd;padding-bottom:6px}.print-date,.print-muted,.print-loc{color:#68737d;font-size:12px}.print-date{margin-bottom:8px}table{width:100%;border-collapse:collapse}td{padding:8px 6px;border-bottom:1px solid #ececec;vertical-align:top;font-size:13px}.print-time{width:78px;font-weight:700;color:#8a6d10}.print-footer{margin-top:30px;padding-top:12px;border-top:1px solid #ddd;font-size:10px;color:#7a838c;text-align:center}`;
+  const doc=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(data.tr.name)} — ${data.es?'Itinerario':'Itinerary'}</title><style>${css}
+.readiness-card{background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.025));border:1px solid rgba(255,255,255,.09);border-radius:18px;padding:16px;margin-bottom:14px;}
+.readiness-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px;}
+.readiness-score-wrap{display:flex;align-items:center;gap:14px;}
+.readiness-ring{--p:0;position:relative;width:72px;height:72px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--brass) calc(var(--p)*1%),rgba(255,255,255,.08) 0);}
+.readiness-ring::before{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--ink-2);}
+.readiness-ring strong{position:relative;z-index:1;font-family:var(--font-display);font-size:24px;color:var(--paper);}
+.readiness-meta .eyebrow{font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);}
+.readiness-meta .status{font-family:var(--font-display);font-size:22px;color:var(--paper);margin-top:2px;}
+.readiness-meta .caption{font-size:12px;color:var(--muted);margin-top:3px;max-width:420px;}
+.readiness-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+@media(max-width:560px){.readiness-grid{grid-template-columns:1fr;}.readiness-head{align-items:flex-start;}.readiness-ring{width:64px;height:64px;}}
+.readiness-item{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:12px;}
+.readiness-item-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px;}
+.readiness-item-title{font-size:13px;font-weight:700;color:var(--ink-text);}
+.readiness-item-pct{font-family:var(--font-mono);font-size:11px;color:var(--brass-light);}
+.readiness-item-sub{font-size:11px;color:var(--muted);line-height:1.4;margin-top:7px;}
+.readiness-item .pbar{height:6px;}
+.readiness-item-actions{margin-top:9px;}
+.readiness-item-actions button{padding:5px 9px;font-size:10.5px;}
+.readiness-next{margin-top:12px;padding:12px;border-radius:12px;background:rgba(201,162,39,.08);border:1px solid rgba(201,162,39,.18);}
+.readiness-next .title{font-size:11px;font-weight:700;color:var(--brass-light);text-transform:uppercase;letter-spacing:.05em;}
+.readiness-next .text{font-size:12px;color:var(--ink-text);margin-top:4px;line-height:1.4;}
+
+</style></head><body>${data.html}</body></html>`;
+  const blob=new Blob([doc],{type:'text/html;charset=utf-8'});
+  const slug=(data.tr.name||'waypoint').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'')||'waypoint';
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`${slug}-itinerary-print.html`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+}
+function collabServer(){
+  const saved=(localStorage.getItem('waypoint-sync-server')||'').replace(/\/$/,'');
+  if(saved) return saved;
+  if(location.protocol==='http:' || location.protocol==='https:') return location.origin.replace(/\/$/,'');
+  return '';
+}
+function randomKey(){ const a=new Uint8Array(18); crypto.getRandomValues(a); return Array.from(a,b=>b.toString(16).padStart(2,'0')).join(''); }
+function setCollabServer(url){ localStorage.setItem('waypoint-sync-server',(url||'').trim().replace(/\/$/,'')); }
+async function startLiveCollaboration(tripId){
+  const tr=tripById(tripId); if(!tr) return;
+  const es=state.lang==='es';
+  let server=tr.syncServer||collabServer();
+  if(!server){ server=prompt(es?'Ingresa la URL de tu servidor Waypoint Sync (ej. https://sync.tudominio.com):':'Enter your Waypoint Sync server URL (e.g. https://sync.yourdomain.com):','')||''; }
+  server=server.trim().replace(/\/$/,''); if(!server) return;
+  setCollabServer(server); ensureShareId(tr); if(!tr.editKey) tr.editKey=randomKey();
+  tr.syncServer=server; tr.liveSync=true; tr.syncRevision=Number(tr.syncRevision||0);
+  await saveState();
+  const ok=await pushTripToCloud(tr,false); if(!ok) return;
+  ensureLiveStream(tr);
+  const base=location.origin && location.origin!=='null' ? location.origin+location.pathname : location.href.split('#')[0];
+  const link=`${base}#collab=${encodeURIComponent(tr.shareId)}&key=${encodeURIComponent(tr.editKey)}&server=${encodeURIComponent(server)}`;
+  try{
+    if(navigator.share){
+      await navigator.share({title:tr.name,text:es?'Edita este itinerario conmigo en Waypoint:':'Edit this itinerary with me in Waypoint:',url:link});
+    }else{
+      await copyTextRobust(link);
+      showToast(es?'Enlace colaborativo copiado':'Collaboration link copied');
+    }
+  }catch(e){
+    if(e && e.name==='AbortError') return;
+    try{ await copyTextRobust(link); showToast(es?'Enlace colaborativo copiado':'Collaboration link copied'); }
+    catch(_){ showCopyFallback(link,es?'Enlace de colaboración':'Collaboration link'); }
+  }
+  render();
+}
+function livePayload(tr){
+  if(!tr.collabDeleted) tr.collabDeleted={days:[],activities:[],bookings:[]};
+  return {waypointLive:1,shareId:tr.shareId,trip:{name:tr.name,destination:tr.destination,tripType:tr.tripType||'',start:tr.start,end:tr.end},days:state.itineraries[tr.id]||[],bookings:state.bookings[tr.id]||[],deleted:tr.collabDeleted};
+}
+function uniqById(remote,local){
+  const m=new Map();
+  (remote||[]).forEach(x=>x&&x.id&&m.set(x.id,JSON.parse(JSON.stringify(x))));
+  (local||[]).forEach(x=>x&&x.id&&m.set(x.id,JSON.parse(JSON.stringify(x))));
+  return [...m.values()];
+}
+function unionIds(a,b){ return [...new Set([...(a||[]),...(b||[])])]; }
+function mergeLivePayload(local,remote){
+  local=local||{}; remote=remote||{};
+  const deleted={
+    days:unionIds(remote.deleted&&remote.deleted.days,local.deleted&&local.deleted.days),
+    activities:unionIds(remote.deleted&&remote.deleted.activities,local.deleted&&local.deleted.activities),
+    bookings:unionIds(remote.deleted&&remote.deleted.bookings,local.deleted&&local.deleted.bookings)
+  };
+  const remoteDays=remote.days||[], localDays=local.days||[];
+  const byDay=new Map();
+  remoteDays.forEach(d=>{ if(d&&d.id) byDay.set(d.id,JSON.parse(JSON.stringify(d))); });
+  localDays.forEach(d=>{
+    if(!d||!d.id) return;
+    const prev=byDay.get(d.id)||{};
+    const merged=Object.assign({},prev,JSON.parse(JSON.stringify(d)));
+    merged.activities=uniqById(prev.activities||[],d.activities||[]).filter(a=>!deleted.activities.includes(a.id));
+    merged.activities.sort((a,b)=>(a.time||'99').localeCompare(b.time||'99'));
+    byDay.set(d.id,merged);
+  });
+  const days=[...byDay.values()].filter(d=>!deleted.days.includes(d.id));
+  const bookings=uniqById(remote.bookings||[],local.bookings||[]).filter(b=>!deleted.bookings.includes(b.id));
+  return {waypointLive:1,shareId:local.shareId||remote.shareId,trip:Object.assign({},remote.trip||{},local.trip||{}),days,bookings,deleted};
+}
+function applyLivePayload(tr,d){
+  d=d||{};
+  Object.assign(tr,d.trip||{});
+  tr.collabDeleted=d.deleted||tr.collabDeleted||{days:[],activities:[],bookings:[]};
+  state.itineraries[tr.id]=d.days||[];
+  state.bookings[tr.id]=d.bookings||[];
+}
+let syncBusy=false, syncDebounce=null, syncPoll=null;
+
+let liveStreams=new Map();
+function closeLiveStream(tripId){
+  const es=liveStreams.get(tripId);
+  if(es){ try{es.close();}catch(e){} liveStreams.delete(tripId); }
+}
+function ensureLiveStream(tr){
+  if(!tr||!tr.liveSync||!tr.syncServer||!tr.shareId||!tr.editKey||typeof EventSource==='undefined') return;
+  if(liveStreams.has(tr.id)) return;
+  try{
+    const url=`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}/events?key=${encodeURIComponent(tr.editKey)}`;
+    const es=new EventSource(url);
+    liveStreams.set(tr.id,es);
+    es.addEventListener('revision',async ev=>{
+      try{
+        const msg=JSON.parse(ev.data||'{}');
+        if(Number(msg.revision||0)>Number(tr.syncRevision||0)) await pullTripFromCloud(tr);
+      }catch(e){}
+    });
+    es.onerror=()=>{
+      // EventSource reconnects automatically; polling remains active as a fallback.
+    };
+  }catch(e){}
+}
+function refreshLiveStreams(){
+  const active=new Set();
+  state.trips.filter(x=>x.liveSync).forEach(tr=>{ active.add(tr.id); ensureLiveStream(tr); });
+  [...liveStreams.keys()].forEach(id=>{ if(!active.has(id)) closeLiveStream(id); });
+}
+
+async function pushTripToCloud(tr,force=false){
+  if(!tr||!tr.liveSync||!tr.syncServer||!tr.shareId||!tr.editKey) return false;
+  try{
+    const local=livePayload(tr);
+    let r=await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}`,{method:'PUT',headers:{'Content-Type':'application/json','X-Edit-Key':tr.editKey},body:JSON.stringify({data:local,clientRevision:Number(tr.syncRevision||0),force:!!force})});
+    if(r.status===409){
+      const conflict=await r.json();
+      const merged=mergeLivePayload(local,conflict.data||{});
+      applyLivePayload(tr,merged);
+      tr.syncRevision=Number(conflict.revision||0);
+      r=await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}`,{method:'PUT',headers:{'Content-Type':'application/json','X-Edit-Key':tr.editKey},body:JSON.stringify({data:merged,clientRevision:tr.syncRevision,force:false})});
+    }
+    if(!r.ok) throw new Error('sync '+r.status);
+    const j=await r.json();
+    tr.syncRevision=j.revision||tr.syncRevision;
+    tr.lastSyncedAt=new Date().toISOString();
+    await window.storage.set('waypoint-simple-data',JSON.stringify(state),false);
+    return true;
+  }catch(e){ console.error(e); showToast(state.lang==='es'?'No se pudo sincronizar con la nube':'Cloud sync failed'); return false; }
+}
+async function pullTripFromCloud(tr){
+  if(!tr||!tr.liveSync||!tr.syncServer||!tr.shareId||!tr.editKey) return false;
+  try{
+    const r=await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}?key=${encodeURIComponent(tr.editKey)}`); if(!r.ok) throw new Error('pull '+r.status); const j=await r.json();
+    if(Number(j.revision||0)>Number(tr.syncRevision||0)){
+      const d=j.data||{}; applyLivePayload(tr,d); tr.syncRevision=j.revision; tr.lastSyncedAt=new Date().toISOString(); await window.storage.set('waypoint-simple-data',JSON.stringify(state),false); render(); showToast(state.lang==='es'?'Cambios colaborativos actualizados':'Collaborative changes updated');
+    }
+    return true;
+  }catch(e){ return false; }
+}
+async function syncTripNow(id){ const tr=tripById(id); if(!tr) return; await pullTripFromCloud(tr); await pushTripToCloud(tr); render(); }
+async function syncAllLiveTrips(){ if(syncBusy) return; syncBusy=true; try{ for(const tr of state.trips.filter(x=>x.liveSync)) await pullTripFromCloud(tr); }finally{syncBusy=false;} }
+async function handleCollabLink(){
+  const h=new URLSearchParams(location.hash.replace(/^#/,'')); const shareId=h.get('collab'), key=h.get('key'), server=(h.get('server')||'').replace(/\/$/,''); if(!shareId||!key||!server) return;
+  setCollabServer(server);
+  try{ const r=await fetch(`${server}/api/trips/${encodeURIComponent(shareId)}?key=${encodeURIComponent(key)}`); if(!r.ok) throw new Error('join'); const j=await r.json(); const d=j.data||{}; let tr=state.trips.find(x=>x.shareId===shareId); if(!tr){ const id=uid(); tr={id,name:(d.trip&&d.trip.name)||'Shared trip',destination:(d.trip&&d.trip.destination)||'',tripType:(d.trip&&d.trip.tripType)||'',start:(d.trip&&d.trip.start)||'',end:(d.trip&&d.trip.end)||'',budgetGoal:0,currency:state.profile.currency||'USD',passportExpiry:'',notes:'',coverPhoto:'',shareId}; state.trips.push(tr); } applyLivePayload(tr,d); tr.editKey=key; tr.syncServer=server; tr.liveSync=true; tr.syncRevision=j.revision||0; tr.lastSyncedAt=new Date().toISOString(); await window.storage.set('waypoint-simple-data',JSON.stringify(state),false); history.replaceState(null,'',location.pathname+location.search); ensureLiveStream(tr); openTrip(tr.id); showToast(state.lang==='es'?'Te uniste al itinerario colaborativo':'Joined collaborative itinerary'); }catch(e){ showToast(state.lang==='es'?'No se pudo abrir el viaje compartido':'Could not open shared trip'); }
+}
+
+async function shareItineraryFile(tripId){
+  const t=tt();
+  const tr = tripById(tripId);
+  if(!tr) return;
+  const payload = buildItineraryPayload(tr);
+  const json = JSON.stringify(payload, null, 2);
+  const slug = (tr.name||'trip').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') || 'trip';
+  const filename = `${slug}-itinerary.json`;
+  const blob = new Blob([json], {type:'application/json'});
+  let file=null;
+  try{ file = new File([blob], filename, {type:'application/json'}); }catch(e){}
+  try{
+    if(file && navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({files:[file], title:t.itinerary.shareTitle.replace('{name}', tr.name), text:t.itinerary.shareText});
+      return;
+    }
+  }catch(e){
+    if(e && e.name==='AbortError') return;
+  }
+  const summary = `${t.itinerary.shareTitle.replace('{name}',tr.name)}\n${tr.destination||''}\n${tr.start||''} → ${tr.end||''}`;
+  try{
+    if(navigator.share){
+      await navigator.share({title:tr.name,text:summary});
+      downloadItineraryBlob(blob,filename,false);
+      showToast(state.lang==='es'?'También se descargó el archivo editable del itinerario':'The editable itinerary file was also downloaded');
+      return;
+    }
+  }catch(e){
+    if(e && e.name==='AbortError') return;
+  }
+  const ok=downloadItineraryBlob(blob,filename,true);
+  if(!ok) openShareFallback(tr.name, summary+'\n\n'+json);
+}
+function downloadItineraryBlob(blob,filename,notify=true){
+  try{
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download=filename; a.style.display='none';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+    if(notify) showToast(tt().itinerary.fileSaved);
+    return true;
+  }catch(e){ return false; }
+}
+function triggerImportItinerary(){ document.getElementById('import-itinerary-file').click(); }
+function importItineraryFile(evt){
+  const t=tt();
+  const file = evt.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const data = JSON.parse(reader.result);
+      if(!data || !data.waypointShare || !data.shareId) throw new Error('bad format');
+      const existing = state.trips.find(x=>x.shareId===data.shareId);
+      if(existing){
+        askConfirm(t.itinerary.importUpdateConfirm.replace('{name}', existing.name), ()=>{
+          existing.name = data.name; existing.destination = data.destination; existing.tripType = data.tripType||existing.tripType;
+          existing.start = data.start; existing.end = data.end;
+          state.itineraries[existing.id] = data.days||[]; state.bookings[existing.id] = data.bookings||state.bookings[existing.id]||[];
+          saveState(); render();
+          showToast(t.itinerary.importUpdated);
+          openTrip(existing.id);
+        }, false, t.common.continueLabel);
+      } else {
+        const newId = uid();
+        state.trips.push({id:newId, name:data.name||'Shared trip', destination:data.destination||'', tripType:data.tripType||'',
+          start:data.start||'', end:data.end||'', budgetGoal:0, currency:state.profile.currency||'USD',
+          passportExpiry:'', notes:'', coverPhoto:'', shareId:data.shareId});
+        state.itineraries[newId] = data.days||[]; state.bookings[newId] = data.bookings||[];
+        saveState(); render();
+        showToast(t.itinerary.importAdded);
+        openTrip(newId);
+      }
+    }catch(e){ showToast(t.itinerary.importError); }
+  };
+  reader.readAsText(file);
+  evt.target.value = '';
+}
+function deleteTrip(id){
+  ui.modal=null;
+  const t=tt();
+  askConfirm(t.home.confirmDelete, ()=>doDeleteTrip(id), true);
+}
+function doDeleteTrip(id){
+  const t=tt();
+  const idx = state.trips.findIndex(x=>x.id===id);
+  if(idx===-1) return;
+  const removedTrip = state.trips[idx];
+  const removedExpenses = state.expenses.filter(x=>x.tripId===id);
+  const removedChecklist = state.checklists[id];
+  const removedItin = state.itineraries[id];
+  const removedDocs = state.tripDocs[id];
+  const removedBookings = state.bookings[id];
+  state.trips = state.trips.filter(x=>x.id!==id);
+  state.expenses = state.expenses.filter(x=>x.tripId!==id);
+  delete state.checklists[id]; delete state.itineraries[id]; delete state.tripDocs[id]; delete state.bookings[id];
+  if(ui.currentTripId===id){ ui.screen='home'; ui.currentTripId=null; }
+  saveState(); render();
+  showToast(t.home.deleted, ()=>{
+    state.trips.splice(idx,0,removedTrip);
+    state.expenses.push(...removedExpenses);
+    if(removedChecklist) state.checklists[id]=removedChecklist;
+    if(removedItin) state.itineraries[id]=removedItin;
+    if(removedDocs) state.tripDocs[id]=removedDocs;
+    if(removedBookings) state.bookings[id]=removedBookings;
+    saveState(); render();
+  });
+}
+
+/* currency select helper */
+function currencySelectHtml(id, selected){
+  const opts = CURRENCIES.map(c=>{
+    const label = `${c.flag} ${c.code} — ${state.lang==='es'?c.es:c.en}`;
+    return `<option value="${c.code}" ${selected===c.code?'selected':''}>${label}</option>`;
+  }).join('');
+  const otherLabel = state.lang==='es'? '✎ Otra (escribir código)':'✎ Other (type code)';
+  const isOther = selected && !CURRENCIES.some(c=>c.code===selected);
+  return `<select id="${id}" onchange="handleCurrencySelect('${id}')">
+    ${opts}<option value="OTHER" ${isOther?'selected':''}>${otherLabel}</option>
+  </select>
+  <input id="${id}-custom" placeholder="${state.lang==='es'?'Código, ej. THB':'Code, e.g. THB'}" maxlength="4"
+    style="text-transform:uppercase;margin-top:8px;display:${isOther?'block':'none'};" value="${isOther?escapeHtml(selected):''}">`;
+}
+function handleCurrencySelect(id){
+  const sel = document.getElementById(id); const custom = document.getElementById(id+'-custom');
+  if(!sel||!custom) return;
+  custom.style.display = sel.value==='OTHER'? 'block':'none';
+  if(sel.value==='OTHER') custom.focus();
+}
+function readCurrencyField(id){
+  const sel = document.getElementById(id); if(!sel) return 'USD';
+  if(sel.value==='OTHER'){ const c=document.getElementById(id+'-custom'); return (c&&c.value.trim().toUpperCase())||'USD'; }
+  return sel.value;
+}
+
+/* ===================== TRIP DETAIL ===================== */
+function viewTripDetail(){
+  const t=tt();
+  const tr = tripById(ui.currentTripId);
+  if(!tr) return `<div class="panel empty"><p>${t.common.none}</p></div>`;
+  const spent = tripSpent(tr.id), budget = Number(tr.budgetGoal||0);
+  const pct = budget>0? Math.min(100, Math.round(spent/budget*100)) : 0;
+  const over = spent>budget && budget>0;
+  const today = new Date(new Date().toDateString());
+  const start = new Date(tr.start), end = new Date(tr.end||tr.start);
+  let countdown;
+  if(end<today) countdown = t.home.past;
+  else if(start<=today && end>=today) countdown = t.home.inProgress;
+  else countdown = daysBetween(today,start)+' '+t.home.daysTo;
+  const coverStyle = tr.coverPhoto? `style="background-image:linear-gradient(180deg, rgba(20,20,15,0.15), rgba(10,10,8,0.68)), url('${tr.coverPhoto}');background-size:cover;background-position:center;"` : '';
+  const mapsLink = tr.destination? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(tr.destination)}" target="_blank" rel="noopener" title="${t.home.openMaps}" style="margin-left:6px;text-decoration:none;">🗺</a>` : '';
+  const weatherLink = tr.destination? `<a href="https://www.google.com/search?q=${encodeURIComponent('weather in '+tr.destination)}" target="_blank" rel="noopener" title="${t.home.checkWeather}" style="margin-left:4px;text-decoration:none;">☀</a>` : '';
+  const passportMsg = passportWarning(tr);
+  return `
+    <div class="pass-main trip-header ${tr.coverPhoto?'has-cover':''}" style="border-radius:16px;margin-bottom:14px;${tr.coverPhoto?'background-size:cover;background-position:center;':''}" ${coverStyle}>
+      <button class="kebab-btn" onclick="openTripActions('${tr.id}')">⋮</button>
+      <div class="route">${escapeHtml(tr.destination||'')}${mapsLink}${weatherLink}</div>
+      <h3 style="font-size:26px;">${escapeHtml(tr.name)}</h3>
+      <div class="dates">${tr.start||'—'} → ${tr.end||'—'} · ${countdown}</div>
+      ${passportMsg? `<div class="passport-warn">⚠ ${passportMsg}</div>`:''}
+      ${budget>0? `<div style="margin-top:10px;"><div class="pbar ${over?'over':''}"><div style="width:${pct}%"></div></div>
+        <div style="font-family:var(--font-mono);font-size:11px;margin-top:5px;opacity:0.85;">${money(spent,tr.currency)} / ${money(budget,tr.currency)}</div></div>`:''}
+    </div>
+    <div class="seg" style="margin-bottom:16px;">
+      <button class="${ui.tripSubTab==='overview'?'active':''}" onclick="setTripSubTab('overview')"><span class="ic">⌂</span>${state.lang==='es'?'Resumen':'Overview'}</button>
+      <button class="${ui.tripSubTab==='itinerary'?'active':''}" onclick="setTripSubTab('itinerary')"><span class="ic">▥</span>${t.tabs.itinerary}</button>
+      <button class="${ui.tripSubTab==='bookings'?'active':''}" onclick="setTripSubTab('bookings')"><span class="ic">🎟</span>${state.lang==='es'?'Reservas':'Bookings'}</button>
+      <button class="${ui.tripSubTab==='budget'?'active':''}" onclick="setTripSubTab('budget')"><span class="ic">▤</span>${t.tabs.budget}</button>
+      <button class="${ui.tripSubTab==='checklist'?'active':''}" onclick="setTripSubTab('checklist')"><span class="ic">☑</span>${t.tabs.checklist}</button>
+      <button class="${ui.tripSubTab==='notes'?'active':''}" onclick="setTripSubTab('notes')"><span class="ic">📄</span>${t.tabs.notes}</button>
+    </div>
+    <div id="trip-subview">${renderTripSubTab(tr)}</div>
+  `;
+}
+function setTripSubTab(tab){ ui.tripSubTab=tab; render(); }
+function renderTripSubTab(tr){
+  if(ui.tripSubTab==='overview') return viewOverviewSub(tr);
+  if(ui.tripSubTab==='itinerary') return viewItinerarySub(tr);
+  if(ui.tripSubTab==='bookings') return viewBookingsSub(tr);
+  if(ui.tripSubTab==='budget') return viewBudgetSub(tr);
+  if(ui.tripSubTab==='checklist') return viewChecklistSub(tr);
+  if(ui.tripSubTab==='notes') return viewNotesSub(tr);
+  return '';
+}
+
+
+function tripDurationDays(tr){
+  if(!tr?.start||!tr?.end) return 0;
+  const a=new Date(`${tr.start}T12:00:00`), b=new Date(`${tr.end}T12:00:00`);
+  if(Number.isNaN(a.getTime())||Number.isNaN(b.getTime())||b<a) return 0;
+  return Math.floor((b-a)/86400000)+1;
+}
+function clamp01(n){ return Math.max(0,Math.min(1,Number(n)||0)); }
+function pct01(n){ return Math.round(clamp01(n)*100); }
+function computeTripReadiness(tr){
+  const es=state.lang==='es';
+  const days=Array.isArray(state.itineraries[tr.id])?state.itineraries[tr.id]:[];
+  const bookings=Array.isArray(state.bookings[tr.id])?state.bookings[tr.id]:[];
+  const packing=Array.isArray(state.checklists[tr.id])?state.checklists[tr.id]:[];
+  const docs=Array.isArray(state.tripDocs[tr.id])?state.tripDocs[tr.id]:[];
+  const expenses=Array.isArray(state.expenses)?state.expenses.filter(x=>x.tripId===tr.id):[];
+  const duration=tripDurationDays(tr);
+
+  // 1) Core trip information — 10%
+  const coreChecks=[
+    Boolean(String(tr.name||'').trim()),
+    Boolean(String(tr.destination||'').trim()),
+    Boolean(tr.start),
+    Boolean(tr.end),
+    Boolean(duration>0)
+  ];
+  const core=coreChecks.filter(Boolean).length/coreChecks.length;
+
+  // 2) Itinerary — 25%
+  // Measures both day coverage and actual activity coverage across the trip.
+  const datedDays=new Set(days.map(d=>d?.date).filter(Boolean));
+  const daysWithActivities=days.filter(d=>Array.isArray(d?.activities)&&d.activities.length>0);
+  const totalActivities=days.reduce((n,d)=>n+(Array.isArray(d?.activities)?d.activities.length:0),0);
+  const expectedDays=duration||Math.max(days.length,1);
+  const plannedDayCoverage=clamp01((duration?datedDays.size:days.length)/expectedDays);
+  const activeDayCoverage=clamp01(daysWithActivities.length/expectedDays);
+  const activityDepth=daysWithActivities.length
+    ? clamp01(totalActivities/(daysWithActivities.length*2)) // 2 activities/day = fully developed day
+    : 0;
+  const itinerary=clamp01(plannedDayCoverage*.35 + activeDayCoverage*.45 + activityDepth*.20);
+
+  // 3) Bookings — 20%
+  // Each saved booking is graded for completeness. No booking = 0 because the section is not prepared yet.
+  const bookingCompleteness=(b)=>{
+    const parts=[
+      {v:Boolean(b?.type),w:.10},
+      {v:Boolean(String(b?.title||'').trim()),w:.25},
+      {v:Boolean(b?.date),w:.20},
+      {v:Boolean(String(b?.provider||'').trim()),w:.15},
+      {v:Boolean(String(b?.confirmation||'').trim()),w:.20},
+      {v:Boolean(String(b?.location||'').trim()),w:.10}
+    ];
+    return parts.reduce((s,p)=>s+(p.v?p.w:0),0);
+  };
+  const bookingsScore=bookings.length
+    ? clamp01(bookings.reduce((s,b)=>s+bookingCompleteness(b),0)/bookings.length)
+    : 0;
+
+  // 4) Packing — 20%
+  // Quantity-aware: 3 shirts count as 3 units, not one row.
+  const packingTotals=packing.reduce((acc,it)=>{
+    const qty=Math.max(1,Number(it?.qty)||1);
+    acc.total+=qty;
+    if(it?.done) acc.done+=qty;
+    return acc;
+  },{total:0,done:0});
+  const packingScore=packingTotals.total?clamp01(packingTotals.done/packingTotals.total):0;
+
+  // 5) Budget — 15%
+  // A defined budget is ready while within limit; overspending proportionally reduces readiness.
+  const budget=Number(tr.budgetGoal||0);
+  const spent=tripSpent(tr.id);
+  let budgetScore=0;
+  if(budget>0){
+    budgetScore=spent<=budget?1:clamp01(budget/spent);
+  }
+
+  // 6) Travel information / documents — 10%
+  // Notes/doc entries are scored by completeness. Passport validity contributes when supplied.
+  const completeDocs=docs.filter(d=>String(d?.label||'').trim()&&String(d?.value||'').trim()).length;
+  const docBase=docs.length?completeDocs/docs.length:0;
+  let passportFactor=null;
+  if(tr.passportExpiry){
+    const warning=passportWarning(tr);
+    passportFactor=warning?0:1;
+  }
+  // If passport is supplied, combine it with notes; otherwise notes determine this section.
+  const docsScore=passportFactor===null?clamp01(docBase):clamp01(docBase*.65+passportFactor*.35);
+
+  const specs=[
+    {
+      key:'details',weight:10,score:core,title:es?'Datos del viaje':'Trip details',
+      sub:core===1?(es?'Destino y fechas válidas completos.':'Destination and valid dates complete.'):(es?'Completa nombre, destino y fechas válidas.':'Complete name, destination and valid dates.'),
+      tab:null
+    },
+    {
+      key:'itinerary',weight:25,score:itinerary,title:es?'Itinerario':'Itinerary',
+      sub:es
+        ?`${days.length}/${expectedDays} días creados · ${daysWithActivities.length} con actividades · ${totalActivities} actividades`
+        :`${days.length}/${expectedDays} days created · ${daysWithActivities.length} with activities · ${totalActivities} activities`,
+      tab:'itinerary'
+    },
+    {
+      key:'bookings',weight:20,score:bookingsScore,title:es?'Reservas':'Bookings',
+      sub:bookings.length
+        ?(es?`${bookings.length} reservas · ${pct01(bookingsScore)}% completas`:`${bookings.length} bookings · ${pct01(bookingsScore)}% complete`)
+        :(es?'Agrega y completa tus reservas.':'Add and complete your bookings.'),
+      tab:'bookings'
+    },
+    {
+      key:'packing',weight:20,score:packingScore,title:es?'Equipaje':'Packing',
+      sub:packingTotals.total
+        ?(es?`${packingTotals.done} de ${packingTotals.total} unidades listas`:`${packingTotals.done} of ${packingTotals.total} units packed`)
+        :(es?'Crea tu lista y marca lo empacado.':'Create your list and mark packed items.'),
+      tab:'checklist'
+    },
+    {
+      key:'budget',weight:15,score:budgetScore,title:es?'Presupuesto':'Budget',
+      sub:budget>0
+        ?(spent<=budget
+          ?(es?`${money(spent,tr.currency)} de ${money(budget,tr.currency)} · dentro del presupuesto`:`${money(spent,tr.currency)} of ${money(budget,tr.currency)} · within budget`)
+          :(es?`Excedido por ${money(spent-budget,tr.currency)}`:`Over by ${money(spent-budget,tr.currency)}`))
+        :(es?'Define un presupuesto total.':'Set a total trip budget.'),
+      tab:'budget'
+    },
+    {
+      key:'docs',weight:10,score:docsScore,title:es?'Información y documentos':'Travel info & documents',
+      sub:docs.length
+        ?(es?`${completeDocs}/${docs.length} notas completas${tr.passportExpiry?' · pasaporte revisado':''}`:`${completeDocs}/${docs.length} notes complete${tr.passportExpiry?' · passport checked':''}`)
+        :(tr.passportExpiry
+          ?(es?'Pasaporte revisado; agrega confirmaciones o datos útiles.':'Passport checked; add confirmations or useful travel info.')
+          :(es?'Agrega confirmaciones, documentos o información importante.':'Add confirmations, documents or important travel information.')),
+      tab:'notes'
+    }
+  ];
+
+  const total=specs.reduce((sum,s)=>sum+s.weight*clamp01(s.score),0);
+  return {
+    ready:Math.round(total),
+    steps:specs.map(s=>({
+      ...s,
+      contribution:Math.round(s.weight*clamp01(s.score)*10)/10,
+      pct:pct01(s.score),
+      done:s.score>=.999,
+      partial:s.score>0&&s.score<.999
+    })),
+    packingTotals,
+    totalActivities,
+    daysWithActivities:daysWithActivities.length,
+    expectedDays,
+    expensesCount:expenses.length
+  };
+}
+
+
+function readinessStatusText(score){
+  const es=state.lang==='es';
+  if(score>=100) return {
+    title:es?'Listo para viajar':'Ready to go',
+    caption:es?'Tu planificación está completa según la información registrada.':'Your trip plan is complete based on the information you’ve added.'
+  };
+  if(score>=85) return {
+    title:es?'Casi listo':'Almost ready',
+    caption:es?'La mayor parte del viaje está preparada. Solo quedan algunos detalles.':'Most of your trip is prepared. Only a few details remain.'
+  };
+  if(score>=60) return {
+    title:es?'Buen progreso':'Good progress',
+    caption:es?'Tu viaje va tomando forma. Completa las áreas pendientes para llegar listo.':'Your trip is taking shape. Finish the remaining areas to be fully prepared.'
+  };
+  if(score>=30) return {
+    title:es?'En preparación':'In progress',
+    caption:es?'Ya comenzaste a organizar el viaje, pero aún faltan varios elementos importantes.':'You’ve started planning, but several important items still need attention.'
+  };
+  return {
+    title:es?'Comenzando':'Getting started',
+    caption:es?'Completa la información principal para empezar a preparar el viaje.':'Add the key trip details to start building your travel plan.'
+  };
+}
+function readinessNextAction(steps){
+  const es=state.lang==='es';
+  const pending=[...steps].filter(x=>x.pct<100).sort((a,b)=>(a.pct-b.pct)||(b.weight-a.weight));
+  if(!pending.length) return es?'Todo está listo. Revisa los detalles finales antes de salir.':'Everything is ready. Review final details before departure.';
+  const x=pending[0];
+  const map={
+    details:es?'Completa los datos principales del viaje.':'Complete the main trip details.',
+    itinerary:es?'Continúa organizando los días y actividades del itinerario.':'Continue planning your itinerary days and activities.',
+    bookings:es?'Revisa y completa las reservas pendientes.':'Review and complete your outstanding bookings.',
+    packing:es?'Avanza con el equipaje y marca lo que ya tienes listo.':'Continue packing and mark items as they’re ready.',
+    budget:es?'Define o revisa el presupuesto del viaje.':'Set or review your trip budget.',
+    docs:es?'Agrega la información y documentos importantes para el viaje.':'Add important travel information and documents.'
+  };
+  return map[x.key]||x.sub;
+}
+
+function viewOverviewSub(tr){
+  const days = Array.isArray(state.itineraries[tr.id]) ? state.itineraries[tr.id] : [];
+  const activities = days.reduce((n,d)=>n+(Array.isArray(d.activities)?d.activities.length:0),0);
+  const bookings = Array.isArray(state.bookings[tr.id])?state.bookings[tr.id]:[];
+  const packing = Array.isArray(state.checklists[tr.id])?state.checklists[tr.id]:[];
+  const packed = packing.filter(x=>x.done).length;
+  const spent = tripSpent(tr.id), budget=Number(tr.budgetGoal||0);
+  const budgetPct = budget>0?Math.min(100,Math.round(spent/budget*100)):0;
+  const packPct = packing.length?Math.round(packed/packing.length*100):0;
+  const es=state.lang==='es';
+  const readiness=computeTripReadiness(tr);
+  const prepSteps=readiness.steps;
+  const ready=readiness.ready;
+  const next = findNextActivity(tr);
+  return `
+    <div class="metric-grid">
+      <div class="metric-card"><div class="k">${es?'Días planificados':'Planned days'}</div><div class="v">${days.length}</div></div>
+      <div class="metric-card"><div class="k">${es?'Actividades':'Activities'}</div><div class="v">${activities}</div></div>
+      <div class="metric-card"><div class="k">${es?'Reservas':'Bookings'}</div><div class="v">${bookings.length}</div></div>
+      <div class="metric-card"><div class="k">${es?'Empacado':'Packed'}</div><div class="v">${packed}/${packing.length}</div></div>
+    </div>
+    <div class="overview-grid">
+      <div>
+        <div class="panel">
+          <h3 style="margin:0 0 12px;color:var(--paper);">${es?'Próximo en tu viaje':'Next on your trip'}</h3>
+          ${next?`<div class="booking-type">${escapeHtml(next.dayLabel)}</div><div class="booking-title">${escapeHtml(next.time||'')} ${escapeHtml(next.title)}</div>${next.location?`<div class="booking-meta">📍 ${escapeHtml(next.location)}</div>`:''}`:
+          `<p style="color:var(--muted);font-size:13px;margin:0;">${es?'Agrega actividades al itinerario para ver aquí lo próximo.':'Add itinerary activities to see what is coming next.'}</p>`}
+        </div>
+        <div class="panel">
+          <h3 style="margin:0 0 12px;color:var(--paper);">${es?'Accesos rápidos':'Quick actions'}</h3>
+          <div class="quick-actions">
+            <button class="btn btn-ghost btn-sm" onclick="setTripSubTab('itinerary')">▥ ${es?'Itinerario':'Itinerary'}</button>
+            <button class="btn btn-ghost btn-sm" onclick="setTripSubTab('bookings')">🎟 ${es?'Reservas':'Bookings'}</button>
+            <button class="btn btn-ghost btn-sm" onclick="setTripSubTab('budget')">▤ ${es?'Presupuesto':'Budget'}</button>
+            <button class="btn btn-ghost btn-sm" onclick="setTripSubTab('checklist')">☑ ${es?'Maleta':'Packing'}</button>
+            ${tr.destination?`<a class="btn btn-ghost btn-sm" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(tr.destination)}">🗺 ${es?'Mapa':'Map'}</a>`:''}
+            ${tr.destination?`<a class="btn btn-ghost btn-sm" target="_blank" rel="noopener" href="https://www.google.com/search?q=${encodeURIComponent('weather in '+tr.destination)}">☀ ${es?'Clima':'Weather'}</a>`:''}
+          </div>
+        </div>
+      </div>
+      <div>
+        ${(()=>{
+          const rs=readinessStatusText(ready);
+          const next=readinessNextAction(prepSteps);
+          return `<div class="readiness-card">
+            <div class="readiness-head">
+              <div class="readiness-score-wrap">
+                <div class="readiness-ring" style="--p:${ready}"><strong>${ready}%</strong></div>
+                <div class="readiness-meta">
+                  <div class="eyebrow">${es?'Preparación del viaje':'Trip readiness'}</div>
+                  <div class="status">${rs.title}</div>
+                  <div class="caption">${rs.caption}</div>
+                </div>
+              </div>
+            </div>
+            <div class="readiness-grid">
+              ${prepSteps.map(x=>`
+                <div class="readiness-item">
+                  <div class="readiness-item-head">
+                    <div class="readiness-item-title">${x.title}</div>
+                    <div class="readiness-item-pct">${x.pct}%</div>
+                  </div>
+                  <div class="pbar"><div style="width:${x.pct}%"></div></div>
+                  <div class="readiness-item-sub">${x.sub}</div>
+                  ${x.tab?`<div class="readiness-item-actions"><button class="btn btn-ghost btn-sm" onclick="setTripSubTab('${x.tab}')">${es?'Revisar':'Review'}</button></div>`:''}
+                </div>
+              `).join('')}
+            </div>
+            <div class="readiness-next">
+              <div class="title">${es?'Siguiente recomendación':'Next recommendation'}</div>
+              <div class="text">${next}</div>
+            </div>
+          </div>`;
+        })()}
+        <div class="panel">
+          <div style="display:flex;justify-content:space-between;font-size:12px;"><span>${es?'Presupuesto usado':'Budget used'}</span><strong>${budget?budgetPct:0}%</strong></div>
+          <div class="progress-line"><div style="width:${budget?budgetPct:0}%"></div></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:14px;"><span>${es?'Maleta lista':'Packing complete'}</span><strong>${packPct}%</strong></div>
+          <div class="progress-line"><div style="width:${packPct}%"></div></div>
+        </div>
+      </div>
+    </div>`;
+}
+function findNextActivity(tr){
+  const days=(state.itineraries[tr.id]||[]).slice();
+  const now=new Date();
+  const items=[];
+  days.forEach((d,idx)=>(d.activities||[]).forEach(a=>{
+    let dt=null;
+    if(d.date){
+      const time=(a.time&&/^\\d{1,2}:\\d{2}/.test(a.time))?a.time:'23:59';
+      dt=new Date(d.date+'T'+time);
+    }
+    items.push({dayLabel:displayDayLabel(d,idx),date:d.date||'',dt,...a});
+  }));
+  const future=items.filter(x=>x.dt && x.dt>=now).sort((a,b)=>a.dt-b.dt);
+  if(future.length) return future[0];
+  return items[0]||null;
+}
+
+function viewBookingsSub(tr){
+  const es=state.lang==='es';
+  const list=state.bookings[tr.id]||[];
+  const labels={flight:es?'Vuelo':'Flight',hotel:es?'Hotel':'Hotel',transport:es?'Transporte':'Transport',activity:es?'Actividad':'Activity',other:es?'Otra':'Other'};
+  return `
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+      <button class="btn btn-brass btn-sm" onclick="openBookingForm()">+ ${es?'Agregar reserva':'Add booking'}</button>
+    </div>
+    ${list.length?list.slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(b=>`
+      <div class="booking-card">
+        <div class="booking-top"><div><div class="booking-type">${labels[b.type]||labels.other}${b.date?' · '+escapeHtml(b.date):''}${b.time?' · '+escapeHtml(b.time):''}</div>
+        <div class="booking-title">${escapeHtml(b.title)}</div>
+        <div class="booking-meta">${b.provider?escapeHtml(b.provider):''}${b.confirmation?`<br>${es?'Confirmación':'Confirmation'}: <strong>${escapeHtml(b.confirmation)}</strong>`:''}${b.location?`<br>📍 ${escapeHtml(b.location)}`:''}${b.notes?`<br>${escapeHtml(b.notes)}`:''}</div></div>
+        <button class="btn btn-danger btn-sm" onclick="deleteBooking('${tr.id}','${b.id}')">✕</button></div>
+        ${b.location?`<div style="margin-top:9px;"><a class="btn btn-ghost btn-sm" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.location)}">🗺 ${es?'Abrir mapa':'Open map'}</a></div>`:''}
+      </div>`).join(''):
+      `<div class="panel empty"><span class="ic">🎟</span><h3>${es?'Aún no hay reservas':'No bookings yet'}</h3><p>${es?'Guarda vuelos, hoteles, transporte y actividades con sus confirmaciones.':'Keep flights, hotels, transport and activity confirmations together.'}</p></div>`}
+  `;
+}
+function openBookingForm(){ ui.modal='booking'; render(); }
+function saveBookingForm(){
+  const g=id=>document.getElementById(id).value;
+  const title=g('b-title').trim(); if(!title) return;
+  const id=ui.currentTripId; if(!state.bookings[id]) state.bookings[id]=[];
+  state.bookings[id].push({id:uid(),type:g('b-type'),title,provider:g('b-provider').trim(),confirmation:g('b-confirm').trim(),
+    date:g('b-date'),time:getTime12PickerValue('b-time'),location:g('b-location').trim(),notes:g('b-notes').trim()});
+  ui.modal=null; saveState(); render();
+}
+function deleteBooking(tripId,id){
+  const tr=tripById(tripId); if(tr&&tr.liveSync){ if(!tr.collabDeleted) tr.collabDeleted={days:[],activities:[],bookings:[]}; if(!tr.collabDeleted.bookings.includes(id)) tr.collabDeleted.bookings.push(id); }
+  state.bookings[tripId]=(state.bookings[tripId]||[]).filter(x=>x.id!==id); saveState(); render();
+}
+
+
+function normalizeTime24(value){
+  if(!value) return '';
+  const s=String(value).trim();
+  let m=s.match(/^(\d{1,2}):(\d{2})$/);
+  if(m){
+    const h=Math.max(0,Math.min(23,Number(m[1])));
+    const min=Math.max(0,Math.min(59,Number(m[2])));
+    return String(h).padStart(2,'0')+':'+String(min).padStart(2,'0');
+  }
+  m=s.match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)$/i);
+  if(m){
+    let h=Number(m[1]); const min=Number(m[2]||0); const ap=m[3].toUpperCase();
+    if(h<1||h>12||min<0||min>59) return '';
+    if(ap==='AM'&&h===12) h=0;
+    if(ap==='PM'&&h!==12) h+=12;
+    return String(h).padStart(2,'0')+':'+String(min).padStart(2,'0');
+  }
+  return s;
+}
+function formatTime12(value){
+  const t=normalizeTime24(value);
+  const m=t.match(/^(\d{2}):(\d{2})$/);
+  if(!m) return value||'';
+  let h=Number(m[1]); const min=m[2]; const ap=h>=12?'PM':'AM';
+  h=h%12||12;
+  return `${h}:${min} ${ap}`;
+}
+function time12PickerHtml(prefix, value=''){
+  const norm=normalizeTime24(value);
+  let h24=norm&&/^\d{2}:\d{2}$/.test(norm)?Number(norm.slice(0,2)):9;
+  let min=norm&&/^\d{2}:\d{2}$/.test(norm)?norm.slice(3,5):'00';
+  const ap=h24>=12?'PM':'AM';
+  const h12=h24%12||12;
+  const hours=Array.from({length:12},(_,i)=>i+1).map(h=>`<option value="${h}" ${h===h12?'selected':''}>${h}</option>`).join('');
+  const mins=['00','05','10','15','20','25','30','35','40','45','50','55'].map(v=>`<option value="${v}" ${v===min?'selected':''}>${v}</option>`).join('');
+  return `<div class="time12-picker">
+    <select class="hour" id="${prefix}-hour" aria-label="Hour">${hours}</select>
+    <span>:</span>
+    <select class="minute" id="${prefix}-minute" aria-label="Minute">${mins}</select>
+    <select class="ampm" id="${prefix}-ampm" aria-label="AM or PM">
+      <option value="AM" ${ap==='AM'?'selected':''}>AM</option>
+      <option value="PM" ${ap==='PM'?'selected':''}>PM</option>
+    </select>
+  </div>`;
+}
+function getTime12PickerValue(prefix){
+  const hEl=document.getElementById(prefix+'-hour');
+  const mEl=document.getElementById(prefix+'-minute');
+  const aEl=document.getElementById(prefix+'-ampm');
+  if(!hEl||!mEl||!aEl) return '';
+  let h=Number(hEl.value); const min=mEl.value; const ap=aEl.value;
+  if(ap==='AM'&&h===12) h=0;
+  if(ap==='PM'&&h!==12) h+=12;
+  return String(h).padStart(2,'0')+':'+String(min).padStart(2,'0');
+}
+
+/* ---- itinerary sub ---- */
+function viewItinerarySub(tr){
+  const t=tt();
+  const days = state.itineraries[tr.id]||[];
+  return `
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+      <button class="btn btn-ghost btn-sm" onclick="generateDays()">${t.itinerary.generate}</button>
+      <button class="btn btn-brass btn-sm" onclick="openDayForm()">+ ${t.itinerary.addDay}</button>
+      ${days.length? `<button class="btn btn-ghost btn-sm" onclick="printItinerary('${tr.id}')">🖨 ${t.itinerary.print}</button>`:''}
+      ${days.length? `<button class="btn btn-ghost btn-sm" onclick="openShareCenter('${tr.id}')">📤 ${t.itinerary.share}</button>`:''}
+      ${days.length? `<button class="btn btn-brass btn-sm" onclick="startLiveCollaboration('${tr.id}')">👥 ${state.lang==='es'?'Colaborar en vivo':'Live collaboration'}</button>`:''}
+    </div>
+    ${tr.liveSync? `<div class="collab-bar"><div class="collab-status"><span class="sync-dot"></span><span>${state.lang==='es'?'Sincronización colaborativa activa':'Live collaboration active'}${tr.lastSyncedAt?' · '+new Date(tr.lastSyncedAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):''}</span></div><button class="btn btn-ghost btn-sm" onclick="syncTripNow('${tr.id}')">↻ ${state.lang==='es'?'Sincronizar ahora':'Sync now'}</button></div>`:''}
+    ${tr.shareId? `<p class="field-hint" style="margin:-8px 0 14px;">${t.itinerary.sharedHint}</p>`:''}
+    ${days.length? days.map((d,i)=>dayCard(tr,d,i,days.length)).join('') : `<div class="panel empty"><p>${t.itinerary.noDays}</p></div>`}
+  `;
+}
+function dayCard(tr,d,i,total){
+  const t=tt();
+  const activities=Array.isArray(d?.activities)?d.activities:[];
+  return `<div class="day-card">
+    <div class="dh">
+      <div class="lbl">${escapeHtml(displayDayLabel(d,i))}</div>
+      <div class="ctl">
+        <button class="btn btn-ghost" ${i===0?'disabled style="opacity:.3"':''} onclick="moveDay('${tr.id}','${d.id}',-1)">${t.common.up}</button>
+        <button class="btn btn-ghost" ${i===total-1?'disabled style="opacity:.3"':''} onclick="moveDay('${tr.id}','${d.id}',1)">${t.common.down}</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteDay('${tr.id}','${d.id}')">✕</button>
+      </div>
+    </div>
+    ${activities.length? activities.map(a=>`
+      <div class="act-row"><span class="time">${escapeHtml(formatTime12(a.time||''))}</span><span class="title">${escapeHtml(a.title)}
+      ${a.location?`<div class="activity-meta">📍 <a target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.location)}">${escapeHtml(a.location)}</a></div>`:''}</span>
+      <button class="del" onclick="deleteActivity('${tr.id}','${d.id}','${a.id}')">✕</button></div>`).join('')
+      : `<p style="color:var(--muted);font-size:12px;margin:6px 0;">${t.itinerary.empty}</p>`}
+    <div class="add-act-row">
+      ${time12PickerHtml(`at-${d.id}`)}
+      <input class="title-in" id="ai-${d.id}" placeholder="${t.itinerary.activity}">
+      <input class="place-in" id="al-${d.id}" placeholder="${state.lang==='es'?'Lugar / dirección (opcional)':'Place / address (optional)'}" onkeydown="if(event.key==='Enter')addActivity('${tr.id}','${d.id}')">
+      <button class="btn btn-brass btn-sm" onclick="addActivity('${tr.id}','${d.id}')">${t.itinerary.addActivity}</button>
+    </div>
+  </div>`;
+}
+
+function localizedDateLabel(iso){
+  if(!iso) return '';
+  const parts=String(iso).split('-').map(Number);
+  if(parts.length!==3 || parts.some(Number.isNaN)) return iso;
+  const d=new Date(parts[0],parts[1]-1,parts[2]);
+  try{
+    return new Intl.DateTimeFormat(state.lang==='es'?'es-ES':'en-US',{
+      weekday:'long', month:'long', day:'numeric', year:'numeric'
+    }).format(d);
+  }catch(e){ return iso; }
+}
+function displayDayLabel(day,index=0){
+  const raw=String(day?.label||'').trim();
+  const generated=/^(Day|Día)\s+\d+\s*[—-]\s*\d{4}-\d{2}-\d{2}$/i.test(raw);
+  if(day?.date && (generated || !raw)){
+    return `${state.lang==='es'?'Día':'Day'} ${index+1} — ${localizedDateLabel(day.date)}`;
+  }
+  return raw || `${state.lang==='es'?'Día':'Day'} ${index+1}${day?.date?' — '+localizedDateLabel(day.date):''}`;
+}
+
+function generateDays(){
+  const tr = tripById(ui.currentTripId);
+  if(!tr || !tr.start || !tr.end) return;
+  if(!state.itineraries[tr.id]) state.itineraries[tr.id]=[];
+  const s = new Date(tr.start), e = new Date(tr.end);
+  const existingDates = new Set(state.itineraries[tr.id].map(d=>d.date));
+  let n=1;
+  for(let d=new Date(s); d<=e; d.setDate(d.getDate()+1)){
+    const iso = d.toISOString().slice(0,10);
+    if(!existingDates.has(iso)){ state.itineraries[tr.id].push({id:uid(), label:`${state.lang==='es'?'Día':'Day'} ${n} — ${iso}`, date:iso, activities:[]}); }
+    n++;
+  }
+  saveState(); render();
+}
+function openDayForm(){ ui.modal='day'; render(); }
+function saveDayForm(){
+  const label = document.getElementById('d-label').value.trim();
+  if(!label || !ui.currentTripId){ ui.modal=null; render(); return; }
+  if(!state.itineraries[ui.currentTripId]) state.itineraries[ui.currentTripId]=[];
+  state.itineraries[ui.currentTripId].push({id:uid(), label, date:'', activities:[]});
+  ui.modal=null; saveState(); render();
+}
+function deleteDay(tripId,dayId){
+  const tr=tripById(tripId); if(tr&&tr.liveSync){ if(!tr.collabDeleted) tr.collabDeleted={days:[],activities:[],bookings:[]}; if(!tr.collabDeleted.days.includes(dayId)) tr.collabDeleted.days.push(dayId); const day=(state.itineraries[tripId]||[]).find(d=>d.id===dayId); (day&&day.activities||[]).forEach(a=>{if(!tr.collabDeleted.activities.includes(a.id)) tr.collabDeleted.activities.push(a.id);}); }
+  state.itineraries[tripId] = (state.itineraries[tripId]||[]).filter(d=>d.id!==dayId);
+  saveState(); render();
+}
+function moveDay(tripId,dayId,dir){
+  const arr = state.itineraries[tripId]||[];
+  const i = arr.findIndex(d=>d.id===dayId); const j=i+dir;
+  if(j<0||j>=arr.length) return;
+  [arr[i],arr[j]] = [arr[j],arr[i]];
+  saveState(); render();
+}
+function addActivity(tripId,dayId){
+  const time = getTime12PickerValue('at-'+dayId);
+  const title = document.getElementById('ai-'+dayId).value.trim();
+  const locEl = document.getElementById('al-'+dayId);
+  const location = locEl?locEl.value.trim():'';
+  if(!title) return;
+  const day = (state.itineraries[tripId]||[]).find(d=>d.id===dayId);
+  if(!day) return;
+  day.activities.push({id:uid(), time, title, location});
+  day.activities.sort((a,b)=>(a.time||'99').localeCompare(b.time||'99'));
+  saveState(); render();
+}
+function deleteActivity(tripId,dayId,actId){
+  const tr=tripById(tripId); if(tr&&tr.liveSync){ if(!tr.collabDeleted) tr.collabDeleted={days:[],activities:[],bookings:[]}; if(!tr.collabDeleted.activities.includes(actId)) tr.collabDeleted.activities.push(actId); }
+  const day = (state.itineraries[tripId]||[]).find(d=>d.id===dayId);
+  if(!day) return;
+  day.activities = day.activities.filter(a=>a.id!==actId);
+  saveState(); render();
+}
+
+/* ---- budget sub ---- */
+function viewBudgetSub(tr){
+  const t=tt();
+  const spent = tripSpent(tr.id), budget = Number(tr.budgetGoal||0);
+  const remaining = budget - spent;
+  const over = spent>budget && budget>0;
+  const catsHtml = CATS.map(c=>{
+    const s = catSpent(tr.id,c); if(s===0) return '';
+    return `<div class="li"><div class="main"><div class="t">${t.budget.cats[c]}</div></div><div class="amt">${money(s,tr.currency)}</div></div>`;
+  }).join('');
+  const expenses = state.expenses.filter(e=>e.tripId===tr.id).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  return `
+    <div class="grid3">
+      <div class="stat"><div class="label">${t.budget.planned}</div><div class="value">${money(budget,tr.currency)}</div></div>
+      <div class="stat"><div class="label">${t.budget.spent}</div><div class="value ${over?'coral':''}">${money(spent,tr.currency)}</div></div>
+      <div class="stat"><div class="label">${over? t.budget.overBy : t.budget.remaining}</div><div class="value ${over?'coral':'green'}">${money(Math.abs(remaining),tr.currency)}</div></div>
+    </div>
+    <div style="margin-bottom:14px;"><button class="btn btn-brass btn-sm" onclick="openExpenseForm()">+ ${t.budget.addExpense}</button></div>
+    ${catsHtml? `<div class="panel"><div class="row-list">${catsHtml}</div></div>` : ''}
+    <div class="panel">
+      <h3 style="margin:0 0 8px;font-size:16px;color:var(--paper);">${t.budget.log}</h3>
+      ${expenses.length? `<div class="row-list">${expenses.map(e=>`
+        <div class="li"><div class="main"><div class="t">${escapeHtml(e.desc||t.budget.cats[e.category])}</div><div class="s">${t.budget.cats[e.category]} · ${e.date||''}</div></div>
+        <div class="amt neg">-${money(e.amount,tr.currency)}</div><button class="del" onclick="deleteExpense('${e.id}')">✕</button></div>`).join('')}</div>`
+        : `<p style="color:var(--muted);font-size:13px;">${t.budget.empty}</p>`}
+    </div>
+    <div class="panel">
+      <h3 style="margin:0 0 4px;font-size:16px;color:var(--paper);cursor:pointer;" onclick="toggleConverter()">${t.budget.convert} ${ui.showConverter?'▲':'▼'}</h3>
+      ${ui.showConverter? converterHtml() : ''}
+    </div>
+  `;
+}
+function toggleConverter(){
+  ui.showConverter=!ui.showConverter; render();
+  if(ui.showConverter && ui.convDraft.mode!=='manual' && !ui.convDraft.loading){
+    setTimeout(fetchDailyRate,50);
+  }
+}
+
+
+function ensureConverterDefaults(){
+  if(!ui.convDraft) ui.convDraft={amount:"100",from:"",to:"",rate:"1",mode:"auto",rateDate:"",loading:false,error:"",rateSource:""};
+  const tr=ui.currentTripId?tripById(ui.currentTripId):null;
+  const preferred=(tr?.currency||state.profile?.currency||'USD').toUpperCase();
+  if(!ui.convDraft.from) ui.convDraft.from=preferred;
+  if(!ui.convDraft.to){
+    const fallback=(CURRENCIES||[]).map(c=>c.code).find(c=>c!==preferred) || 'EUR';
+    ui.convDraft.to=fallback;
+  }
+  if(ui.convDraft.from===ui.convDraft.to){
+    const fallback=(CURRENCIES||[]).map(c=>c.code).find(c=>c!==ui.convDraft.from) || (ui.convDraft.from==='EUR'?'USD':'EUR');
+    ui.convDraft.to=fallback;
+  }
+}
+
+
+
+
+function converterCurrencyOptions(selected){
+  const list = Array.isArray(CURRENCIES)?CURRENCIES:[];
+  const sel=String(selected||'').toUpperCase();
+  const known=list.some(c=>c.code===sel);
+  const options=list.map(c=>`<option value="${c.code}" ${c.code===sel?'selected':''}>${c.code} — ${state.lang==='es'?(c.es||c.name||c.code):(c.en||c.name||c.code)}</option>`).join('');
+  return `${options}<option value="OTHER" ${sel&&!known?'selected':''}>${state.lang==='es'?'Otra moneda…':'Other currency…'}</option>`;
+}
+function fxCurrencyField(id,label,value){
+  const val=String(value||'').toUpperCase();
+  const known=(CURRENCIES||[]).some(c=>c.code===val);
+  return `<div class="field"><label>${label}</label>
+    <select id="${id}" onchange="converterCurrencyChanged('${id}')">${converterCurrencyOptions(val)}</select>
+    <input id="${id}-other" maxlength="4" placeholder="${state.lang==='es'?'Código ISO, ej. MXN':'ISO code, e.g. MXN'}"
+      value="${known?'':escapeHtml(val)}" style="text-transform:uppercase;margin-top:7px;display:${known?'none':'block'};" onchange="syncConverterDraftFromFields(false);if(ui.convDraft.mode===\'auto\')fetchDailyRate();">
+  </div>`;
+}
+function converterCurrencyChanged(id){
+  const s=document.getElementById(id),o=document.getElementById(id+'-other');
+  if(!s||!o)return;
+  o.style.display=s.value==='OTHER'?'block':'none';
+  if(s.value==='OTHER') o.focus();
+  syncConverterDraftFromFields(false);
+  if(ui.convDraft.mode==='auto') fetchDailyRate();
+}
+function readConverterCurrency(id){
+  const s=document.getElementById(id);
+  if(!s) return '';
+  if(s.value==='OTHER'){
+    const o=document.getElementById(id+'-other');
+    return String(o?.value||'').trim().toUpperCase();
+  }
+  return s.value.toUpperCase();
+}
+function syncConverterDraftFromFields(includeRate=true){
+  const a=document.getElementById('cv-amount');
+  if(a) ui.convDraft.amount=a.value;
+  ui.convDraft.from=readConverterCurrency('cv-from')||ui.convDraft.from||state.profile?.currency||'USD';
+  ui.convDraft.to=readConverterCurrency('cv-to')||ui.convDraft.to||((CURRENCIES||[]).map(c=>c.code).find(c=>c!==(ui.convDraft.from||'USD'))||'EUR');
+  if(includeRate){
+    const r=document.getElementById('cv-rate');
+    if(r) ui.convDraft.rate=r.value;
+  }
+}
+function swapConverterCurrencies(){
+  syncConverterDraftFromFields();
+  const old=ui.convDraft.from; ui.convDraft.from=ui.convDraft.to; ui.convDraft.to=old;
+  ui.convResult=null; ui.convDraft.error=''; render();
+  if(ui.convDraft.mode==='auto') setTimeout(fetchDailyRate,0);
+}
+function setConverterMode(mode){
+  syncConverterDraftFromFields();
+  ui.convDraft.mode=mode;
+  ui.convDraft.error='';
+  ui.convResult=null;
+  render();
+  if(mode==='auto') setTimeout(fetchDailyRate,0);
+}
+async function fetchDailyRate(){
+  ensureConverterDefaults();
+  syncConverterDraftFromFields(false);
+  const from=String(ui.convDraft.from||'').toUpperCase();
+  const to=String(ui.convDraft.to||'').toUpperCase();
+  if(!from||!to) return;
+
+  if(from===to){
+    ui.convDraft.rate='1';
+    ui.convDraft.rateDate=new Date().toISOString().slice(0,10);
+    ui.convDraft.loading=false;
+    ui.convDraft.error='';
+    ui.convDraft.rateSource='identity';
+    ui.convResult={value:parseMoneyInput(ui.convDraft.amount),to,rate:1,date:ui.convDraft.rateDate||''};
+    render();
+    return;
+  }
+
+  const cacheKey=`waypoint-fx:${from}:${to}`;
+  const saveCachedRate=(data)=>{
+    try{
+      localStorage.setItem(cacheKey,JSON.stringify({
+        rate:Number(data.rate),
+        date:data.date||'',
+        source:data.source||'',
+        savedAt:Date.now()
+      }));
+    }catch(e){}
+  };
+  const readCachedRate=()=>{
+    try{
+      const raw=localStorage.getItem(cacheKey);
+      if(!raw) return null;
+      const x=JSON.parse(raw);
+      return Number(x.rate)>0?x:null;
+    }catch(e){ return null; }
+  };
+  const applyRate=(data,source)=>{
+    const rate=Number(data.rate);
+    if(!Number.isFinite(rate)||rate<=0) throw new Error('invalid rate');
+    ui.convDraft.rate=String(rate);
+    ui.convDraft.rateDate=data.date||new Date().toISOString().slice(0,10);
+    ui.convDraft.loading=false;
+    ui.convDraft.error='';
+    ui.convDraft.rateSource=source||data.source||'live';
+    const amount=parseMoneyInput(ui.convDraft.amount);
+    ui.convResult={value:roundMoney(amount*rate),to,rate,date:ui.convDraft.rateDate||''};
+    saveCachedRate({rate,date:ui.convDraft.rateDate,source:ui.convDraft.rateSource});
+    render();
+  };
+
+  ui.convDraft.loading=true;
+  ui.convDraft.error='';
+  render();
+
+  // Route 1: Waypoint production server (best for deployed app).
+  try{
+    if(location.protocol==='http:' || location.protocol==='https:'){
+      const r=await fetch(`/api/fx/rate?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,{cache:'no-store'});
+      if(r.ok){
+        const data=await r.json();
+        if(Number(data.rate)>0){
+          applyRate(data,'Waypoint');
+          return;
+        }
+      }
+    }
+  }catch(e){}
+
+  // Route 2: direct public provider (works for standalone HTML/PWA when allowed by network/browser).
+  try{
+    const url=`https://api.frankfurter.dev/v2/rate/${encodeURIComponent(from.toLowerCase())}/${encodeURIComponent(to.toLowerCase())}`;
+    const r=await fetch(url,{headers:{'accept':'application/json'},cache:'no-store'});
+    if(r.ok){
+      const data=await r.json();
+      if(Number(data.rate)>0){
+        applyRate({rate:Number(data.rate),date:data.date||'',source:'Frankfurter'},'Frankfurter');
+        return;
+      }
+    }
+  }catch(e){}
+
+  // Route 3: try rates endpoint as a compatibility fallback.
+  try{
+    const url=`https://api.frankfurter.dev/v2/rates?base=${encodeURIComponent(from.toLowerCase())}&quotes=${encodeURIComponent(to.toLowerCase())}`;
+    const r=await fetch(url,{headers:{'accept':'application/json'},cache:'no-store'});
+    if(r.ok){
+      const rows=await r.json();
+      const row=Array.isArray(rows)?rows.find(x=>String(x.quote||'').toUpperCase()===to):null;
+      if(row&&Number(row.rate)>0){
+        applyRate({rate:Number(row.rate),date:row.date||'',source:'Frankfurter'},'Frankfurter');
+        return;
+      }
+    }
+  }catch(e){}
+
+  // Route 4: last known valid rate from this device.
+  const cached=readCachedRate();
+  if(cached){
+    ui.convDraft.rate=String(cached.rate);
+    ui.convDraft.rateDate=cached.date||'';
+    ui.convDraft.loading=false;
+    ui.convDraft.error=state.lang==='es'
+      ?'Sin conexión con la tasa en vivo. Mostrando la última tasa disponible en este dispositivo.'
+      :'Live rate unavailable. Showing the last rate saved on this device.';
+    ui.convDraft.rateSource='cache';
+    const amount=parseMoneyInput(ui.convDraft.amount);
+    ui.convResult={value:roundMoney(amount*Number(cached.rate)),to,rate:Number(cached.rate),date:cached.date||''};
+    render();
+    return;
+  }
+
+  ui.convDraft.loading=false;
+  ui.convDraft.error=state.lang==='es'
+    ?'No pudimos obtener una tasa en vivo para este par. Verifica tu conexión o usa una tasa manual.'
+    :'We could not retrieve a live rate for this pair. Check your connection or use a manual rate.';
+  ui.convDraft.rateSource='';
+  render();
+}
+
+function converterHtml(){
+  ensureConverterDefaults();
+  const t=tt();
+  const d=ui.convDraft;
+  const auto=d.mode!=='manual';
+  return `
+    <div class="seg" style="margin:10px 0 12px;">
+      <button class="${auto?'active':''}" onclick="setConverterMode('auto')">⚡ ${t.budget.fxAuto}</button>
+      <button class="${!auto?'active':''}" onclick="setConverterMode('manual')">✎ ${t.budget.fxManual}</button>
+    </div>
+    <div class="field"><label>${t.budget.convertAmount}</label>
+      <input id="cv-amount" type="number" min="0" step="0.01" inputmode="decimal" value="${escapeHtml(d.amount)}" oninput="ui.convDraft.amount=this.value" onblur="if(this.value!==\'\'){this.value=roundMoney(this.value).toFixed(2);ui.convDraft.amount=this.value;}">
+    </div>
+    <div class="form-row">
+      ${fxCurrencyField('cv-from',t.budget.convertFrom,d.from)}
+      ${fxCurrencyField('cv-to',t.budget.convertTo,d.to)}
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:-2px 0 12px;">
+      <button class="btn btn-ghost btn-sm" onclick="swapConverterCurrencies()">⇄ ${t.budget.fxSwap}</button>
+      ${auto?`<button class="btn btn-ghost btn-sm" onclick="fetchDailyRate()">↻ ${t.budget.fxRefresh}</button>`:''}
+    </div>
+    ${auto?`
+      <div class="panel" style="padding:12px;margin-bottom:12px;">
+        <div style="font-size:11px;color:var(--muted);font-family:var(--font-mono);text-transform:uppercase;">${t.budget.fxToday}</div>
+        ${d.loading?`<div style="margin-top:5px;">${t.budget.fxLoading}</div>`:
+          d.error?`<div style="margin-top:5px;color:#E8A186;">${escapeHtml(d.error)}</div>`:
+          `<div style="font-size:22px;font-family:var(--font-display);margin-top:3px;">1 ${escapeHtml(d.from)} = ${fmt(Number(d.rate)||0)} ${escapeHtml(d.to)}</div>
+           ${d.rateDate?`<div class="field-hint">${t.budget.fxUpdated}: ${escapeHtml(d.rateDate)}${d.rateSource==='cache'?(state.lang==='es'?' · última tasa guardada':' · last saved rate'):(d.rateSource?` · ${escapeHtml(d.rateSource)}`:'')}</div>`:''}`}
+      </div>`:
+      `<div class="field"><label>${t.budget.convertRate.replace('{from}',d.from||state.profile?.currency||'USD').replace('{to}',d.to||'EUR')}</label>
+        <input id="cv-rate" type="number" min="0" step="0.000001" inputmode="decimal" value="${escapeHtml(d.rate)}" oninput="ui.convDraft.rate=this.value">
+      </div>`}
+    <button class="btn btn-brass btn-sm" onclick="${auto?'fetchDailyRate()':'calcConvert()'}">${t.budget.convertBtn}</button>
+    ${ui.convResult!==null?`<div class="stat" style="margin-top:10px;">
+      <div class="label">${t.budget.convertResult}</div>
+      <div class="value">${fmt(ui.convResult.value)} ${escapeHtml(ui.convResult.to)}</div>
+      ${ui.convResult.rate?`<div class="foot">1 ${escapeHtml(d.from)} = ${fmt(ui.convResult.rate)} ${escapeHtml(d.to)}${ui.convResult.date?' · '+escapeHtml(ui.convResult.date):''}</div>`:''}
+    </div>`:''}
+  `;
+}
+function calcConvert(){
+  syncConverterDraftFromFields(true);
+  const amount=parseMoneyInput(ui.convDraft.amount);
+  const rate=parseFloat(ui.convDraft.rate)||0;
+  ui.convResult={value:roundMoney(amount*rate),to:ui.convDraft.to||'—',rate,date:ui.convDraft.rateDate||''};
+  render();
+}
+function openExpenseForm(){
+  ui.modal='expense';
+  ui.expenseDraft = {cat:CATS[0], desc:'', amount:'', date:new Date().toISOString().slice(0,10)};
+  render();
+}
+function saveExpenseForm(){
+  const g=id=>document.getElementById(id).value;
+  state.expenses.push({id:uid(), tripId:ui.currentTripId, category:g('e-cat'), desc:g('e-desc').trim(), amount:parseMoneyInput(g('e-amount')), date:g('e-date')});
+  ui.modal=null; ui.expenseDraft=null;
+  saveState(); render();
+}
+function deleteExpense(id){
+  const t=tt();
+  const idx = state.expenses.findIndex(e=>e.id===id);
+  const removed = state.expenses[idx];
+  state.expenses = state.expenses.filter(e=>e.id!==id);
+  saveState(); render();
+  showToast(t.budget.deleted, ()=>{ state.expenses.splice(idx,0,removed); saveState(); render(); });
+}
+
+/* ---- checklist sub ---- */
+function packingCategoryOf(it){
+  return PACKING_CATEGORIES.includes(it.category)?it.category:'other';
+}
+function packingCategoryLabel(cat){ return PACKING_CATEGORY_LABELS[state.lang][cat]||cat; }
+function viewChecklistSub(tr){
+  const t=tt(), es=state.lang==='es';
+  const items = state.checklists[tr.id]||[];
+  const packed=items.filter(x=>x.done).length;
+  const pct=items.length?Math.round(packed/items.length*100):0;
+  const groups=PACKING_CATEGORIES.map(cat=>({cat,items:items.filter(x=>packingCategoryOf(x)===cat)})).filter(g=>g.items.length);
+  return `
+    <div class="panel">
+      <div class="packing-summary">
+        <div><div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;">${es?'Progreso del equipaje':'Packing progress'}</div>
+        <div class="packing-count">${packed}/${items.length}</div><div style="font-size:11px;color:var(--muted);">${es?'artículos preparados':'items packed'}</div></div>
+        <div style="min-width:120px;flex:1;max-width:260px;"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:6px;"><span>${es?'Completado':'Complete'}</span><strong>${pct}%</strong></div><div class="progress-line"><div style="width:${pct}%"></div></div></div>
+      </div>
+      <div class="packing-add-grid">
+        <div class="packing-name field" style="margin:0;"><label>${es?'Artículo':'Item'}</label><input id="ck-item" placeholder="${t.checklist.itemPlaceholder}" onkeydown="if(event.key==='Enter')addChecklistItem()"></div>
+        <div class="field" style="margin:0;"><label>${es?'Categoría':'Category'}</label><select id="ck-cat">${PACKING_CATEGORIES.map(c=>`<option value="${c}">${packingCategoryLabel(c)}</option>`).join('')}</select></div>
+        <div class="field" style="margin:0;"><label>${es?'Cantidad':'Qty'}</label><input id="ck-qty" type="number" min="1" max="99" value="1"></div>
+        <button class="btn btn-brass btn-sm packing-add-btn" onclick="addChecklistItem()">+ ${t.common.add}</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+      <button class="btn btn-ghost btn-sm" onclick="addPresetItems()">+ ${es?'Esenciales de viaje':'Travel essentials'}</button>
+      ${tr.tripType && TRIP_TYPE_PACKING[tr.tripType]? `<button class="btn btn-ghost btn-sm" onclick="addTypePresetItems()">+ ${TRIP_TYPE_LABELS[state.lang][tr.tripType]}</button>`:''}
+      ${items.length?`<button class="btn btn-ghost btn-sm" onclick="markAllPacked(${packed===items.length?'false':'true'})">${packed===items.length?(es?'Desmarcar todo':'Unpack all'):(es?'Marcar todo listo':'Pack all')}</button>`:''}
+    </div>
+    ${groups.length?groups.map(g=>`<div class="panel packing-group">
+      <div class="packing-group-head"><div class="packing-group-title">${packingCategoryLabel(g.cat)}</div><div class="packing-group-count">${g.items.filter(x=>x.done).length}/${g.items.length}</div></div>
+      ${g.items.map(it=>`<div class="packing-item"><input type="checkbox" ${it.done?'checked':''} onchange="toggleChecklistItem('${it.id}')"><span class="packing-text ${it.done?'done':''}">${escapeHtml(it.text)}</span>${Number(it.qty||1)>1?`<span class="qty-badge">×${Number(it.qty||1)}</span>`:''}<button class="del" onclick="deleteChecklistItem('${it.id}')">✕</button></div>`).join('')}
+    </div>`).join(''):`<div class="panel"><div class="empty"><span class="ic">🧳</span><h3>${es?'Tu maleta empieza aquí':'Your packing list starts here'}</h3><p>${es?'Agrega tus artículos o usa una lista sugerida para comenzar.':'Add items or use a suggested list to get started.'}</p></div></div>`}
+  `;
+}
+function addChecklistItem(){
+  const el=document.getElementById('ck-item'); if(!el||!ui.currentTripId) return;
+  const val=el.value.trim(); if(!val) return;
+  const cat=document.getElementById('ck-cat')?.value||'other';
+  const qty=Math.max(1,Math.min(99,Number(document.getElementById('ck-qty')?.value||1)));
+  if(!state.checklists[ui.currentTripId]) state.checklists[ui.currentTripId]=[];
+  state.checklists[ui.currentTripId].push({id:uid(),text:val,done:false,category:cat,qty});
+  saveState(); render();
+}
+function normalizePackingPreset(x){ return typeof x==='string'?{text:x,category:'other',qty:1}:{text:x.text,category:x.category||'other',qty:x.qty||1}; }
+function addPresetItems(){
+  if(!ui.currentTripId) return;
+  if(!state.checklists[ui.currentTripId]) state.checklists[ui.currentTripId]=[];
+  const existing=new Set(state.checklists[ui.currentTripId].map(i=>(i.text||'').toLowerCase()));
+  PRESET_ITEMS[state.lang].map(normalizePackingPreset).forEach(x=>{if(!existing.has(x.text.toLowerCase())) state.checklists[ui.currentTripId].push({id:uid(),text:x.text,done:false,category:x.category,qty:x.qty});});
+  saveState(); render();
+}
+function addTypePresetItems(){
+  const tr=tripById(ui.currentTripId);
+  if(!tr||!tr.tripType||!TRIP_TYPE_PACKING[tr.tripType]) return;
+  if(!state.checklists[ui.currentTripId]) state.checklists[ui.currentTripId]=[];
+  const existing=new Set(state.checklists[ui.currentTripId].map(i=>(i.text||'').toLowerCase()));
+  TRIP_TYPE_PACKING[tr.tripType][state.lang].map(normalizePackingPreset).forEach(x=>{if(!existing.has(x.text.toLowerCase())) state.checklists[ui.currentTripId].push({id:uid(),text:x.text,done:false,category:x.category,qty:x.qty});});
+  saveState(); render();
+}
+function toggleChecklistItem(id){
+  const it=(state.checklists[ui.currentTripId]||[]).find(i=>i.id===id);
+  if(it){it.done=!it.done;saveState();render();}
+}
+function markAllPacked(done){
+  (state.checklists[ui.currentTripId]||[]).forEach(i=>i.done=Boolean(done));
+  saveState();render();
+}
+function deleteChecklistItem(id){
+  state.checklists[ui.currentTripId]=(state.checklists[ui.currentTripId]||[]).filter(i=>i.id!==id);
+  saveState();render();
+}
+
+/* ---- notes sub ---- */
+function viewNotesSub(tr){
+  const t=tt();
+  const docs = state.tripDocs[tr.id]||[];
+  return `
+    <p style="color:var(--muted);font-size:12.5px;margin:0 0 14px;">${t.notes.sub}</p>
+    ${docs.length? `<div class="panel"><div class="row-list">${docs.map(d=>`
+      <div class="li"><div class="main"><div class="t">${escapeHtml(d.label)}</div><div class="s">${escapeHtml(d.value)}</div></div>
+      <button class="del" onclick="deleteDoc('${tr.id}','${d.id}')">✕</button></div>`).join('')}</div></div>`
+      : `<div class="panel empty"><p>${t.notes.empty}</p></div>`}
+    <div class="panel">
+      <div class="field"><label>${t.notes.label}</label><input id="doc-label" placeholder="${t.notes.labelPlaceholder}"></div>
+      <div class="field"><label>${t.notes.value}</label><input id="doc-value" placeholder="${t.notes.valuePlaceholder}" onkeydown="if(event.key==='Enter')addDoc('${tr.id}')"></div>
+      <button class="btn btn-brass btn-sm btn-block" onclick="addDoc('${tr.id}')">+ ${t.notes.addEntry}</button>
+      <p class="field-hint" style="margin:12px 0 4px;">${t.notes.presets}</p>
+      <div class="chips-wrap">${DOC_PRESETS[state.lang].map(p=>`<button class="chip" style="cursor:pointer;" onclick="quickAddDoc('${p.replace(/'/g,"\\'")}')"><span>+ ${p}</span></button>`).join('')}</div>
+    </div>
+  `;
+}
+function addDoc(tripId){
+  const label = document.getElementById('doc-label').value.trim();
+  const value = document.getElementById('doc-value').value.trim();
+  if(!label || !value) return;
+  if(!state.tripDocs[tripId]) state.tripDocs[tripId]=[];
+  state.tripDocs[tripId].push({id:uid(), label, value});
+  saveState(); render();
+}
+function quickAddDoc(label){
+  const el = document.getElementById('doc-label');
+  if(el){ el.value = label; document.getElementById('doc-value').focus(); }
+}
+function deleteDoc(tripId,docId){
+  state.tripDocs[tripId] = (state.tripDocs[tripId]||[]).filter(d=>d.id!==docId);
+  saveState(); render();
+}
+
+/* ===================== SETTINGS ===================== */
+function viewSettings(){
+  const t=tt();
+  return `
+    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p></div></div>
+    <div class="panel">
+      <h3 style="margin:0 0 12px;font-size:16px;color:var(--paper);">${t.settings.account}</h3>
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px;">
+        <div class="photo-circle">${avatarInner()}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('pf-photo').click()">${t.settings.uploadPhoto}</button>
+          <input type="file" id="pf-photo" accept="image/*" class="hidden-file" onchange="handlePhotoUpload(event)">
+          ${state.profile.photo? `<button class="btn btn-ghost btn-sm" onclick="removePhoto()">${t.common.remove}</button>`:''}
+        </div>
+      </div>
+      <p class="field-hint">${t.settings.orAvatar}</p>
+      <div class="avatar-grid">${AVATARS.map(a=>`<div class="avatar-opt ${(!state.profile.photo && state.profile.avatar===a)?'sel':''}" onclick="setAvatar('${a}')">${a}</div>`).join('')}</div>
+      <div class="field" style="margin-top:12px;max-width:280px;"><label>${t.settings.name}</label><input id="pf-name" placeholder="${t.settings.namePlaceholder}" value="${escapeHtml(state.profile.name||'')}" onchange="saveProfileName(this.value)"></div>
+    </div>
+    <div class="panel">
+      <p style="font-family:var(--font-mono);font-size:10.5px;color:var(--muted);margin:0 0 6px;text-transform:uppercase;letter-spacing:0.08em;">${t.settings.theme}</p>
+      <div class="theme-grid">
+        ${THEME_LIST.map(th=>`<div class="theme-opt ${state.profile.theme===th?'sel':''}" onclick="setTheme('${th}')">
+          <div class="theme-swatch" style="background:${themePreview(th)};"></div><div class="lbl">${t.settings.themes[th]}</div></div>`).join('')}
+      </div>
+      <div class="field" style="margin-top:16px;max-width:280px;"><label>${t.settings.defaultCurrency}</label>${currencySelectHtml('pf-currency', state.profile.currency||'USD')}</div>
+    </div>
+    <div class="panel">
+      <h3 style="margin:0 0 6px;font-size:16px;color:var(--paper);">${t.settings.data}</h3>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 12px;">${t.settings.dataSub}</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-brass btn-sm" onclick="exportData()">⭳ ${t.settings.exportBtn}</button>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('import-file').click()">⭱ ${t.settings.importBtn}</button>
+        <input type="file" id="import-file" class="hidden-file" accept="application/json" onchange="importData(event)">
+        <button class="btn btn-danger btn-sm" onclick="resetAllData()">${t.settings.resetAll}</button>
+      </div>
+    </div>
+  `;
+}
+function themePreview(th){
+  const map = {brass:'linear-gradient(135deg,#123B3B,#C9A227)',sunset:'linear-gradient(135deg,#4A2A1C,#E07A3F)',forest:'linear-gradient(135deg,#1B3A29,#B7A345)',rose:'linear-gradient(135deg,#432A4E,#D68FB0)'};
+  return map[th]||map.brass;
+}
+function setAvatar(a){ state.profile.avatar=a; state.profile.photo=''; saveState(); render(); }
+function saveProfileName(v){ state.profile.name = v.trim(); saveState(); }
+function setTheme(th){ state.profile.theme=th; saveState(); render(); }
+function handlePhotoUpload(evt){
+  const file = evt.target.files[0]; if(!file) return;
+  resizeImageFile(file, 200, (dataUrl)=>{ state.profile.photo=dataUrl; saveState(); render(); });
+}
+function removePhoto(){ state.profile.photo=''; saveState(); render(); }
+document.addEventListener('change', (e)=>{ if(e.target && e.target.id==='pf-currency'){ state.profile.currency = readCurrencyField('pf-currency'); saveState(); } });
+
+function exportData(){
+  const t=tt();
+  const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='waypoint-backup-'+new Date().toISOString().slice(0,10)+'.json';
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  showToast(t.settings.exported);
+}
+function importData(evt){
+  const t=tt();
+  const file = evt.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const data = JSON.parse(reader.result);
+      if(!data || !Array.isArray(data.trips)) throw new Error('bad format');
+      askConfirm(t.settings.importConfirm, ()=>{
+        state = Object.assign({lang:state.lang, trips:[], expenses:[], checklists:{}, itineraries:{}, tripDocs:{}, bookings:{}}, data);
+        saveState(); render();
+        showToast(t.settings.imported);
+      }, true, t.common.continueLabel);
+    }catch(e){ showToast(t.settings.importError); }
+  };
+  reader.readAsText(file);
+  evt.target.value = '';
+}
+function resetAllData(){
+  const t=tt();
+  askConfirm(t.settings.resetConfirm, ()=>{
+    const lang = state.lang;
+    state = {lang, trips:[], expenses:[], checklists:{}, itineraries:{}, tripDocs:{}, bookings:{}, profile:{name:"", avatar:"✈", photo:"", currency:"USD", theme:"brass"}};
+    ui = {screen:"home", currentTripId:null, tripSubTab:"overview", modal:null, editingTrip:null,
+      tripSearch:"", tripView:"upcoming", newTripCover:"", expenseDraft:null,
+      confirmMessage:"", confirmAction:null, confirmDanger:false, confirmLabel:null,
+      convDraft:{amount:"100", from:"", to:"", rate:"1", mode:"auto", rateDate:"", loading:false, error:"", rateSource:""}, convResult:null};
+    saveState(); render();
+    showToast(t.settings.resetDone);
+  }, true);
+}
+
+/* ===================== MODALS ===================== */
+function renderModal(){
+  let old = document.querySelector('.modal-bg'); if(old) old.remove();
+  if(!ui.modal) return;
+  const t=tt();
+  const bg = document.createElement('div');
+  bg.className='modal-bg';
+  bg.onclick=(e)=>{ if(e.target===bg){ ui.modal=null; render(); } };
+  let inner='';
+
+  if(ui.modal==='trip'){
+    const tr = ui.editingTrip? tripById(ui.editingTrip) : {};
+    const coverPhoto = ui.editingTrip? tr.coverPhoto : ui.newTripCover;
+    inner = `
+      <h3>${ui.editingTrip? t.trip.editTripTitle : t.trip.newTripTitle}</h3>
+      <div class="field"><label>${t.trip.coverPhoto}</label>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="trip-cover-preview">${coverPhoto? `<img src="${coverPhoto}">` : '🖼'}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('trip-cover-file').click()">${t.trip.uploadPhoto}</button>
+            <input type="file" id="trip-cover-file" accept="image/*" class="hidden-file" onchange="handleTripCoverUpload(event,'${ui.editingTrip||''}')">
+            ${coverPhoto? `<button type="button" class="btn btn-ghost btn-sm" onclick="removeTripCover('${ui.editingTrip||''}')">${t.common.remove}</button>`:''}
+          </div>
+        </div>
+      </div>
+      <div class="field"><label>${t.trip.name}</label><input id="f-name" placeholder="${t.trip.namePlaceholder}" value="${escapeHtml(tr.name||'')}"></div>
+      <div class="field"><label>${t.trip.destination}</label><input id="f-dest" placeholder="${t.trip.destPlaceholder}" value="${escapeHtml(tr.destination||'')}"></div>
+      <div class="field"><label>${t.trip.tripType}</label><select id="f-type">
+        <option value="">${t.trip.tripTypeNone}</option>
+        ${TRIP_TYPES.map(tt2=>`<option value="${tt2}" ${tr.tripType===tt2?'selected':''}>${TRIP_TYPE_LABELS[state.lang][tt2]}</option>`).join('')}
+      </select></div>
+      <div class="form-row">
+        <div class="field"><label>${t.trip.start}</label><input id="f-start" type="date" value="${tr.start||''}"></div>
+        <div class="field"><label>${t.trip.end}</label><input id="f-end" type="date" value="${tr.end||''}"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>${t.trip.budgetGoal}</label><input id="f-budget" type="number" min="0" value="${tr.budgetGoal||''}" step="0.01" inputmode="decimal" onblur="if(this.value!==''){this.value=roundMoney(this.value).toFixed(2);}"></div>
+        <div class="field"><label>${t.trip.currency}</label>${currencySelectHtml('f-currency', tr.currency||state.profile.currency||'USD')}</div>
+      </div>
+      <div class="field"><label>${t.trip.passportExpiry}</label><input id="f-passport" type="date" value="${tr.passportExpiry||''}">
+        <p class="field-hint">${t.trip.passportHint}</p></div>
+      <div class="field"><label>${t.trip.notes}</label><textarea id="f-notes">${escapeHtml(tr.notes||'')}</textarea></div>
+      <div class="form-actions">
+        <button class="btn btn-brass btn-block" onclick="saveTripForm()">${t.common.save}</button>
+        <button class="btn btn-ghost" onclick="closeModal()">${t.common.cancel}</button>
+      </div>`;
+  }
+  if(ui.modal==='shareCenter'){
+    const tr=tripById(ui.actionsTripId);
+    if(tr){
+      const es=state.lang==='es';
+      const liveReady=!!(tr.liveSync&&tr.syncServer&&tr.editKey&&tr.shareId);
+      inner = `
+        <h3>↗ ${es?'Compartir viaje':'Share trip'}</h3>
+        <p class="field-hint" style="margin-bottom:14px;">${es?'Elige cómo quieres compartir este viaje. Waypoint usará la opción compatible con tu dispositivo.':'Choose how you want to share this trip. Waypoint will use the option supported by your device.'}</p>
+        <button class="btn btn-brass btn-block" style="justify-content:flex-start;margin-bottom:8px;" onclick="nativeShareTrip('${tr.id}')">↗ &nbsp;${es?'Compartir del sistema':'System share'}</button>
+        <button class="btn btn-ghost btn-block" style="justify-content:flex-start;margin-bottom:8px;" onclick="shareViaWhatsApp('${tr.id}')">💬 &nbsp;WhatsApp</button>
+        <button class="btn btn-ghost btn-block" style="justify-content:flex-start;margin-bottom:8px;" onclick="shareViaSMS('${tr.id}')">💬 &nbsp;${es?'Mensajes / SMS':'Messages / SMS'}</button>
+        <button class="btn btn-ghost btn-block" style="justify-content:flex-start;margin-bottom:8px;" onclick="shareViaEmail('${tr.id}')">✉️ &nbsp;${es?'Correo':'Email'}</button>
+        <button class="btn btn-ghost btn-block" style="justify-content:flex-start;margin-bottom:8px;" onclick="copyTripShare('${tr.id}')">📋 &nbsp;${es?'Copiar resumen':'Copy summary'}</button>
+        <button class="btn btn-ghost btn-block" style="justify-content:flex-start;margin-bottom:8px;" onclick="downloadEditableItinerary('${tr.id}')">⬇️ &nbsp;${es?'Descargar itinerario editable':'Download editable itinerary'}</button>
+        <button class="btn btn-ghost btn-block" style="justify-content:flex-start;margin-bottom:8px;" onclick="startLiveCollaboration('${tr.id}')">👥 &nbsp;${liveReady?(es?'Compartir enlace colaborativo':'Share collaboration link'):(es?'Activar colaboración en vivo':'Enable live collaboration')}</button>
+        <button class="btn btn-ghost btn-block" style="margin-top:12px;" onclick="closeModal()">${t.common.close}</button>`;
+    }
+  }
+
+  if(ui.modal==='shareFallback'){
+    const d=ui.shareFallback||{};
+    inner = `
+      <h3>↗ ${state.lang==='es'?'Compartir':'Share'}: ${escapeHtml(d.title||'')}</h3>
+      <p class="field-hint">${state.lang==='es'?'Tu navegador no permitió abrir el menú de compartir. Copia este contenido y envíalo por WhatsApp, Mensajes, correo u otra app.':'Your browser did not allow the share menu. Copy this content and send it through Messages, email, or another app.'}</p>
+      <div class="field"><textarea id="share-fallback-text" style="min-height:180px;">${escapeHtml(d.text||'')}</textarea></div>
+      <div class="form-actions">
+        <button class="btn btn-brass" onclick="copyShareFallback()">${state.lang==='es'?'Copiar':'Copy'}</button>
+        <button class="btn btn-ghost" onclick="closeModal()">${t.common.close}</button>
+      </div>`;
+  }
+
+  if(ui.modal==='tripActions'){
+    const tr = tripById(ui.actionsTripId);
+    inner = tr? `
+      <h3>${escapeHtml(tr.name)}</h3>
+      <button class="btn btn-ghost btn-block" style="justify-content:flex-start;margin-bottom:8px;" onclick="openTripForm('${tr.id}')">✎ &nbsp;${t.common.edit}</button>
+      <button class="btn btn-ghost btn-block" style="justify-content:flex-start;margin-bottom:8px;" onclick="duplicateTrip('${tr.id}')">⧉ &nbsp;${t.home.duplicate}</button>
+      <button class="btn btn-ghost btn-block" style="justify-content:flex-start;margin-bottom:8px;" onclick="shareTrip('${tr.id}')">↗ &nbsp;${t.home.share}</button>
+      <button class="btn btn-danger btn-block" style="justify-content:flex-start;" onclick="deleteTrip('${tr.id}')">✕ &nbsp;${t.common.delete}</button>
+    ` : '';
+  }
+  if(ui.modal==='day'){
+    inner = `
+      <h3>${t.itinerary.addDay}</h3>
+      <div class="field"><label>${t.itinerary.dayLabel}</label><input id="d-label" placeholder="Day 1 — city arrival"></div>
+      <div class="form-actions">
+        <button class="btn btn-brass btn-block" onclick="saveDayForm()">${t.common.save}</button>
+        <button class="btn btn-ghost" onclick="closeModal()">${t.common.cancel}</button>
+      </div>`;
+  }
+  if(ui.modal==='expense'){
+    const d = ui.expenseDraft || {cat:CATS[0], desc:'', amount:'', date:new Date().toISOString().slice(0,10)};
+    inner = `
+      <h3>${t.budget.addExpense}</h3>
+      <div class="field"><label>${t.budget.category}</label><select id="e-cat">${CATS.map(c=>`<option value="${c}" ${d.cat===c?'selected':''}>${t.budget.cats[c]}</option>`).join('')}</select></div>
+      <div class="field"><label>${t.budget.desc}</label><input id="e-desc" value="${escapeHtml(d.desc)}"></div>
+      <div class="form-row">
+        <div class="field"><label>${t.budget.amount}</label><input id="e-amount" type="number" min="0" value="${escapeHtml(d.amount)}" step="0.01" inputmode="decimal" onblur="if(this.value!==''){this.value=roundMoney(this.value).toFixed(2);}"></div>
+        <div class="field"><label>${t.budget.date}</label><input id="e-date" type="date" value="${d.date}"></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-brass btn-block" onclick="saveExpenseForm()">${t.common.save}</button>
+        <button class="btn btn-ghost" onclick="closeModal()">${t.common.cancel}</button>
+      </div>`;
+  }
+  if(ui.modal==='booking'){
+    const es=state.lang==='es';
+    inner = `
+      <h3>${es?'Nueva reserva':'New booking'}</h3>
+      <div class="field"><label>${es?'Tipo':'Type'}</label><select id="b-type">
+        <option value="flight">✈ ${es?'Vuelo':'Flight'}</option>
+        <option value="hotel">🏨 Hotel</option>
+        <option value="transport">🚗 ${es?'Transporte':'Transport'}</option>
+        <option value="activity">🎟 ${es?'Actividad':'Activity'}</option>
+        <option value="other">• ${es?'Otra':'Other'}</option>
+      </select></div>
+      <div class="field"><label>${es?'Nombre / ruta':'Name / route'}</label><input id="b-title" placeholder="${es?'Ej. MIA → BOG / Hotel Cartagena':'e.g. MIA → BOG / Cartagena Hotel'}"></div>
+      <div class="form-row">
+        <div class="field"><label>${es?'Proveedor':'Provider'}</label><input id="b-provider" placeholder="${es?'Aerolínea, hotel…':'Airline, hotel…'}"></div>
+        <div class="field"><label>${es?'Confirmación':'Confirmation'}</label><input id="b-confirm" placeholder="ABC123"></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>${es?'Fecha':'Date'}</label><input id="b-date" type="date"></div>
+        <div class="field"><label>${es?'Hora':'Time'}</label>${time12PickerHtml('b-time')}</div>
+      </div>
+      <div class="field"><label>${es?'Lugar / dirección':'Place / address'}</label><input id="b-location" placeholder="${es?'Aeropuerto, hotel, punto de encuentro…':'Airport, hotel, meeting point…'}"></div>
+      <div class="field"><label>${es?'Notas':'Notes'}</label><textarea id="b-notes" placeholder="${es?'Terminal, equipaje, check-in, instrucciones…':'Terminal, baggage, check-in, instructions…'}"></textarea></div>
+      <div class="form-actions">
+        <button class="btn btn-brass btn-block" onclick="saveBookingForm()">${es?'Guardar':'Save'}</button>
+        <button class="btn btn-ghost" onclick="closeModal()">${es?'Cancelar':'Cancel'}</button>
+      </div>`;
+  }
+  if(ui.modal==='confirm'){
+    inner = `
+      <h3>${ui.confirmDanger? '⚠ ' : ''}${t.common.pleaseConfirm}</h3>
+      <p style="color:var(--muted);font-size:14px;line-height:1.55;margin:0 0 20px;">${escapeHtml(ui.confirmMessage||'')}</p>
+      <div class="form-actions">
+        <button class="btn ${ui.confirmDanger?'btn-danger':'btn-brass'} btn-block" onclick="runConfirmAction()">${ui.confirmLabel || (ui.confirmDanger? t.common.delete : t.common.save)}</button>
+        <button class="btn btn-ghost" onclick="cancelConfirm()">${t.common.cancel}</button>
+      </div>`;
+  }
+  bg.innerHTML = `<div class="modal">${inner}</div>`;
+  document.body.appendChild(bg);
+}
+function closeModal(){ ui.modal=null; ui.editingTrip=null; render(); }
+
+document.addEventListener('change', (e)=>{
+  if(e.target && e.target.id==='f-currency'){ /* handled at save time */ }
+});
+
+
+if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('/service-worker.js').catch(()=>{}));
+}
+
+loadState();
+setTimeout(()=>{ const s=document.getElementById('splash'); if(s) s.remove(); }, 1600);
+</script>
+</body>
+</html>

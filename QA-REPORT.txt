@@ -1,0 +1,99 @@
+Waypoint 4.0 Production QA
+Date: 2026-09-23
+
+Automated checks completed:
+PASS server.js syntax
+PASS frontend inline JavaScript syntax
+PASS static index response
+PASS PWA manifest response
+PASS health endpoint
+PASS collaboration trip creation
+PASS collaboration trip read
+PASS invalid edit key rejected
+PASS stale revision conflict detected
+PASS near-real-time SSE revision event
+
+Architecture:
+- Same-origin frontend + API
+- Persistent JSON data file configurable by WAYPOINT_DATA_FILE
+- Recommended production mount: /data
+- SSE live updates with polling fallback
+- PWA manifest + service worker
+- Web / iPhone Safari PWA / Android Chrome PWA
+
+Manual pre-launch checks still required on the actual production HTTPS domain:
+- iPhone system share sheet
+- Android system share sheet
+- print/PDF UI on each target OS
+- Add to Home Screen / Install app
+- final privacy/support contact details
+- DNS/custom domain
+
+
+Waypoint 4.1 additions:
+PASS generated itinerary day labels localize dynamically ES/EN
+PASS frontend JavaScript syntax after localization changes
+PASS server JavaScript syntax after FX proxy changes
+PASS currency converter supports selectable source/target currency
+PASS automatic/manual conversion modes
+PASS source/target swap action
+PASS same-currency automatic rate endpoint
+PASS core server smoke suite after V4.1 changes
+
+External FX network note:
+The execution sandbox used to build this release cannot reach external APIs from Node, so an end-to-end live Frankfurter request cannot be executed here. The integration follows Frankfurter v2's documented `/v2/rate/{base}/{quote}` endpoint. Verify one live USD/COP conversion after deployment on the public HTTPS host.
+
+
+Waypoint 4.2.1 hotfix:
+PASS itinerary renderer variable fix (`i` instead of undefined `index`)
+PASS legacy/imported days without `activities` arrays no longer crash rendering
+PASS malformed non-array itinerary values fall back safely to an empty itinerary
+PASS bilingual day labels preserved
+
+
+Waypoint 4.3 readiness engine:
+PASS weighted readiness totals 100%
+PASS trip details validity is scored proportionally
+PASS itinerary score uses trip-day coverage, active-day coverage, and activity depth
+PASS booking score measures field completeness per reservation
+PASS packing score is quantity-aware
+PASS budget score decreases proportionally when spending exceeds budget
+PASS travel information/documents score checks completed notes and passport validity when supplied
+PASS readiness UI displays section percentage and weighted contribution
+
+
+Waypoint 4.3.1 readiness UI polish:
+PASS technical weighting explanation removed from customer-facing UI
+PASS weighted score remains unchanged internally
+PASS professional readiness status labels added
+PASS visual progress card and progress bars added
+PASS next recommended action added
+PASS internal contribution math hidden from end users
+
+
+Waypoint 4.3.3 FX reliability:
+PASS automatic FX first tries Waypoint server endpoint
+PASS standalone HTML falls back to direct Frankfurter v2 pair endpoint
+PASS secondary Frankfurter rates endpoint fallback added
+PASS last successful exchange rate cached per currency pair on device
+PASS offline/provider failure can use last known rate with visible status
+PASS manual rate remains available as final fallback
+
+
+Waypoint 4.3.4 FX UI cleanup:
+PASS recent conversions section removed
+PASS recent conversion reuse controls removed
+PASS automatic daily FX retained
+PASS manual FX retained
+PASS currency swap retained
+PASS last-known-rate cache retained
+
+
+Waypoint 4.3.5 monetary precision:
+PASS budget and expense monetary inputs support 0.01 increments
+PASS monetary fields use decimal keyboard hints on mobile
+PASS stored budget and expense values are rounded to cents
+PASS converter amount and converted monetary result are rounded to two decimals
+PASS exchange-rate field retains high precision for accurate FX calculations
+PASS money formatting always displays two decimal places
+PASS accumulated trip spending is rounded to cents to avoid floating-point artifacts

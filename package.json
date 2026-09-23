@@ -1,0 +1,13 @@
+{
+  "name": "waypoint-trip-planner",
+  "version": "4.3.6",
+  "private": true,
+  "description": "Waypoint production web/PWA and live collaboration server",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node scripts/smoke-test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

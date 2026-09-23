@@ -1,0 +1,14 @@
+services:
+  waypoint:
+    build: .
+    ports:
+      - "8787:8787"
+    environment:
+      PORT: 8787
+      WAYPOINT_DATA_FILE: /data/waypoint-sync-data.json
+    volumes:
+      - waypoint_data:/data
+    restart: unless-stopped
+
+volumes:
+  waypoint_data:
