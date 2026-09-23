@@ -161,3 +161,9 @@ Waypoint stores flight reservations as planning records: flight number, origin, 
 - Drafts remain local per trip.
 - Read receipts are participant-based. Opening the chat marks messages through the latest visible/server-loaded message as read.
 - Senders see `Read by <name>` / `Leído por <nombre>` and `Read by everyone` / `Leído por todos` when applicable.
+
+## Waypoint 5.0 trip hub
+
+Collaboration now synchronizes the major trip-planning areas: itinerary, bookings, expenses/budget data, packing items and travel notes. The collaborative chat acts as a trip hub by mixing normal participant messages with concise system activity events such as itinerary changes, new bookings, expenses, packing updates and notes.
+
+Activity events identify the participant associated with the synchronized change and keep the latest 150 events per shared trip. The chat itself remains limited separately and retains read receipts, typing indicators, emoji/GIPHY support and participant identity.

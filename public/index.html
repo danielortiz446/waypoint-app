@@ -556,6 +556,16 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   }
 }
 
+
+/* trip collaboration activity hub v5 */
+.chat-activity{
+  align-self:center;max-width:88%;padding:7px 10px;border-radius:10px;
+  background:rgba(104,140,170,.09);border:1px solid rgba(104,140,170,.14);
+  color:var(--muted);font-size:10.5px;line-height:1.4;text-align:center;
+}
+.chat-activity strong{color:var(--ink-text);font-weight:700;}
+.chat-activity .time{font:8px var(--font-mono);opacity:.75;margin-left:5px;}
+
 </style>
 </head>
 <body>
@@ -1388,12 +1398,48 @@ function chatDayLabel(iso){
     return d.toLocaleDateString(state.lang==='es'?'es-ES':'en-US',{month:'short',day:'numeric',year:d.getFullYear()!==now.getFullYear()?'numeric':undefined});
   }catch(e){return '';}
 }
+
+function activityText(a,es){
+  const actor=escapeHtml(a.actorName||(es?'Alguien':'Someone'));
+  const label=escapeHtml(a.label||'');
+  const amount=escapeHtml(a.amount||'');
+  const map={
+    trip_updated: es?`${actor} actualizó los datos del viaje`:`${actor} updated trip details`,
+    day_added: es?`${actor} agregó un día al itinerario`:`${actor} added an itinerary day`,
+    day_removed: es?`${actor} eliminó un día del itinerario`:`${actor} removed an itinerary day`,
+    activity_added: es?`${actor} agregó ${label||'una actividad'}`:`${actor} added ${label||'an activity'}`,
+    activity_updated: es?`${actor} modificó ${label||'una actividad'}`:`${actor} updated ${label||'an activity'}`,
+    activity_removed: es?`${actor} eliminó una actividad`:`${actor} removed an activity`,
+    booking_added: es?`${actor} agregó la reserva ${label}`:`${actor} added booking ${label}`,
+    booking_updated: es?`${actor} modificó la reserva ${label}`:`${actor} updated booking ${label}`,
+    booking_removed: es?`${actor} eliminó una reserva`:`${actor} removed a booking`,
+    expense_added: es?`${actor} agregó un gasto${label?` · ${label}`:''}${amount?` · ${amount}`:''}`:`${actor} added an expense${label?` · ${label}`:''}${amount?` · ${amount}`:''}`,
+    expense_removed: es?`${actor} eliminó un gasto`:`${actor} removed an expense`,
+    packing_added: es?`${actor} agregó ${label||'un artículo'} al equipaje`:`${actor} added ${label||'an item'} to packing`,
+    packing_updated: es?`${actor} actualizó ${label||'un artículo'} del equipaje`:`${actor} updated ${label||'a packing item'}`,
+    packing_removed: es?`${actor} eliminó un artículo del equipaje`:`${actor} removed a packing item`,
+    note_added: es?`${actor} agregó la nota ${label}`:`${actor} added note ${label}`,
+    note_removed: es?`${actor} eliminó una nota`:`${actor} removed a note`
+  };
+  return map[a.type]|| (es?`${actor} actualizó el viaje`:`${actor} updated the trip`);
+}
+function chatHubItems(messages,activity){
+  return [
+    ...(messages||[]).map(x=>({...x,_hubType:'message'})),
+    ...(activity||[]).map(x=>({...x,_hubType:'activity'}))
+  ].sort((a,b)=>Date.parse(a.createdAt||0)-Date.parse(b.createdAt||0));
+}
+
 function chatMessagesHtml(messages,me,es){
   let lastDay='';
   const tr=tripById(ui.chatTripId);
-  return messages.map(m=>{
+  const items=chatHubItems(messages,ui.chatActivity||[]);
+  return items.map(m=>{
     const day=chatDayLabel(m.createdAt); let sep='';
     if(day!==lastDay){lastDay=day;sep=`<div class="chat-day">${escapeHtml(day)}</div>`;}
+    if(m._hubType==='activity'){
+      return `${sep}<div class="chat-activity"><strong>${activityText(m,es)}</strong><span class="time">${escapeHtml(formatChatTime(m.createdAt))}</span></div>`;
+    }
     const mine=m.participantId===me;
     let body='';
     if(m.kind==='gif'&&m.gifId){
@@ -1471,7 +1517,7 @@ function renderChatMessagesInPlace(){
   const list=document.getElementById('chat-list'); if(!list) return;
   const es=state.lang==='es'; const me=chatParticipantId();
   const nearBottom=list.scrollHeight-list.scrollTop-list.clientHeight<90;
-  list.innerHTML=(ui.chatMessages||[]).length?chatMessagesHtml(ui.chatMessages,me,es):`<div class="chat-empty">${es?'Todavía no hay mensajes. Inicia la conversación con los demás participantes del viaje.':'No messages yet. Start the conversation with the other trip participants.'}</div>`;
+  list.innerHTML=((ui.chatMessages||[]).length||(ui.chatActivity||[]).length)?chatMessagesHtml(ui.chatMessages,me,es):`<div class="chat-empty">${es?'Todavía no hay mensajes. Inicia la conversación con los demás participantes del viaje.':'No messages yet. Start the conversation with the other trip participants.'}</div>`;
   if(nearBottom) list.scrollTop=list.scrollHeight;
 }
 async function loadTripChat(tripId,quiet=false){
@@ -1482,7 +1528,7 @@ async function loadTripChat(tripId,quiet=false){
     if(r.status===404){ showToast(state.lang==='es'?'Este viaje ya no se comparte.':'This trip is no longer shared.'); return false; }
     if(!r.ok) throw new Error('chat '+r.status);
     const j=await r.json();
-    ui.chatTripId=tripId; ui.chatMessages=Array.isArray(j.messages)?j.messages:[]; ui.chatLoading=false; ui.chatError='';
+    ui.chatTripId=tripId; ui.chatMessages=Array.isArray(j.messages)?j.messages:[]; ui.chatActivity=Array.isArray(j.activity)?j.activity:[]; ui.chatLoading=false; ui.chatError='';
     tr.chatUnread=0;
     await loadCollabParticipants(tripId);
     if(ui.modal==='tripChat') renderChatMessagesInPlace();
@@ -1501,7 +1547,7 @@ async function openTripChat(tripId){
   if(!tr||!tr.liveSync){ showToast(state.lang==='es'?'Activa primero la colaboración en vivo':'Enable live collaboration first'); return; }
   const name=ensureChatName(tripId); if(!name) return;
   if(!tr.collabParticipantId) tr.collabParticipantId=chatParticipantId();
-  ui.chatTripId=tripId; ui.chatMessages=[]; ui.chatLoading=true; ui.chatError=''; ui.chatSending=false; ui.chatDraft=getChatDraft(tripId); ui.chatTypingNames=[]; ui.chatGifMap={}; ui.chatGifSearchResults=[];
+  ui.chatTripId=tripId; ui.chatMessages=[]; ui.chatActivity=[]; ui.chatLoading=true; ui.chatError=''; ui.chatSending=false; ui.chatDraft=getChatDraft(tripId); ui.chatTypingNames=[]; ui.chatGifMap={}; ui.chatGifSearchResults=[];
   tr.chatUnread=0; ui.modal='tripChat'; render();
   await registerCollabParticipant(tr);
   await loadTripChat(tripId,true);
@@ -1721,8 +1767,22 @@ async function startLiveCollaboration(tripId){
   render();
 }
 function livePayload(tr){
-  if(!tr.collabDeleted) tr.collabDeleted={days:[],activities:[],bookings:[]};
-  return {waypointLive:1,shareId:tr.shareId,trip:{name:tr.name,destination:tr.destination,tripType:tr.tripType||'',start:tr.start,end:tr.end},days:state.itineraries[tr.id]||[],bookings:state.bookings[tr.id]||[],deleted:tr.collabDeleted};
+  if(!tr.collabDeleted) tr.collabDeleted={days:[],activities:[],bookings:[],expenses:[],checklists:[],docs:[]};
+  return {
+    waypointLive:2,
+    shareId:tr.shareId,
+    trip:{
+      name:tr.name,destination:tr.destination,tripType:tr.tripType||'',start:tr.start,end:tr.end,
+      budgetGoal:roundMoney(tr.budgetGoal||0),currency:tr.currency||'USD',
+      passportExpiry:tr.passportExpiry||'',notes:tr.notes||''
+    },
+    days:state.itineraries[tr.id]||[],
+    bookings:state.bookings[tr.id]||[],
+    expenses:(state.expenses||[]).filter(e=>e.tripId===tr.id),
+    checklists:state.checklists[tr.id]||[],
+    docs:state.tripDocs[tr.id]||[],
+    deleted:tr.collabDeleted
+  };
 }
 function uniqById(remote,local){
   const m=new Map();
@@ -1736,13 +1796,16 @@ function mergeLivePayload(local,remote){
   const deleted={
     days:unionIds(remote.deleted&&remote.deleted.days,local.deleted&&local.deleted.days),
     activities:unionIds(remote.deleted&&remote.deleted.activities,local.deleted&&local.deleted.activities),
-    bookings:unionIds(remote.deleted&&remote.deleted.bookings,local.deleted&&local.deleted.bookings)
+    bookings:unionIds(remote.deleted&&remote.deleted.bookings,local.deleted&&local.deleted.bookings),
+    expenses:unionIds(remote.deleted&&remote.deleted.expenses,local.deleted&&local.deleted.expenses),
+    checklists:unionIds(remote.deleted&&remote.deleted.checklists,local.deleted&&local.deleted.checklists),
+    docs:unionIds(remote.deleted&&remote.deleted.docs,local.deleted&&local.deleted.docs)
   };
   const remoteDays=remote.days||[], localDays=local.days||[];
   const byDay=new Map();
-  remoteDays.forEach(d=>{ if(d&&d.id) byDay.set(d.id,JSON.parse(JSON.stringify(d))); });
+  remoteDays.forEach(d=>{if(d&&d.id)byDay.set(d.id,JSON.parse(JSON.stringify(d)));});
   localDays.forEach(d=>{
-    if(!d||!d.id) return;
+    if(!d||!d.id)return;
     const prev=byDay.get(d.id)||{};
     const merged=Object.assign({},prev,JSON.parse(JSON.stringify(d)));
     merged.activities=uniqById(prev.activities||[],d.activities||[]).filter(a=>!deleted.activities.includes(a.id));
@@ -1751,14 +1814,26 @@ function mergeLivePayload(local,remote){
   });
   const days=[...byDay.values()].filter(d=>!deleted.days.includes(d.id));
   const bookings=uniqById(remote.bookings||[],local.bookings||[]).filter(b=>!deleted.bookings.includes(b.id));
-  return {waypointLive:1,shareId:local.shareId||remote.shareId,trip:Object.assign({},remote.trip||{},local.trip||{}),days,bookings,deleted};
+  const expenses=uniqById(remote.expenses||[],local.expenses||[]).filter(e=>!deleted.expenses.includes(e.id));
+  const checklists=uniqById(remote.checklists||[],local.checklists||[]).filter(i=>!deleted.checklists.includes(i.id));
+  const docs=uniqById(remote.docs||[],local.docs||[]).filter(d=>!deleted.docs.includes(d.id));
+  return {
+    waypointLive:2,
+    shareId:local.shareId||remote.shareId,
+    trip:Object.assign({},remote.trip||{},local.trip||{}),
+    days,bookings,expenses,checklists,docs,deleted
+  };
 }
 function applyLivePayload(tr,d){
   d=d||{};
   Object.assign(tr,d.trip||{});
-  tr.collabDeleted=d.deleted||tr.collabDeleted||{days:[],activities:[],bookings:[]};
+  tr.collabDeleted=d.deleted||tr.collabDeleted||{days:[],activities:[],bookings:[],expenses:[],checklists:[],docs:[]};
   state.itineraries[tr.id]=d.days||[];
   state.bookings[tr.id]=d.bookings||[];
+  const remoteExpenses=(d.expenses||[]).map(e=>({...e,tripId:tr.id}));
+  state.expenses=[...(state.expenses||[]).filter(e=>e.tripId!==tr.id),...remoteExpenses];
+  state.checklists[tr.id]=d.checklists||[];
+  state.tripDocs[tr.id]=d.docs||[];
 }
 let syncBusy=false, syncDebounce=null, syncPoll=null;
 
@@ -1811,6 +1886,11 @@ function ensureLiveStream(tr){
         if(ui.modal==='tripChat') render();
       }catch(e){}
     });
+    es.addEventListener('activity',async ()=>{
+      try{
+        if(ui.modal==='tripChat'&&ui.chatTripId===tr.id) await loadTripChat(tr.id,true);
+      }catch(e){}
+    });
     es.onerror=()=>{
       // EventSource reconnects automatically; polling remains active as a fallback.
     };
@@ -1826,13 +1906,13 @@ async function pushTripToCloud(tr,force=false){
   if(!tr||!tr.liveSync||!tr.syncServer||!tr.shareId||!tr.editKey) return false;
   try{
     const local=livePayload(tr);
-    let r=await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}`,{method:'PUT',headers:{'Content-Type':'application/json','X-Edit-Key':tr.editKey,...(tr.ownerKey?{'X-Owner-Key':tr.ownerKey}:{})},body:JSON.stringify({data:local,clientRevision:Number(tr.syncRevision||0),force:!!force})});
+    let r=await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}`,{method:'PUT',headers:{'Content-Type':'application/json','X-Edit-Key':tr.editKey,...(tr.ownerKey?{'X-Owner-Key':tr.ownerKey}:{}),'X-Participant-Id':tr.collabParticipantId||chatParticipantId()},body:JSON.stringify({data:local,clientRevision:Number(tr.syncRevision||0),force:!!force})});
     if(r.status===409){
       const conflict=await r.json();
       const merged=mergeLivePayload(local,conflict.data||{});
       applyLivePayload(tr,merged);
       tr.syncRevision=Number(conflict.revision||0);
-      r=await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}`,{method:'PUT',headers:{'Content-Type':'application/json','X-Edit-Key':tr.editKey,...(tr.ownerKey?{'X-Owner-Key':tr.ownerKey}:{})},body:JSON.stringify({data:merged,clientRevision:tr.syncRevision,force:false})});
+      r=await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}`,{method:'PUT',headers:{'Content-Type':'application/json','X-Edit-Key':tr.editKey,...(tr.ownerKey?{'X-Owner-Key':tr.ownerKey}:{}),'X-Participant-Id':tr.collabParticipantId||chatParticipantId()},body:JSON.stringify({data:merged,clientRevision:tr.syncRevision,force:false})});
     }
     if(!r.ok) throw new Error('sync '+r.status);
     const j=await r.json();
@@ -2446,7 +2526,7 @@ async function saveBookingForm(){
   ui.modal=null; await saveState(); render();
 }
 function deleteBooking(tripId,id){
-  const tr=tripById(tripId); if(tr&&tr.liveSync){ if(!tr.collabDeleted) tr.collabDeleted={days:[],activities:[],bookings:[]}; if(!tr.collabDeleted.bookings.includes(id)) tr.collabDeleted.bookings.push(id); }
+  const tr=tripById(tripId); if(tr&&tr.liveSync){ if(!tr.collabDeleted) tr.collabDeleted={days:[],activities:[],bookings:[],expenses:[],checklists:[],docs:[]}; if(!tr.collabDeleted.bookings.includes(id)) tr.collabDeleted.bookings.push(id); }
   state.bookings[tripId]=(state.bookings[tripId]||[]).filter(x=>x.id!==id); saveState(); render();
 }
 
@@ -2590,7 +2670,7 @@ function saveDayForm(){
   ui.modal=null; saveState(); render();
 }
 function deleteDay(tripId,dayId){
-  const tr=tripById(tripId); if(tr&&tr.liveSync){ if(!tr.collabDeleted) tr.collabDeleted={days:[],activities:[],bookings:[]}; if(!tr.collabDeleted.days.includes(dayId)) tr.collabDeleted.days.push(dayId); const day=(state.itineraries[tripId]||[]).find(d=>d.id===dayId); (day&&day.activities||[]).forEach(a=>{if(!tr.collabDeleted.activities.includes(a.id)) tr.collabDeleted.activities.push(a.id);}); }
+  const tr=tripById(tripId); if(tr&&tr.liveSync){ if(!tr.collabDeleted) tr.collabDeleted={days:[],activities:[],bookings:[],expenses:[],checklists:[],docs:[]}; if(!tr.collabDeleted.days.includes(dayId)) tr.collabDeleted.days.push(dayId); const day=(state.itineraries[tripId]||[]).find(d=>d.id===dayId); (day&&day.activities||[]).forEach(a=>{if(!tr.collabDeleted.activities.includes(a.id)) tr.collabDeleted.activities.push(a.id);}); }
   state.itineraries[tripId] = (state.itineraries[tripId]||[]).filter(d=>d.id!==dayId);
   saveState(); render();
 }
@@ -2614,7 +2694,7 @@ function addActivity(tripId,dayId){
   saveState(); render();
 }
 function deleteActivity(tripId,dayId,actId){
-  const tr=tripById(tripId); if(tr&&tr.liveSync){ if(!tr.collabDeleted) tr.collabDeleted={days:[],activities:[],bookings:[]}; if(!tr.collabDeleted.activities.includes(actId)) tr.collabDeleted.activities.push(actId); }
+  const tr=tripById(tripId); if(tr&&tr.liveSync){ if(!tr.collabDeleted) tr.collabDeleted={days:[],activities:[],bookings:[],expenses:[],checklists:[],docs:[]}; if(!tr.collabDeleted.activities.includes(actId)) tr.collabDeleted.activities.push(actId); }
   const day = (state.itineraries[tripId]||[]).find(d=>d.id===dayId);
   if(!day) return;
   day.activities = day.activities.filter(a=>a.id!==actId);
@@ -2916,11 +2996,22 @@ function saveExpenseForm(){
 }
 function deleteExpense(id){
   const t=tt();
-  const idx = state.expenses.findIndex(e=>e.id===id);
-  const removed = state.expenses[idx];
-  state.expenses = state.expenses.filter(e=>e.id!==id);
+  const idx=state.expenses.findIndex(e=>e.id===id);
+  const removed=state.expenses[idx];
+  const tr=removed?tripById(removed.tripId):null;
+  if(tr&&tr.liveSync){
+    if(!tr.collabDeleted)tr.collabDeleted={days:[],activities:[],bookings:[],expenses:[],checklists:[],docs:[]};
+    if(!tr.collabDeleted.expenses.includes(id))tr.collabDeleted.expenses.push(id);
+  }
+  state.expenses=state.expenses.filter(e=>e.id!==id);
   saveState(); render();
-  showToast(t.budget.deleted, ()=>{ state.expenses.splice(idx,0,removed); saveState(); render(); });
+  showToast(t.budget.deleted, ()=>{
+    if(removed){
+      state.expenses.splice(Math.max(0,idx),0,removed);
+      if(tr?.collabDeleted)tr.collabDeleted.expenses=tr.collabDeleted.expenses.filter(x=>x!==id);
+      saveState(); render();
+    }
+  });
 }
 
 /* ---- checklist sub ---- */
@@ -2993,6 +3084,11 @@ function markAllPacked(done){
   saveState();render();
 }
 function deleteChecklistItem(id){
+  const tr=tripById(ui.currentTripId);
+  if(tr&&tr.liveSync){
+    if(!tr.collabDeleted)tr.collabDeleted={days:[],activities:[],bookings:[],expenses:[],checklists:[],docs:[]};
+    if(!tr.collabDeleted.checklists.includes(id))tr.collabDeleted.checklists.push(id);
+  }
   state.checklists[ui.currentTripId]=(state.checklists[ui.currentTripId]||[]).filter(i=>i.id!==id);
   saveState();render();
 }
@@ -3029,8 +3125,13 @@ function quickAddDoc(label){
   if(el){ el.value = label; document.getElementById('doc-value').focus(); }
 }
 function deleteDoc(tripId,docId){
-  state.tripDocs[tripId] = (state.tripDocs[tripId]||[]).filter(d=>d.id!==docId);
-  saveState(); render();
+  const tr=tripById(tripId);
+  if(tr&&tr.liveSync){
+    if(!tr.collabDeleted)tr.collabDeleted={days:[],activities:[],bookings:[],expenses:[],checklists:[],docs:[]};
+    if(!tr.collabDeleted.docs.includes(docId))tr.collabDeleted.docs.push(docId);
+  }
+  state.tripDocs[tripId]=(state.tripDocs[tripId]||[]).filter(d=>d.id!==docId);
+  saveState();render();
 }
 
 /* ===================== SETTINGS ===================== */
@@ -3195,7 +3296,7 @@ function renderModal(){
         </div>
         ${ui.chatError?`<div class="chat-error">${escapeHtml(ui.chatError)}</div>`:''}
         <div class="chat-list" id="chat-list" role="log" aria-live="polite" aria-relevant="additions text">
-          ${ui.chatLoading?`<div class="chat-empty">${es?'Cargando conversación…':'Loading conversation…'}</div>`:messages.length?chatMessagesHtml(messages,me,es):`<div class="chat-empty">${es?'Todavía no hay mensajes. Inicia la conversación con los demás participantes del viaje.':'No messages yet. Start the conversation with the other trip participants.'}</div>`}
+          ${ui.chatLoading?`<div class="chat-empty">${es?'Cargando conversación…':'Loading conversation…'}</div>`:(messages.length||(ui.chatActivity||[]).length)?chatMessagesHtml(messages,me,es):`<div class="chat-empty">${es?'Todavía no hay mensajes. Inicia la conversación con los demás participantes del viaje.':'No messages yet. Start the conversation with the other trip participants.'}</div>`}
         </div>
         <div class="chat-typing" id="chat-typing" aria-live="polite"></div>
         <div class="chat-compose-wrap">

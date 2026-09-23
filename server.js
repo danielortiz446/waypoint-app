@@ -79,6 +79,51 @@ function safePublicPath(urlPath){
   const full=path.resolve(PUBLIC_DIR,clean||'index.html');
   return full.startsWith(path.resolve(PUBLIC_DIR)+path.sep)||full===path.resolve(PUBLIC_DIR,'index.html')?full:null;
 }
+
+function arrayMapById(arr){
+  const m=new Map();
+  for(const x of (Array.isArray(arr)?arr:[])) if(x&&x.id)m.set(x.id,x);
+  return m;
+}
+function shallowDifferent(a,b,keys){
+  return keys.some(k=>JSON.stringify(a?.[k]??null)!==JSON.stringify(b?.[k]??null));
+}
+function flattenActivities(days){
+  const out=[];
+  for(const d of (days||[])) for(const a of (d.activities||[])) out.push({...a,dayId:d.id});
+  return out;
+}
+function deriveActivityEvents(prev,next,actorName,actorId){
+  if(!prev||!next)return [];
+  const events=[], now=new Date().toISOString();
+  const add=(type,meta={})=>events.push({id:crypto.randomUUID(),type,actorName:actorName||'Participant',actorId:actorId||'',createdAt:now,...meta});
+  if(shallowDifferent(prev.trip,next.trip,['name','destination','tripType','start','end','budgetGoal','currency','passportExpiry','notes'])) add('trip_updated');
+
+  const compare=(oldArr,newArr,types,labelKey,keys,extra)=>{
+    const a=arrayMapById(oldArr), b=arrayMapById(newArr);
+    for(const [id,x] of b){
+      if(!a.has(id)) add(types.add,{label:String(x?.[labelKey]||'').slice(0,120),...(extra?extra(x):{})});
+      else if(keys&&shallowDifferent(a.get(id),x,keys)) add(types.update,{label:String(x?.[labelKey]||'').slice(0,120),...(extra?extra(x):{})});
+    }
+    for(const id of a.keys()) if(!b.has(id)) add(types.remove);
+  };
+
+  compare(prev.days,next.days,{add:'day_added',update:null,remove:'day_removed'},'label',null);
+  compare(flattenActivities(prev.days),flattenActivities(next.days),{add:'activity_added',update:'activity_updated',remove:'activity_removed'},'title',['title','time','location','dayId']);
+  compare(prev.bookings,next.bookings,{add:'booking_added',update:'booking_updated',remove:'booking_removed'},'title',['title','date','time','provider','confirmation','location','notes','flightNumber','origin','destination']);
+  compare(prev.expenses,next.expenses,{add:'expense_added',update:null,remove:'expense_removed'},'desc',null,x=>({amount:Number.isFinite(Number(x.amount))?String(Number(x.amount).toFixed(2)):''}));
+  compare(prev.checklists,next.checklists,{add:'packing_added',update:'packing_updated',remove:'packing_removed'},'text',['text','done','category','qty']);
+  compare(prev.docs,next.docs,{add:'note_added',update:'note_added',remove:'note_removed'},'label',['label','value']);
+
+  return events.filter(e=>e.type).slice(0,8);
+}
+function notifyActivity(id,events){
+  if(!events||!events.length)return;
+  const set=eventClients.get(id); if(!set)return;
+  const msg=`event: activity\ndata: ${JSON.stringify({count:events.length,latest:events[events.length-1]})}\n\n`;
+  for(const res of [...set]){try{res.write(msg);}catch(e){set.delete(res);}}
+}
+
 function notifyRevision(id,room){
   const set=eventClients.get(id);
   if(!set) return;
@@ -121,7 +166,7 @@ const server=http.createServer(async(req,res)=>{
   try{
     const u=new URL(req.url,'http://localhost');
 
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'4.9.4',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'5.0.0',time:new Date().toISOString()});
 
     if(req.method==='GET'&&u.pathname==='/api/fx/rate'){
       const from=String(u.searchParams.get('from')||'').trim().toUpperCase();
@@ -255,7 +300,7 @@ const server=http.createServer(async(req,res)=>{
       if(req.method==='GET'){
         const key=u.searchParams.get('key')||'';
         if(hash(key)!==room.keyHash) return json(res,403,{error:'invalid edit key'});
-        return json(res,200,{messages:Array.isArray(room.chat)?room.chat:[]});
+        return json(res,200,{messages:Array.isArray(room.chat)?room.chat:[],activity:Array.isArray(room.activity)?room.activity:[]});
       }
       if(req.method==='POST'){
         const editKey=String(req.headers['x-edit-key']||'');
@@ -319,15 +364,20 @@ const server=http.createServer(async(req,res)=>{
         }
         const revision=(existing?.revision||0)+1;
         const ownerKey=String(req.headers['x-owner-key']||'');
+        const participantId=String(req.headers['x-participant-id']||'').trim().slice(0,100);
+        const participant=(existing?.participants||[]).find(p=>p.participantId===participantId);
+        const newEvents=existing?deriveActivityEvents(existing.data||{},incoming.data||{},participant?.name||'Participant',participantId):[];
+        const activity=[...(Array.isArray(existing?.activity)?existing.activity:[]),...newEvents].slice(-150);
         rooms[id]={
           keyHash:existing?.keyHash||hash(editKey),
           ownerKeyHash:existing?.ownerKeyHash||(ownerKey?hash(ownerKey):null),
           revision,updatedAt:new Date().toISOString(),data:incoming.data,
           chat:Array.isArray(existing?.chat)?existing.chat:[],
+          activity,
           participants:Array.isArray(existing?.participants)?existing.participants:[]
         };
-        persist(); notifyRevision(id,rooms[id]);
-        return json(res,200,{ok:true,revision,updatedAt:rooms[id].updatedAt});
+        persist(); notifyRevision(id,rooms[id]); notifyActivity(id,newEvents);
+        return json(res,200,{ok:true,revision,updatedAt:rooms[id].updatedAt,activityAdded:newEvents.length});
       }
       if(req.method==='DELETE'){
         const existing=rooms[id];
@@ -365,4 +415,4 @@ const server=http.createServer(async(req,res)=>{
   }
 });
 
-server.listen(PORT,HOST,()=>console.log(`Waypoint 4.9.4 listening on http://${HOST}:${PORT}`));
+server.listen(PORT,HOST,()=>console.log(`Waypoint 5.0.0 listening on http://${HOST}:${PORT}`));
