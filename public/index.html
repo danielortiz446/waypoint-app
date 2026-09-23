@@ -1050,31 +1050,56 @@ function openTripChat(tripId){
 async function sendTripChat(tripId){
   const tr=tripById(tripId);
   const input=document.getElementById('chat-input');
+  const btn=document.getElementById('chat-send-btn');
   if(!tr||!input) return;
+
   const text=String(input.value||'').trim();
-  if(!text) return;
-  if(text.length>500){
-    showToast(state.lang==='es'?'El mensaje puede tener máximo 500 caracteres':'Messages can be up to 500 characters');
+  if(!text){
+    input.focus();
     return;
   }
+  if(text.length>500){
+    showToast(state.lang==='es'?'El mensaje puede tener máximo 500 caracteres':'Messages can be up to 500 characters');
+    input.focus();
+    return;
+  }
+
   const name=ensureChatName();
-  if(!name) return;
+  if(!name){
+    input.focus();
+    return;
+  }
+
   input.disabled=true;
+  if(btn) btn.disabled=true;
+
   try{
     const r=await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}/chat`,{
       method:'POST',
       headers:{'Content-Type':'application/json','X-Edit-Key':tr.editKey},
-      body:JSON.stringify({text,name,participantId:chatParticipantId()})
+      body:JSON.stringify({
+        text,
+        name,
+        participantId:chatParticipantId()
+      })
     });
+
     const j=await r.json().catch(()=>({}));
-    if(!r.ok) throw new Error(j.error||'chat');
+    if(!r.ok) throw new Error(j.error||`chat ${r.status}`);
+
     input.value='';
     await loadTripChat(tripId,true);
   }catch(e){
+    console.error('Waypoint chat send failed:',e);
     showToast(state.lang==='es'?'No se pudo enviar el mensaje':'Could not send message');
   }finally{
-    input.disabled=false;
-    input.focus();
+    const current=document.getElementById('chat-input');
+    const currentBtn=document.getElementById('chat-send-btn');
+    if(current){
+      current.disabled=false;
+      current.focus();
+    }
+    if(currentBtn) currentBtn.disabled=false;
   }
 }
 function chatKeydown(e,tripId){
@@ -2467,6 +2492,60 @@ function renderModal(){
         <button class="btn btn-ghost" onclick="closeModal()">${t.common.cancel}</button>
       </div>`;
   }
+  if(ui.modal==='tripChat'){
+    const tr=tripById(ui.chatTripId);
+    if(tr){
+      const es=state.lang==='es';
+      const messages=Array.isArray(ui.chatMessages)?ui.chatMessages:[];
+      const me=chatParticipantId();
+      inner=`
+        <div class="chat-shell">
+          <div class="chat-head">
+            <div>
+              <h3 style="margin-bottom:2px;">💬 ${es?'Chat del viaje':'Trip chat'}</h3>
+              <div class="chat-trip">${escapeHtml(tr.name||'')}</div>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="loadTripChat('${tr.id}')">↻ ${es?'Actualizar':'Refresh'}</button>
+          </div>
+
+          <div class="chat-list" id="chat-list">
+            ${ui.chatLoading
+              ? `<div class="chat-empty">${es?'Cargando mensajes…':'Loading messages…'}</div>`
+              : messages.length
+                ? messages.map(m=>`
+                    <div class="chat-msg ${m.participantId===me?'mine':''}">
+                      <div class="chat-meta">${escapeHtml(m.name||(es?'Participante':'Participant'))} · ${escapeHtml(formatChatTime(m.createdAt))}</div>
+                      <div class="chat-text">${escapeHtml(m.text||'')}</div>
+                    </div>`).join('')
+                : `<div class="chat-empty">${es?'Todavía no hay mensajes. Escribe el primero.':'No messages yet. Start the conversation.'}</div>`
+            }
+          </div>
+
+          <div class="chat-compose">
+            <textarea
+              id="chat-input"
+              maxlength="500"
+              autocomplete="off"
+              autocapitalize="sentences"
+              enterkeyhint="send"
+              placeholder="${es?'Escribe un mensaje…':'Write a message…'}"
+              onkeydown="chatKeydown(event,'${tr.id}')"></textarea>
+            <button type="button" id="chat-send-btn" class="btn btn-brass" onclick="sendTripChat('${tr.id}')">${es?'Enviar':'Send'}</button>
+          </div>
+
+          <div class="field-hint">${es?'Solo los participantes con acceso al viaje colaborativo pueden ver este chat.':'Only participants with access to this collaborative trip can view this chat.'}</div>
+          <button type="button" class="btn btn-ghost btn-block" onclick="closeModal()">${t.common.close}</button>
+        </div>`;
+
+      setTimeout(()=>{
+        const list=document.getElementById('chat-list');
+        if(list) list.scrollTop=list.scrollHeight;
+        const input=document.getElementById('chat-input');
+        if(input && !ui.chatLoading) input.focus();
+      },0);
+    }
+  }
+
   if(ui.modal==='shareCenter'){
     const tr=tripById(ui.actionsTripId);
     if(tr){
