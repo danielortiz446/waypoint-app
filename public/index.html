@@ -991,6 +991,17 @@ function collabServer(){
 function randomKey(){ const a=new Uint8Array(18); crypto.getRandomValues(a); return Array.from(a,b=>b.toString(16).padStart(2,'0')).join(''); }
 function setCollabServer(url){ localStorage.setItem('waypoint-sync-server',(url||'').trim().replace(/\/$/,'')); }
 
+
+function waypointLang(){
+  const saved=String(state?.lang||'').toLowerCase();
+  if(saved==='es'||saved==='en') return saved;
+  const htmlLang=String(document.documentElement.lang||'').toLowerCase();
+  if(htmlLang.startsWith('es')) return 'es';
+  if(htmlLang.startsWith('en')) return 'en';
+  const browser=String(navigator.language||'').toLowerCase();
+  return browser.startsWith('es')?'es':'en';
+}
+
 function chatParticipantId(){
   let id=localStorage.getItem('waypoint-chat-participant-id');
   if(!id){ id='p-'+randomKey(); localStorage.setItem('waypoint-chat-participant-id',id); }
@@ -1008,7 +1019,7 @@ function chatParticipantName(tripId){
 function ensureChatName(tripId){
   let name=chatParticipantName(tripId);
   if(name) return name;
-  const es=state.lang==='es';
+  const es=waypointLang()==='es';
   name=(prompt(es?'Escribe tu nombre para identificarte en este viaje:':'Enter your name so other participants can identify you:','')||'').trim().slice(0,60);
   if(name){
     localStorage.setItem('waypoint-chat-name',name);
@@ -1158,7 +1169,7 @@ function collabParticipantsText(tr){
 }
 async function stopLiveCollaboration(tripId){
   const tr=tripById(tripId); if(!tr) return;
-  const es=state.lang==='es';
+  const es=waypointLang()==='es';
   if(!tr.collabOwner||!tr.ownerKey){
     showToast(es?'Solo el propietario puede desactivar el enlace compartido.':'Only the owner can disable the shared link.');
     return;
@@ -1183,7 +1194,7 @@ async function stopLiveCollaboration(tripId){
 }
 async function leaveLiveCollaboration(tripId){
   const tr=tripById(tripId); if(!tr) return;
-  const es=state.lang==='es';
+  const es=waypointLang()==='es';
   if(!confirm(es?'¿Salir de este viaje compartido? Conservarás una copia local, pero dejará de sincronizarse.':'Leave this shared trip? You will keep a local copy, but it will stop syncing.')) return;
   closeLiveStream(tr.id);
   tr.liveSync=false; tr.collabOwner=false;
@@ -1195,7 +1206,7 @@ async function leaveLiveCollaboration(tripId){
 
 async function startLiveCollaboration(tripId){
   const tr=tripById(tripId); if(!tr) return;
-  const es=state.lang==='es';
+  const es=waypointLang()==='es';
   const participantName=ensureChatName(tripId);
   if(!participantName) return;
 
@@ -1370,7 +1381,7 @@ async function handleCollabLink(){
   const shareId=h.get('collab'), key=h.get('key'), server=(h.get('server')||'').replace(/\/$/,'');
   if(!shareId||!key||!server) return;
   setCollabServer(server);
-  const es=state.lang==='es';
+  const es=waypointLang()==='es';
   try{
     const r=await fetch(`${server}/api/trips/${encodeURIComponent(shareId)}?key=${encodeURIComponent(key)}`);
     if(!r.ok) throw new Error('join');
@@ -1389,7 +1400,7 @@ async function handleCollabLink(){
     // Identify the participant before joining so chat already knows who they are.
     let name=String(tr.collabParticipantName||state.profile?.name||localStorage.getItem('waypoint-chat-name')||'').trim().slice(0,60);
     if(!name){
-      name=(prompt(es?'Antes de unirte, escribe tu nombre. Así los demás sabrán quién eres en el chat y la colaboración:':'Before joining, enter your name so others can identify you in chat and collaboration:','')||'').trim().slice(0,60);
+      name=(prompt(es?'Antes de unirte al viaje, escribe tu nombre. Así los demás participantes sabrán quién eres en el chat y durante la colaboración:':'Before joining the trip, enter your name so other participants can identify you in chat and during collaboration:','')||'').trim().slice(0,60);
     }
     if(!name) throw new Error('name required');
     tr.collabParticipantName=name;
@@ -1400,7 +1411,7 @@ async function handleCollabLink(){
     history.replaceState(null,'',location.pathname+location.search);
     ensureLiveStream(tr);
     openTrip(tr.id);
-    showToast(es?`Te uniste como ${name}`:`Joined as ${name}`);
+    showToast(es?`Te uniste al viaje como ${name}`:`Joined the trip as ${name}`);
   }catch(e){
     console.error(e);
     showToast(es?'No se pudo abrir el viaje compartido':'Could not open shared trip');
