@@ -412,6 +412,35 @@ body{transition:background .3s;}
 .chat-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:10px;background:var(--coral);color:#fff;font-size:9px;font-family:var(--font-mono);margin-left:4px;}
 @media(max-width:600px){.chat-modal{width:100%;max-width:none;height:100dvh;max-height:none;border-radius:0;margin:0}.chat-shell{height:100dvh;min-height:0}.chat-msg{max-width:86%}.chat-compose .btn{min-width:70px;padding-left:12px;padding-right:12px}}
 
+
+/* emoji + GIF chat tools v4.7 */
+.chat-tools{display:flex;gap:6px;align-items:center;margin-bottom:7px;position:relative;}
+.chat-tool-btn{border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.045);color:var(--ink-text);border-radius:10px;min-width:38px;height:34px;padding:0 10px;font-size:15px;cursor:pointer;}
+.chat-tool-btn:hover{background:rgba(255,255,255,.08);}
+.chat-tool-btn.active{border-color:rgba(201,162,39,.35);background:rgba(201,162,39,.12);}
+.chat-picker{border:1px solid rgba(255,255,255,.10);background:rgba(8,24,40,.98);border-radius:12px;margin-bottom:8px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.28);}
+.emoji-picker{padding:10px;display:grid;grid-template-columns:repeat(9,1fr);gap:4px;max-height:190px;overflow:auto;}
+.emoji-btn{border:0;background:transparent;border-radius:8px;font-size:21px;line-height:34px;height:34px;cursor:pointer;}
+.emoji-btn:hover{background:rgba(255,255,255,.08);}
+.gif-picker-head{padding:10px;border-bottom:1px solid rgba(255,255,255,.08);}
+.gif-search-row{display:flex;gap:7px;}
+.gif-search-row input{flex:1;}
+.gif-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:8px;max-height:280px;overflow:auto;}
+.gif-item{border:0;background:rgba(255,255,255,.04);border-radius:9px;overflow:hidden;padding:0;cursor:pointer;aspect-ratio:1.2/1;position:relative;}
+.gif-item img{width:100%;height:100%;object-fit:cover;display:block;}
+.gif-loading,.gif-empty{padding:22px;text-align:center;color:var(--muted);font-size:11px;grid-column:1/-1;}
+.giphy-attrib{padding:6px 10px 9px;text-align:right;color:var(--muted);font:9px var(--font-mono);border-top:1px solid rgba(255,255,255,.06);}
+.chat-gif{display:block;max-width:260px;width:100%;border-radius:9px;margin-top:2px;background:rgba(255,255,255,.04);}
+.chat-gif-placeholder{width:220px;max-width:100%;aspect-ratio:1.3/1;border-radius:9px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:10px;}
+.chat-msg.gif-message{padding:6px;}
+.chat-msg.gif-message .chat-meta{padding:3px 5px 0;}
+.chat-msg.gif-message .chat-status{padding:0 5px 3px;}
+@media(max-width:600px){
+  .emoji-picker{grid-template-columns:repeat(8,1fr);max-height:210px;}
+  .gif-grid{grid-template-columns:repeat(2,minmax(0,1fr));max-height:34vh;}
+  .chat-gif{max-width:72vw;}
+}
+
 </style>
 </head>
 <body>
@@ -1054,6 +1083,141 @@ function ensureChatName(tripId){
   }
   return name;
 }
+
+const CHAT_EMOJIS=['😀','😃','😄','😁','😂','🤣','😊','😍','🥰','😘','😎','🤩','🥳','😇','🙂','😉','🤗','🤔','😴','😭','🥺','😢','😡','😱','🤯','😅','🙃','❤️','🩷','🧡','💛','💚','🩵','💙','💜','🤍','🖤','💕','💞','💯','✨','⭐','🔥','🎉','🎊','👏','🙌','👍','👎','🙏','🤝','💪','👀','✈️','🌎','🌴','🏝️','🗺️','📍','🧳','🏨','🚗','🚆','☀️','🌙','☕','🍽️','🍹','🎵','📸','✅','⚠️','❗','❓'];
+let giphyConfigCache=null;
+function chatEmojiHtml(){
+  return CHAT_EMOJIS.map(e=>`<button type="button" class="emoji-btn" onclick="insertChatEmoji('${e.replace(/'/g,"\\'")}')" aria-label="${e}">${e}</button>`).join('');
+}
+function toggleChatEmojiPicker(){
+  const emoji=document.getElementById('chat-emoji-picker'), gif=document.getElementById('chat-gif-picker');
+  if(!emoji)return;
+  const open=emoji.hidden;
+  emoji.hidden=!open;
+  if(gif)gif.hidden=true;
+  document.getElementById('chat-emoji-btn')?.classList.toggle('active',open);
+  document.getElementById('chat-gif-btn')?.classList.remove('active');
+  if(!open) document.getElementById('chat-input')?.focus();
+}
+function insertChatEmoji(emoji){
+  const input=document.getElementById('chat-input'); if(!input)return;
+  const start=input.selectionStart??input.value.length, end=input.selectionEnd??start;
+  const next=input.value.slice(0,start)+emoji+input.value.slice(end);
+  if(next.length>500)return;
+  input.value=next;
+  const pos=start+emoji.length;
+  input.setSelectionRange(pos,pos);
+  updateChatComposer(ui.chatTripId);
+  input.focus();
+}
+async function getGiphyConfig(){
+  if(giphyConfigCache)return giphyConfigCache;
+  try{
+    const r=await fetch('/api/giphy-config',{cache:'no-store'});
+    const j=await r.json();
+    giphyConfigCache=r.ok?j:{enabled:false};
+  }catch(e){giphyConfigCache={enabled:false};}
+  return giphyConfigCache;
+}
+function giphyCustomerId(){
+  let id=localStorage.getItem('waypoint-giphy-customer-id');
+  if(!id){id='wp-'+randomKey();localStorage.setItem('waypoint-giphy-customer-id',id);}
+  return id;
+}
+function toggleChatGifPicker(){
+  const gif=document.getElementById('chat-gif-picker'), emoji=document.getElementById('chat-emoji-picker');
+  if(!gif)return;
+  const open=gif.hidden;
+  gif.hidden=!open;
+  if(emoji)emoji.hidden=true;
+  document.getElementById('chat-gif-btn')?.classList.toggle('active',open);
+  document.getElementById('chat-emoji-btn')?.classList.remove('active');
+  if(open) loadGiphyResults('');
+  else document.getElementById('chat-input')?.focus();
+}
+let giphySearchTimer=null;
+function scheduleGiphySearch(){
+  clearTimeout(giphySearchTimer);
+  giphySearchTimer=setTimeout(()=>loadGiphyResults(document.getElementById('gif-search')?.value||''),300);
+}
+async function loadGiphyResults(query){
+  const grid=document.getElementById('gif-grid'); if(!grid)return;
+  const es=state.lang==='es';
+  grid.innerHTML=`<div class="gif-loading">${es?'Cargando GIFs…':'Loading GIFs…'}</div>`;
+  const cfg=await getGiphyConfig();
+  if(!cfg.enabled||!cfg.apiKey){
+    grid.innerHTML=`<div class="gif-empty">${es?'Los GIFs todavía no están activados. Agrega GIPHY_API_KEY en Railway.':'GIFs are not enabled yet. Add GIPHY_API_KEY in Railway.'}</div>`;
+    return;
+  }
+  try{
+    const q=String(query||'').trim().slice(0,50);
+    const base=q?'https://api.giphy.com/v1/gifs/search':'https://api.giphy.com/v1/gifs/trending';
+    const p=new URLSearchParams({api_key:cfg.apiKey,limit:'18',rating:'pg',lang:state.lang==='es'?'es':'en',customer_id:giphyCustomerId()});
+    if(q)p.set('q',q);
+    const r=await fetch(`${base}?${p.toString()}`);
+    const j=await r.json();
+    const items=Array.isArray(j.data)?j.data:[];
+    ui.chatGifSearchResults=items;
+    if(!items.length){
+      grid.innerHTML=`<div class="gif-empty">${es?'No encontramos GIFs para esa búsqueda.':'No GIFs found for that search.'}</div>`;
+      return;
+    }
+    grid.innerHTML=items.map((g,i)=>{
+      const src=g.images?.fixed_width_small?.url||g.images?.fixed_width?.url||g.images?.downsized?.url||'';
+      return `<button type="button" class="gif-item" onclick="sendChatGif('${ui.chatTripId}',${i})" aria-label="${escapeHtml(g.title||'GIF')}"><img loading="lazy" src="${escapeHtml(src)}" alt="${escapeHtml(g.title||'GIF')}"></button>`;
+    }).join('');
+  }catch(e){
+    console.error('GIPHY search failed',e);
+    grid.innerHTML=`<div class="gif-empty">${es?'No se pudieron cargar los GIFs. Inténtalo de nuevo.':'Could not load GIFs. Try again.'}</div>`;
+  }
+}
+async function resolveChatGifs(){
+  const ids=[...new Set((ui.chatMessages||[]).filter(m=>m.kind==='gif'&&m.gifId).map(m=>m.gifId))];
+  if(!ids.length)return;
+  const cfg=await getGiphyConfig();
+  if(!cfg.enabled||!cfg.apiKey)return;
+  ui.chatGifMap=ui.chatGifMap||{};
+  const missing=ids.filter(id=>!ui.chatGifMap[id]).slice(0,100);
+  if(!missing.length)return;
+  try{
+    const p=new URLSearchParams({api_key:cfg.apiKey,ids:missing.join(','),rating:'pg',customer_id:giphyCustomerId()});
+    const r=await fetch(`https://api.giphy.com/v1/gifs?${p.toString()}`);
+    const j=await r.json();
+    for(const g of (j.data||[])){
+      ui.chatGifMap[g.id]={
+        url:g.images?.fixed_width?.url||g.images?.downsized?.url||g.images?.original?.url||'',
+        alt:g.title||'GIF'
+      };
+    }
+    renderChatMessagesInPlace();
+  }catch(e){console.error('GIPHY resolve failed',e);}
+}
+async function sendChatGif(tripId,index){
+  const tr=tripById(tripId), g=(ui.chatGifSearchResults||[])[index];
+  if(!tr||!g||ui.chatSending)return;
+  const participantId=tr.collabParticipantId||chatParticipantId();
+  const clientMessageId='c-'+randomKey();
+  ui.chatSending=true;
+  try{
+    const r=await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}/chat`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Edit-Key':tr.editKey},
+      body:JSON.stringify({kind:'gif',gifId:g.id,gifTitle:String(g.title||'GIF').slice(0,160),participantId,clientMessageId})
+    });
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(j.error||`chat ${r.status}`);
+    ui.chatGifMap=ui.chatGifMap||{};
+    ui.chatGifMap[g.id]={url:g.images?.fixed_width?.url||g.images?.downsized?.url||g.images?.original?.url||'',alt:g.title||'GIF'};
+    if(j.message) ui.chatMessages=[...(ui.chatMessages||[]).filter(x=>x.id!==j.message.id),j.message];
+    const picker=document.getElementById('chat-gif-picker'); if(picker)picker.hidden=true;
+    document.getElementById('chat-gif-btn')?.classList.remove('active');
+    renderChatMessagesInPlace();
+  }catch(e){
+    console.error(e);
+    showToast(state.lang==='es'?'No se pudo enviar el GIF.':'Could not send the GIF.');
+  }finally{ui.chatSending=false;}
+}
+
 function chatDraftKey(tripId){ return `waypoint-chat-draft-${tripId}`; }
 function getChatDraft(tripId){ return localStorage.getItem(chatDraftKey(tripId))||''; }
 function setChatDraft(tripId,value){
@@ -1079,10 +1243,20 @@ function chatMessagesHtml(messages,me,es){
   return messages.map(m=>{
     const day=chatDayLabel(m.createdAt); let sep='';
     if(day!==lastDay){ lastDay=day; sep=`<div class="chat-day">${escapeHtml(day)}</div>`; }
-    return `${sep}<div class="chat-msg ${m.participantId===me?'mine':''}" data-message-id="${escapeHtml(m.id||'')}">
+    const mine=m.participantId===me;
+    let body='';
+    if(m.kind==='gif'&&m.gifId){
+      const gif=(ui.chatGifMap||{})[m.gifId];
+      body=gif?.url
+        ?`<img class="chat-gif" loading="lazy" src="${escapeHtml(gif.url)}" alt="${escapeHtml(gif.alt||m.gifTitle||'GIF')}">`
+        :`<div class="chat-gif-placeholder">${es?'Cargando GIF…':'Loading GIF…'}</div>`;
+    }else{
+      body=`<div class="chat-text">${escapeHtml(m.text||'')}</div>`;
+    }
+    return `${sep}<div class="chat-msg ${mine?'mine':''} ${m.kind==='gif'?'gif-message':''}" data-message-id="${escapeHtml(m.id||'')}">
       <div class="chat-meta"><span>${escapeHtml(m.name||(es?'Participante':'Participant'))}</span><span>·</span><span>${escapeHtml(formatChatTime(m.createdAt))}</span></div>
-      <div class="chat-text">${escapeHtml(m.text||'')}</div>
-      ${m.participantId===me?`<div class="chat-status">${es?'Enviado':'Sent'} ✓</div>`:''}
+      ${body}
+      ${mine?`<div class="chat-status">${es?'Enviado':'Sent'} ✓</div>`:''}
     </div>`;
   }).join('');
 }
@@ -1117,6 +1291,7 @@ async function loadTripChat(tripId,quiet=false){
     ui.chatTripId=tripId; ui.chatMessages=Array.isArray(j.messages)?j.messages:[]; ui.chatLoading=false; ui.chatError='';
     tr.chatUnread=0;
     if(ui.modal==='tripChat') renderChatMessagesInPlace();
+    resolveChatGifs();
     return true;
   }catch(e){
     console.error('Waypoint chat load failed:',e);
@@ -1130,7 +1305,7 @@ async function openTripChat(tripId){
   if(!tr||!tr.liveSync){ showToast(state.lang==='es'?'Activa primero la colaboración en vivo':'Enable live collaboration first'); return; }
   const name=ensureChatName(tripId); if(!name) return;
   if(!tr.collabParticipantId) tr.collabParticipantId=chatParticipantId();
-  ui.chatTripId=tripId; ui.chatMessages=[]; ui.chatLoading=true; ui.chatError=''; ui.chatSending=false; ui.chatDraft=getChatDraft(tripId); ui.chatTypingNames=[];
+  ui.chatTripId=tripId; ui.chatMessages=[]; ui.chatLoading=true; ui.chatError=''; ui.chatSending=false; ui.chatDraft=getChatDraft(tripId); ui.chatTypingNames=[]; ui.chatGifMap={}; ui.chatGifSearchResults=[];
   tr.chatUnread=0; ui.modal='tripChat'; render();
   await registerCollabParticipant(tr);
   await loadTripChat(tripId,true);
@@ -2841,6 +3016,21 @@ function renderModal(){
         </div>
         <div class="chat-typing" id="chat-typing" aria-live="polite"></div>
         <div class="chat-compose-wrap">
+          <div class="chat-tools">
+            <button type="button" id="chat-emoji-btn" class="chat-tool-btn" onclick="toggleChatEmojiPicker()" aria-label="${es?'Emojis':'Emojis'}">😊</button>
+            <button type="button" id="chat-gif-btn" class="chat-tool-btn" onclick="toggleChatGifPicker()" aria-label="GIF">GIF</button>
+          </div>
+          <div id="chat-emoji-picker" class="chat-picker emoji-picker" hidden>${chatEmojiHtml()}</div>
+          <div id="chat-gif-picker" class="chat-picker" hidden>
+            <div class="gif-picker-head">
+              <div class="gif-search-row">
+                <input id="gif-search" maxlength="50" placeholder="${es?'Buscar GIFs…':'Search GIFs…'}" oninput="scheduleGiphySearch()">
+                <button type="button" class="btn btn-ghost btn-sm" onclick="loadGiphyResults(document.getElementById('gif-search')?.value||'')">${es?'Buscar':'Search'}</button>
+              </div>
+            </div>
+            <div id="gif-grid" class="gif-grid"><div class="gif-loading">${es?'Abre el buscador para cargar GIFs.':'Open the picker to load GIFs.'}</div></div>
+            <div class="giphy-attrib">Powered by GIPHY</div>
+          </div>
           <div class="chat-compose">
             <textarea id="chat-input" maxlength="500" autocomplete="off" autocapitalize="sentences" enterkeyhint="send" aria-label="${es?'Escribir mensaje':'Write message'}" placeholder="${es?'Escribe un mensaje…':'Write a message…'}" oninput="updateChatComposer('${tr.id}')" onkeydown="chatKeydown(event,'${tr.id}')">${escapeHtml(draft)}</textarea>
             <button type="button" id="chat-send-btn" class="btn btn-brass" onclick="sendTripChat('${tr.id}')" ${String(draft||'').trim()?'':'disabled'}>${es?'Enviar':'Send'}</button>

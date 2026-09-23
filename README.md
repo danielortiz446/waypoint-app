@@ -146,3 +146,12 @@ Flight data is provided by the configured provider and should be verified with t
 ## Waypoint 4.6 professional chat
 
 The collaboration chat now uses registered participant identities on the server, idempotent sends, anti-spam rate limiting, per-trip drafts, typing indicators, date separators, accessible live regions, mobile full-screen layout, and self-aware unread counters. The server no longer trusts a display name supplied with each message; it resolves the sender from the registered participant list.
+
+## Emoji and GIF chat
+
+Waypoint 4.7 adds:
+- Built-in emoji picker (no external service required).
+- GIPHY GIF search inside collaborative chat.
+- GIF messages store only the GIPHY content ID in Waypoint; clients resolve the current media rendition directly from GIPHY.
+- Visible `Powered by GIPHY` attribution in the picker.
+- `GIPHY_API_KEY` must be configured in Railway for GIF search. The key is delivered to the web client at runtime because GIPHY requires search/media requests to be made directly client-side rather than proxied by Waypoint.

@@ -211,7 +211,7 @@ const server=http.createServer(async(req,res)=>{
   try{
     const u=new URL(req.url,'http://localhost');
 
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'4.6.0',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'4.7.0',time:new Date().toISOString()});
 
     if(req.method==='GET'&&u.pathname==='/api/fx/rate'){
       const from=String(u.searchParams.get('from')||'').trim().toUpperCase();
@@ -244,8 +244,14 @@ const server=http.createServer(async(req,res)=>{
 
 
 
+
+    if(req.method==='GET'&&u.pathname==='/api/giphy-config'){
+      const key=String(process.env.GIPHY_API_KEY||'').trim();
+      return json(res,200,{enabled:Boolean(key),apiKey:key||null,provider:key?'GIPHY':null});
+    }
+
     if(req.method==='GET'&&u.pathname==='/api/features'){
-      return json(res,200,{flightAlerts:Boolean(process.env.FLIGHTAWARE_API_KEY&&webpush&&vapidKeys),webPush:Boolean(webpush&&vapidKeys),provider:process.env.FLIGHTAWARE_API_KEY?'FlightAware':null});
+      return json(res,200,{flightAlerts:Boolean(process.env.FLIGHTAWARE_API_KEY&&webpush&&vapidKeys),webPush:Boolean(webpush&&vapidKeys),provider:process.env.FLIGHTAWARE_API_KEY?'FlightAware':null,giphy:Boolean(process.env.GIPHY_API_KEY)});
     }
     if(req.method==='GET'&&u.pathname==='/api/notifications/vapid-public-key'){
       if(!webpush||!vapidKeys) return json(res,503,{error:'push_not_configured'});
@@ -382,11 +388,15 @@ const server=http.createServer(async(req,res)=>{
         const editKey=String(req.headers['x-edit-key']||'');
         if(hash(editKey)!==room.keyHash) return json(res,403,{error:'invalid edit key'});
         const incoming=await readBody(req);
+        const kind=String(incoming.kind||'text')==='gif'?'gif':'text';
         const textValue=String(incoming.text||'').trim();
+        const gifId=String(incoming.gifId||'').trim().slice(0,120);
+        const gifTitle=String(incoming.gifTitle||'GIF').trim().slice(0,160);
         const participantId=String(incoming.participantId||'').trim().slice(0,100);
         const clientMessageId=String(incoming.clientMessageId||'').trim().slice(0,100);
-        if(!textValue) return json(res,400,{error:'message is empty'});
-        if(textValue.length>500) return json(res,400,{error:'message too long'});
+        if(kind==='text'&&!textValue) return json(res,400,{error:'message is empty'});
+        if(kind==='text'&&textValue.length>500) return json(res,400,{error:'message too long'});
+        if(kind==='gif'&&!/^[A-Za-z0-9_-]{1,120}$/.test(gifId)) return json(res,400,{error:'invalid gif id'});
         if(!participantId) return json(res,400,{error:'participant identity required'});
         const participant=(room.participants||[]).find(p=>p.participantId===participantId);
         if(!participant) return json(res,403,{error:'participant not registered'});
@@ -396,7 +406,13 @@ const server=http.createServer(async(req,res)=>{
           const duplicate=room.chat.find(m=>m.clientMessageId===clientMessageId&&m.participantId===participantId);
           if(duplicate) return json(res,200,{ok:true,message:duplicate,duplicate:true});
         }
-        const message={id:crypto.randomUUID(),clientMessageId,text:textValue,name:participant.name,participantId,createdAt:new Date().toISOString()};
+        const message={
+          id:crypto.randomUUID(),clientMessageId,kind,
+          text:kind==='text'?textValue:'',
+          gifId:kind==='gif'?gifId:undefined,
+          gifTitle:kind==='gif'?gifTitle:undefined,
+          name:participant.name,participantId,createdAt:new Date().toISOString()
+        };
         room.chat.push(message);
         if(room.chat.length>200) room.chat=room.chat.slice(-200);
         participant.lastSeenAt=new Date().toISOString();
@@ -476,4 +492,4 @@ const server=http.createServer(async(req,res)=>{
   }
 });
 
-server.listen(PORT,HOST,()=>console.log(`Waypoint 4.6.0 listening on http://${HOST}:${PORT}`));
+server.listen(PORT,HOST,()=>console.log(`Waypoint 4.7.0 listening on http://${HOST}:${PORT}`));
