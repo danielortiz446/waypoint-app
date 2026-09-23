@@ -69,3 +69,13 @@ Also review those pages if you later add analytics, ads, accounts, payments, loc
 ## Railway Dockerfile note
 
 Railway does not accept the Docker `VOLUME` instruction during Dockerfile validation. Persistent storage must be created in Railway and mounted at `/data`.
+
+## Optional GIF search
+
+Emoji chat works without external configuration.
+
+For in-chat GIPHY search, add this Railway/hosting environment variable:
+
+`GIPHY_API_KEY=...`
+
+The GIF picker also supports approved direct GIPHY/Tenor media URLs as a manual fallback. The GIPHY API key is delivered to the browser at runtime because GIPHY search is performed client-side.

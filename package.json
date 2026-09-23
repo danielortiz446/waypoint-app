@@ -1,6 +1,6 @@
 {
   "name": "waypoint-trip-planner",
-  "version": "4.8.0",
+  "version": "4.8.1",
   "private": true,
   "description": "Waypoint production web/PWA and live collaboration server",
   "scripts": {
@@ -9,8 +9,5 @@
   },
   "engines": {
     "node": ">=18"
-  },
-  "dependencies": {
-    "web-push": "^3.6.7"
   }
 }

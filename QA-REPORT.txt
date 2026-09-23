@@ -97,3 +97,10 @@ PASS converter amount and converted monetary result are rounded to two decimals
 PASS exchange-rate field retains high precision for accurate FX calculations
 PASS money formatting always displays two decimal places
 PASS accumulated trip spending is rounded to cents to avoid floating-point artifacts
+
+WAYPOINT 4.8.1 STABILITY REVIEW
+- Removed unfinished/paid real-time flight-alert integration and all FlightAware/Web Push controls.
+- Retained normal flight reservation fields (flight number, origin, destination, date/time, confirmation, notes).
+- Fixed active-collaboration re-sharing so invitees cannot be promoted locally to owner.
+- Reviewed GIPHY/privacy disclosures.
+- Re-ran JavaScript syntax and server smoke tests.

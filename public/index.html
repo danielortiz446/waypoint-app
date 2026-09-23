@@ -1537,14 +1537,38 @@ async function startLiveCollaboration(tripId){
   const participantName=ensureChatName(tripId);
   if(!participantName) return;
 
+  // If collaboration is already active, only share the existing invitation.
+  // Never promote an invitee to owner merely because they re-share the link.
+  if(tr.liveSync&&tr.syncServer&&tr.shareId&&tr.editKey){
+    const base=location.origin&&location.origin!=='null'?location.origin+location.pathname:location.href.split('#')[0];
+    const link=`${base}#collab=${encodeURIComponent(tr.shareId)}&key=${encodeURIComponent(tr.editKey)}&server=${encodeURIComponent(tr.syncServer)}`;
+    try{
+      if(navigator.share){
+        await navigator.share({
+          title:tr.name,
+          text:es?'Te invito a colaborar en este viaje de Waypoint. Al abrir el enlace, identifícate con tu nombre:':'Join this Waypoint trip collaboration. When you open the link, identify yourself with your name:',
+          url:link
+        });
+      }else{
+        await copyTextRobust(link);
+        showToast(es?'Enlace colaborativo copiado':'Collaboration link copied');
+      }
+    }catch(e){
+      if(e&&e.name==='AbortError')return;
+      try{await copyTextRobust(link);showToast(es?'Enlace colaborativo copiado':'Collaboration link copied');}
+      catch(_){showCopyFallback(link,es?'Enlace de colaboración':'Collaboration link');}
+    }
+    return;
+  }
+
   let server=tr.syncServer||collabServer();
-  if(!server){ server=prompt(es?'Ingresa la URL de tu servidor Waypoint Sync:':'Enter your Waypoint Sync server URL:','')||''; }
-  server=server.trim().replace(/\/$/,''); if(!server) return;
+  if(!server){server=prompt(es?'Ingresa la URL de tu servidor Waypoint Sync:':'Enter your Waypoint Sync server URL:','')||'';}
+  server=server.trim().replace(/\/$/,''); if(!server)return;
 
   setCollabServer(server);
   ensureShareId(tr);
-  if(!tr.editKey) tr.editKey=randomKey();
-  if(!tr.ownerKey) tr.ownerKey=randomKey();
+  tr.editKey=tr.editKey||randomKey();
+  tr.ownerKey=tr.ownerKey||randomKey();
   tr.collabOwner=true;
   tr.collabParticipantName=participantName;
   tr.collabParticipantId=tr.collabParticipantId||chatParticipantId();
@@ -1553,25 +1577,28 @@ async function startLiveCollaboration(tripId){
   tr.syncRevision=Number(tr.syncRevision||0);
 
   await saveState();
-  const ok=await pushTripToCloud(tr,false); if(!ok) return;
+  const ok=await pushTripToCloud(tr,false); if(!ok)return;
   await registerCollabParticipant(tr);
   ensureLiveStream(tr);
 
-  const base=location.origin && location.origin!=='null' ? location.origin+location.pathname : location.href.split('#')[0];
-  // Owner key is deliberately NOT included in the invitation.
+  const base=location.origin&&location.origin!=='null'?location.origin+location.pathname:location.href.split('#')[0];
   const link=`${base}#collab=${encodeURIComponent(tr.shareId)}&key=${encodeURIComponent(tr.editKey)}&server=${encodeURIComponent(server)}`;
 
   try{
     if(navigator.share){
-      await navigator.share({title:tr.name,text:es?'Te invito a colaborar conmigo en este viaje de Waypoint. Al abrir el enlace, identifícate con tu nombre:':'I’m inviting you to collaborate on this Waypoint trip. When you open the link, identify yourself with your name:',url:link});
+      await navigator.share({
+        title:tr.name,
+        text:es?'Te invito a colaborar conmigo en este viaje de Waypoint. Al abrir el enlace, identifícate con tu nombre:':'I’m inviting you to collaborate on this Waypoint trip. When you open the link, identify yourself with your name:',
+        url:link
+      });
     }else{
       await copyTextRobust(link);
       showToast(es?'Enlace colaborativo copiado':'Collaboration link copied');
     }
   }catch(e){
-    if(e && e.name==='AbortError') return;
-    try{ await copyTextRobust(link); showToast(es?'Enlace colaborativo copiado':'Collaboration link copied'); }
-    catch(_){ showCopyFallback(link,es?'Enlace de colaboración':'Collaboration link'); }
+    if(e&&e.name==='AbortError')return;
+    try{await copyTextRobust(link);showToast(es?'Enlace colaborativo copiado':'Collaboration link copied');}
+    catch(_){showCopyFallback(link,es?'Enlace de colaboración':'Collaboration link');}
   }
   render();
 }
@@ -2243,9 +2270,6 @@ function viewBookingsSub(tr){
         <button class="btn btn-danger btn-sm" onclick="deleteBooking('${tr.id}','${b.id}')">✕</button></div>
         <div style="margin-top:9px;display:flex;gap:7px;flex-wrap:wrap;">
           ${b.location?`<a class="btn btn-ghost btn-sm" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.location)}">🗺 ${es?'Abrir mapa':'Open map'}</a>`:''}
-          ${b.type==='flight'&&b.flightNumber?(b.flightAlertsActive
-            ?`<button class="btn btn-ghost btn-sm" onclick="disableFlightAlerts('${tr.id}','${b.id}')">🔔 ${es?'Alertas activas':'Alerts on'}</button>`
-            :`<button class="btn btn-brass btn-sm" onclick="enableFlightAlerts('${tr.id}',(state.bookings['${tr.id}']||[]).find(x=>x.id==='${b.id}'))">🔔 ${es?'Activar alertas':'Enable alerts'}</button>`):''}
         </div>
       </div>`).join(''):
       `<div class="panel empty"><span class="ic">🎟</span><h3>${es?'Aún no hay reservas':'No bookings yet'}</h3><p>${es?'Guarda vuelos, hoteles, transporte y actividades con sus confirmaciones.':'Keep flights, hotels, transport and activity confirmations together.'}</p></div>`}
@@ -2257,83 +2281,6 @@ function toggleFlightFields(){
   const box=document.getElementById('flight-fields');
   if(box) box.style.display=type==='flight'?'block':'none';
 }
-function urlBase64ToUint8Array(base64String){
-  const padding='='.repeat((4-base64String.length%4)%4);
-  const base64=(base64String+padding).replace(/-/g,'+').replace(/_/g,'/');
-  const rawData=atob(base64);
-  return Uint8Array.from([...rawData].map(ch=>ch.charCodeAt(0)));
-}
-async function getPushSubscription(){
-  if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window)) throw new Error('push_unsupported');
-  let permission=Notification.permission;
-  if(permission==='default') permission=await Notification.requestPermission();
-  if(permission!=='granted') throw new Error('permission_denied');
-  const keyRes=await fetch('/api/notifications/vapid-public-key',{cache:'no-store'});
-  if(!keyRes.ok) throw new Error('push_not_configured');
-  const keyData=await keyRes.json();
-  const reg=await navigator.serviceWorker.ready;
-  let sub=await reg.pushManager.getSubscription();
-  if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(keyData.publicKey)});
-  return sub.toJSON();
-}
-async function enableFlightAlerts(tripId,booking){
-  const es=state.lang==='es';
-  if(!booking?.flightNumber||!booking?.date){
-    showToast(es?'Para activar alertas necesitas número de vuelo y fecha.':'Flight number and date are required for alerts.');
-    return false;
-  }
-  try{
-    const subscription=await getPushSubscription();
-    const token=booking.flightWatchToken||randomKey()+randomKey();
-    const r=await fetch('/api/flight-watches',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        token,
-        flightNumber:booking.flightNumber.trim().toUpperCase(),
-        date:booking.date,
-        origin:(booking.origin||'').trim().toUpperCase(),
-        destination:(booking.destination||'').trim().toUpperCase(),
-        bookingTitle:booking.title||booking.flightNumber,
-        subscription
-      })
-    });
-    const j=await r.json().catch(()=>({}));
-    if(!r.ok) throw new Error(j.error||'watch_failed');
-    booking.flightWatchId=j.id;
-    booking.flightWatchToken=token;
-    booking.flightAlertsActive=true;
-    booking.flightAlertProvider=j.provider||'FlightAware';
-    booking.flightAlertStatus=j.status||'active';
-    await saveState();
-    render();
-    showToast(es?'Alertas de vuelo activadas.':'Flight alerts enabled.');
-    return true;
-  }catch(e){
-    console.error(e);
-    const msg=String(e.message||e);
-    if(msg.includes('permission_denied')) showToast(es?'Debes permitir notificaciones para recibir alertas de vuelo.':'Allow notifications to receive flight alerts.');
-    else if(msg.includes('push_unsupported')) showToast(es?'Este dispositivo no admite notificaciones web en este modo. En iPhone instala Waypoint en la pantalla de inicio.':'This device does not support web notifications in this mode. On iPhone, install Waypoint to the Home Screen.');
-    else if(msg.includes('flight_provider_not_configured')) showToast(es?'Las alertas están listas en Waypoint, pero falta conectar la API de vuelos en Railway.':'Waypoint is ready for flight alerts, but the flight API still needs to be connected in Railway.');
-    else showToast(es?'No se pudieron activar las alertas de vuelo.':'Could not enable flight alerts.');
-    return false;
-  }
-}
-async function disableFlightAlerts(tripId,bookingId){
-  const list=state.bookings[tripId]||[];
-  const b=list.find(x=>x.id===bookingId); if(!b) return;
-  try{
-    if(b.flightWatchId&&b.flightWatchToken){
-      await fetch(`/api/flight-watches/${encodeURIComponent(b.flightWatchId)}`,{
-        method:'DELETE',headers:{'X-Watch-Token':b.flightWatchToken}
-      });
-    }
-  }catch(e){}
-  delete b.flightWatchId; delete b.flightWatchToken; b.flightAlertsActive=false; b.flightAlertStatus='off';
-  await saveState(); render();
-  showToast(state.lang==='es'?'Alertas de vuelo desactivadas.':'Flight alerts disabled.');
-}
-
 function openBookingForm(){ ui.modal='booking'; render(); }
 async function saveBookingForm(){
   const g=id=>document.getElementById(id)?.value||'';
@@ -2349,10 +2296,8 @@ async function saveBookingForm(){
     booking.origin=g('b-origin').trim().toUpperCase();
     booking.destination=g('b-destination').trim().toUpperCase();
   }
-  const wantsAlerts=type==='flight'&&Boolean(document.getElementById('b-flight-alerts')?.checked);
   state.bookings[tripId].push(booking);
   ui.modal=null; await saveState(); render();
-  if(wantsAlerts) await enableFlightAlerts(tripId,booking);
 }
 function deleteBooking(tripId,id){
   const tr=tripById(tripId); if(tr&&tr.liveSync){ if(!tr.collabDeleted) tr.collabDeleted={days:[],activities:[],bookings:[]}; if(!tr.collabDeleted.bookings.includes(id)) tr.collabDeleted.bookings.push(id); }
@@ -3248,11 +3193,6 @@ function renderModal(){
           <div class="field"><label>${es?'Origen (IATA)':'Origin (IATA)'}</label><input id="b-origin" maxlength="3" placeholder="MIA" style="text-transform:uppercase"></div>
           <div class="field"><label>${es?'Destino (IATA)':'Destination (IATA)'}</label><input id="b-destination" maxlength="3" placeholder="BOG" style="text-transform:uppercase"></div>
         </div>
-        <label style="display:flex;align-items:flex-start;gap:9px;font-size:12px;color:var(--ink-text);">
-          <input id="b-flight-alerts" type="checkbox" style="width:18px;height:18px;accent-color:var(--brass);margin-top:1px;">
-          <span>🔔 ${es?'Recibir alertas del vuelo (salida, llegada, retrasos, cancelación y cambios disponibles)':'Receive flight alerts (departure, arrival, delays, cancellation and available changes)'}</span>
-        </label>
-        <div class="field-hint">${es?'En iPhone, Waypoint debe estar instalada en la pantalla de inicio para recibir Web Push.':'On iPhone, Waypoint must be installed on the Home Screen to receive Web Push.'}</div>
       </div>
       <div class="field"><label>${es?'Nombre / ruta':'Name / route'}</label><input id="b-title" placeholder="${es?'Ej. MIA → BOG / Hotel Cartagena':'e.g. MIA → BOG / Cartagena Hotel'}"></div>
       <div class="form-row">

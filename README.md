@@ -128,20 +128,6 @@ Chat messages are not included in ordinary local-only trips.
 - Invitees receive a **Leave** action that stops synchronization only on their device and keeps a local copy.
 - People identify themselves when they first open an invitation. That identity is used automatically by trip chat and appears in the participant list.
 
-## Real-time flight alerts
-
-Flight bookings can include a flight number, origin, destination and an opt-in for flight notifications.
-
-Production flight alerts use:
-- FlightAware AeroAPI alert webhooks
-- standards-based Web Push
-- the existing Waypoint service worker
-
-Set `FLIGHTAWARE_API_KEY` in Railway Variables. Waypoint generates and persists its own VAPID key pair in `/data`, so no separate VAPID setup is required.
-
-On iPhone/iPad, Web Push requires Waypoint to be installed as a Home Screen web app. On Android and supported desktop browsers, permission is requested when the user enables flight alerts.
-
-Flight data is provided by the configured provider and should be verified with the airline/airport for critical travel decisions.
 
 ## Waypoint 4.6 professional chat
 
@@ -163,3 +149,7 @@ Waypoint 4.7 adds:
   1. GIPHY search when `GIPHY_API_KEY` is configured in Railway.
   2. Direct media URL fallback from approved GIPHY/Tenor media hosts for testing or manual use.
 - GIF messages render inline in the collaborative chat.
+
+## Flight reservations
+
+Waypoint stores flight reservations as planning records: flight number, origin, destination, date/time, provider, confirmation and notes. Real-time flight-status notifications are intentionally not included in this version, so the app has no unfinished flight-alert controls or paid flight-data dependency.
