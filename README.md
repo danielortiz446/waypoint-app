@@ -145,9 +145,8 @@ Waypoint 4.7 adds:
 ## Waypoint 4.8 chat media refinements
 
 - Emoji picker is now a compact popover with categories and recent emojis instead of a large exposed grid.
-- GIFs support two paths:
-  1. GIPHY search when `GIPHY_API_KEY` is configured in Railway.
-  2. Direct media URL fallback from approved GIPHY/Tenor media hosts for testing or manual use.
+- GIFs are available only through the configured GIPHY search.
+- Direct/external GIF URLs are not accepted.
 - GIF messages render inline in the collaborative chat.
 
 ## Flight reservations

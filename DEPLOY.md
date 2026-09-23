@@ -78,4 +78,4 @@ For in-chat GIPHY search, add this Railway/hosting environment variable:
 
 `GIPHY_API_KEY=...`
 
-The GIF picker also supports approved direct GIPHY/Tenor media URLs as a manual fallback. The GIPHY API key is delivered to the browser at runtime because GIPHY search is performed client-side.
+The GIPHY API key is delivered to the browser at runtime because GIPHY search is performed client-side.

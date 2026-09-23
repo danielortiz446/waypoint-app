@@ -466,8 +466,6 @@ body{transition:background .3s;}
 .gif-item{border:0;background:rgba(255,255,255,.04);border-radius:10px;overflow:hidden;padding:0;cursor:pointer;aspect-ratio:1.25/1;position:relative;}
 .gif-item img{width:100%;height:100%;object-fit:cover;display:block;}
 .gif-loading,.gif-empty{padding:20px 10px;text-align:center;color:var(--muted);font-size:11px;grid-column:1/-1;line-height:1.5;}
-.gif-url-row{display:flex;gap:7px;margin-top:9px;padding-top:9px;border-top:1px solid rgba(255,255,255,.07);}
-.gif-url-row input{flex:1;}
 .giphy-attrib{padding:6px 10px 9px;text-align:right;color:var(--muted);font:9px var(--font-mono);}
 .chat-gif{display:block;max-width:280px;width:100%;border-radius:10px;background:rgba(255,255,255,.04);}
 .chat-gif-placeholder{width:230px;max-width:100%;aspect-ratio:1.3/1;border-radius:10px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:10px;}
@@ -1215,7 +1213,7 @@ async function loadGiphyResults(query){
   grid.innerHTML=`<div class="gif-loading">${es?'Cargando GIFs…':'Loading GIFs…'}</div>`;
   const cfg=await getGiphyConfig();
   if(!cfg.enabled||!cfg.apiKey){
-    grid.innerHTML=`<div class="gif-empty">${es?'La búsqueda todavía no está conectada. Puedes pegar un enlace directo de GIF abajo o agregar GIPHY_API_KEY en Railway.':'GIF search is not connected yet. Paste a direct GIF URL below or add GIPHY_API_KEY in Railway.'}</div>`;
+    grid.innerHTML=`<div class="gif-empty">${es?'Los GIFs todavía no están disponibles. Agrega GIPHY_API_KEY en Railway para activar el buscador.':'GIFs are not available yet. Add GIPHY_API_KEY in Railway to enable the search.'}</div>`;
     return;
   }
   try{
@@ -1237,44 +1235,11 @@ async function loadGiphyResults(query){
     }).join('');
   }catch(e){
     console.error('GIPHY search failed',e);
-    grid.innerHTML=`<div class="gif-empty">${es?'No se pudieron cargar los GIFs. Puedes usar la opción de enlace directo abajo.':'Could not load GIFs. You can use the direct URL option below.'}</div>`;
+    grid.innerHTML=`<div class="gif-empty">${es?'No se pudieron cargar los GIFs. Inténtalo de nuevo.':'Could not load GIFs. Try again.'}</div>`;
   }
 }
-function allowedDirectGifUrl(value){
-  try{
-    const u=new URL(String(value||'').trim());
-    if(u.protocol!=='https:')return null;
-    const host=u.hostname.toLowerCase();
-    const allowed=['media.giphy.com','i.giphy.com','media.tenor.com','c.tenor.com'];
-    if(!allowed.includes(host))return null;
-    return u.href.slice(0,1200);
-  }catch(e){return null;}
-}
-async function sendDirectGifUrl(tripId){
-  const input=document.getElementById('gif-url-input');
-  const url=allowedDirectGifUrl(input?.value);
-  if(!url){
-    showToast(state.lang==='es'?'Usa un enlace directo de media.giphy.com o media.tenor.com.':'Use a direct media.giphy.com or media.tenor.com link.');
-    input?.focus(); return;
-  }
-  const tr=tripById(tripId); if(!tr||ui.chatSending)return;
-  const participantId=tr.collabParticipantId||chatParticipantId();
-  const clientMessageId='c-'+randomKey();
-  ui.chatSending=true;
-  try{
-    const r=await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}/chat`,{
-      method:'POST',
-      headers:{'Content-Type':'application/json','X-Edit-Key':tr.editKey},
-      body:JSON.stringify({kind:'gif',gifUrl:url,gifTitle:'GIF',participantId,clientMessageId})
-    });
-    const j=await r.json().catch(()=>({}));
-    if(!r.ok)throw new Error(j.error||`chat ${r.status}`);
-    if(j.message)ui.chatMessages=[...(ui.chatMessages||[]).filter(x=>x.id!==j.message.id),j.message];
-    closeChatMediaPickers(); renderChatMessagesInPlace();
-  }catch(e){
-    console.error(e); showToast(state.lang==='es'?'No se pudo enviar el GIF.':'Could not send the GIF.');
-  }finally{ui.chatSending=false;}
-}
+
+
 async function resolveChatGifs(){
   const ids=[...new Set((ui.chatMessages||[]).filter(m=>m.kind==='gif'&&m.gifId).map(m=>m.gifId))];
   if(!ids.length)return;
@@ -1343,12 +1308,10 @@ function chatMessagesHtml(messages,me,es){
     if(day!==lastDay){lastDay=day;sep=`<div class="chat-day">${escapeHtml(day)}</div>`;}
     const mine=m.participantId===me;
     let body='';
-    if(m.kind==='gif'){
+    if(m.kind==='gif'&&m.gifId){
       const gif=(ui.chatGifMap||{})[m.gifId];
-      const src=m.gifUrl||gif?.url||'';
-      const alt=m.gifTitle||gif?.alt||'GIF';
-      body=src
-        ?`<img class="chat-gif" loading="lazy" src="${escapeHtml(src)}" alt="${escapeHtml(alt)}">`
+      body=gif?.url
+        ?`<img class="chat-gif" loading="lazy" src="${escapeHtml(gif.url)}" alt="${escapeHtml(gif.alt||m.gifTitle||'GIF')}">`
         :`<div class="chat-gif-placeholder">${es?'Cargando GIF…':'Loading GIF…'}</div>`;
     }else{
       body=`<div class="chat-text">${escapeHtml(m.text||'')}</div>`;
@@ -3084,10 +3047,6 @@ function renderModal(){
                   <button type="button" class="btn btn-ghost btn-sm" onclick="loadGiphyResults(document.getElementById('gif-search')?.value||'')">${es?'Buscar':'Search'}</button>
                 </div>
                 <div id="gif-grid" class="gif-grid"><div class="gif-loading">${es?'Cargando GIFs…':'Loading GIFs…'}</div></div>
-                <div class="gif-url-row">
-                  <input id="gif-url-input" placeholder="${es?'O pega un GIF directo de GIPHY/Tenor':'Or paste a direct GIPHY/Tenor GIF URL'}">
-                  <button type="button" class="btn btn-ghost btn-sm" onclick="sendDirectGifUrl('${tr.id}')">${es?'Enviar':'Send'}</button>
-                </div>
               </div>
               <div class="giphy-attrib">Powered by GIPHY</div>
             </div>

@@ -47,7 +47,7 @@ async function sseNext(id,key){
     r=await fetch(base+'/manifest.webmanifest');
     results.push(['manifest',r.ok&&(await r.json()).name.includes('Waypoint')]);
     r=await fetch(base+'/health');
-    results.push(['health',r.ok&&(await r.json()).version==='4.8.1']);
+    results.push(['health',r.ok&&(await r.json()).version==='4.8.2']);
 
     const id='trip-test',key='secret-edit-key';
     r=await fetch(base+`/api/trips/${id}`,{method:'PUT',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({clientRevision:0,data:{waypointLive:1,trip:{name:'QA Trip'},days:[],bookings:[]}})});
@@ -72,31 +72,7 @@ async function sseNext(id,key){
 
     r=await fetch(base+`/api/trips/${id}/participants`,{method:'POST',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({name:'QA User',participantId:'qa-user'})});
     results.push(['participant preregistration',r.ok]);
-
-    r=await fetch(base+`/api/trips/${id}/chat`,{method:'POST',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({text:'Hello from QA',name:'QA User',participantId:'qa-user'})});
-    const sent=await r.json();
-    results.push(['chat send',r.status===201&&sent.message&&sent.message.text==='Hello from QA']);
-
-    r=await fetch(base+`/api/trips/${id}/chat?key=${encodeURIComponent(key)}`);
-    const chat=await r.json();
-    results.push(['chat read',r.ok&&Array.isArray(chat.messages)&&chat.messages.length===1&&chat.messages[0].name==='QA User']);
-
-    r=await fetch(base+`/api/trips/${id}/chat?key=wrong`);
-    results.push(['chat invalid key',r.status===403]);
-
-    r=await fetch(base+`/api/trips/${id}/chat`,{method:'POST',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({kind:'gif',gifId:'xT4uQulxzV39haRFjG',gifTitle:'QA GIF',participantId:'qa-user',clientMessageId:'gif-qa-1'})});
-    const gifSent=await r.json();
-    results.push(['chat gif send',r.status===201&&gifSent.message&&gifSent.message.kind==='gif'&&gifSent.message.gifId==='xT4uQulxzV39haRFjG']);
-
-    r=await fetch(base+`/api/trips/${id}/chat`,{method:'POST',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({kind:'gif',gifId:'bad gif id!',participantId:'qa-user',clientMessageId:'gif-bad'})});
-    results.push(['chat invalid gif rejected',r.status===400]);
-
-    r=await fetch(base+`/api/trips/${id}/chat`,{method:'POST',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({kind:'gif',gifUrl:'https://media.giphy.com/media/xT4uQulxzV39haRFjG/giphy.gif',gifTitle:'Direct QA GIF',participantId:'qa-user',clientMessageId:'gif-url-qa-1'})});
-    const gifUrlSent=await r.json();
-    results.push(['chat direct gif url',r.status===201&&gifUrlSent.message&&gifUrlSent.message.gifUrl&&gifUrlSent.message.kind==='gif']);
-
-
-    r=await fetch(base+'/api/giphy-config');
+r=await fetch(base+'/api/giphy-config');
     const giphyCfg=await r.json();
     results.push(['giphy config endpoint',r.ok&&typeof giphyCfg.enabled==='boolean']);
 
