@@ -368,6 +368,23 @@ body{transition:background .3s;}
 .readiness-next .title{font-size:11px;font-weight:700;color:var(--brass-light);text-transform:uppercase;letter-spacing:.05em;}
 .readiness-next .text{font-size:12px;color:var(--ink-text);margin-top:4px;line-height:1.4;}
 
+
+/* live collaboration chat */
+.chat-modal{max-width:560px;}
+.chat-shell{display:flex;flex-direction:column;gap:10px;}
+.chat-head{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.chat-trip{font-size:11px;color:var(--muted);margin-top:2px;}
+.chat-list{height:min(52vh,440px);overflow:auto;padding:10px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);border-radius:12px;display:flex;flex-direction:column;gap:9px;}
+.chat-empty{padding:26px 12px;text-align:center;color:var(--muted);font-size:12px;}
+.chat-msg{max-width:82%;padding:9px 11px;border-radius:12px;background:rgba(255,255,255,.075);border:1px solid rgba(255,255,255,.07);align-self:flex-start;}
+.chat-msg.mine{align-self:flex-end;background:rgba(201,162,39,.12);border-color:rgba(201,162,39,.23);}
+.chat-meta{font-family:var(--font-mono);font-size:9px;color:var(--muted);margin-bottom:4px;}
+.chat-text{font-size:13px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink-text);}
+.chat-compose{display:flex;gap:8px;align-items:flex-end;}
+.chat-compose textarea{flex:1;min-height:44px;max-height:110px;resize:none;}
+.chat-compose .btn{min-height:44px;}
+.chat-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:10px;background:var(--coral);color:#fff;font-size:9px;font-family:var(--font-mono);margin-left:4px;}
+
 </style>
 </head>
 <body>
@@ -973,6 +990,100 @@ function collabServer(){
 }
 function randomKey(){ const a=new Uint8Array(18); crypto.getRandomValues(a); return Array.from(a,b=>b.toString(16).padStart(2,'0')).join(''); }
 function setCollabServer(url){ localStorage.setItem('waypoint-sync-server',(url||'').trim().replace(/\/$/,'')); }
+
+function chatParticipantId(){
+  let id=localStorage.getItem('waypoint-chat-participant-id');
+  if(!id){ id='p-'+randomKey(); localStorage.setItem('waypoint-chat-participant-id',id); }
+  return id;
+}
+function chatParticipantName(){
+  const saved=(state.profile&&state.profile.name||'').trim();
+  if(saved) return saved.slice(0,60);
+  const existing=(localStorage.getItem('waypoint-chat-name')||'').trim();
+  return existing.slice(0,60);
+}
+function ensureChatName(){
+  let name=chatParticipantName();
+  if(name) return name;
+  const es=state.lang==='es';
+  name=(prompt(es?'Escribe el nombre que verán los demás participantes en el chat:':'Enter the name other participants will see in chat:','')||'').trim().slice(0,60);
+  if(name) localStorage.setItem('waypoint-chat-name',name);
+  return name;
+}
+function formatChatTime(iso){
+  try{
+    return new Date(iso).toLocaleTimeString(state.lang==='es'?'es-ES':'en-US',{hour:'numeric',minute:'2-digit',hour12:true});
+  }catch(e){ return ''; }
+}
+async function loadTripChat(tripId,quiet=false){
+  const tr=tripById(tripId);
+  if(!tr||!tr.liveSync||!tr.syncServer||!tr.shareId||!tr.editKey) return;
+  try{
+    const r=await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}/chat?key=${encodeURIComponent(tr.editKey)}`,{cache:'no-store'});
+    if(!r.ok) throw new Error('chat '+r.status);
+    const j=await r.json();
+    ui.chatTripId=tripId;
+    ui.chatMessages=Array.isArray(j.messages)?j.messages:[];
+    tr.chatUnread=0;
+    ui.chatLoading=false;
+    if(ui.modal==='tripChat') render();
+  }catch(e){
+    ui.chatLoading=false;
+    if(!quiet) showToast(state.lang==='es'?'No se pudo cargar el chat':'Could not load chat');
+    if(ui.modal==='tripChat') render();
+  }
+}
+function openTripChat(tripId){
+  const tr=tripById(tripId);
+  if(!tr||!tr.liveSync){
+    showToast(state.lang==='es'?'Activa primero la colaboración en vivo':'Enable live collaboration first');
+    return;
+  }
+  ui.chatTripId=tripId;
+  ui.chatMessages=[];
+  ui.chatLoading=true;
+  tr.chatUnread=0;
+  ui.modal='tripChat';
+  render();
+  loadTripChat(tripId);
+}
+async function sendTripChat(tripId){
+  const tr=tripById(tripId);
+  const input=document.getElementById('chat-input');
+  if(!tr||!input) return;
+  const text=String(input.value||'').trim();
+  if(!text) return;
+  if(text.length>500){
+    showToast(state.lang==='es'?'El mensaje puede tener máximo 500 caracteres':'Messages can be up to 500 characters');
+    return;
+  }
+  const name=ensureChatName();
+  if(!name) return;
+  input.disabled=true;
+  try{
+    const r=await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}/chat`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Edit-Key':tr.editKey},
+      body:JSON.stringify({text,name,participantId:chatParticipantId()})
+    });
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(j.error||'chat');
+    input.value='';
+    await loadTripChat(tripId,true);
+  }catch(e){
+    showToast(state.lang==='es'?'No se pudo enviar el mensaje':'Could not send message');
+  }finally{
+    input.disabled=false;
+    input.focus();
+  }
+}
+function chatKeydown(e,tripId){
+  if(e.key==='Enter'&&!e.shiftKey){
+    e.preventDefault();
+    sendTripChat(tripId);
+  }
+}
+
 async function startLiveCollaboration(tripId){
   const tr=tripById(tripId); if(!tr) return;
   const es=state.lang==='es';
@@ -1058,6 +1169,16 @@ function ensureLiveStream(tr){
       try{
         const msg=JSON.parse(ev.data||'{}');
         if(Number(msg.revision||0)>Number(tr.syncRevision||0)) await pullTripFromCloud(tr);
+      }catch(e){}
+    });
+    es.addEventListener('chat',async ev=>{
+      try{
+        if(ui.modal==='tripChat'&&ui.chatTripId===tr.id){
+          await loadTripChat(tr.id,true);
+        }else{
+          tr.chatUnread=Number(tr.chatUnread||0)+1;
+          render();
+        }
       }catch(e){}
     });
     es.onerror=()=>{
@@ -1689,7 +1810,7 @@ function viewItinerarySub(tr){
       ${days.length? `<button class="btn btn-ghost btn-sm" onclick="openShareCenter('${tr.id}')">📤 ${t.itinerary.share}</button>`:''}
       ${days.length? `<button class="btn btn-brass btn-sm" onclick="startLiveCollaboration('${tr.id}')">👥 ${state.lang==='es'?'Colaborar en vivo':'Live collaboration'}</button>`:''}
     </div>
-    ${tr.liveSync? `<div class="collab-bar"><div class="collab-status"><span class="sync-dot"></span><span>${state.lang==='es'?'Sincronización colaborativa activa':'Live collaboration active'}${tr.lastSyncedAt?' · '+new Date(tr.lastSyncedAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):''}</span></div><button class="btn btn-ghost btn-sm" onclick="syncTripNow('${tr.id}')">↻ ${state.lang==='es'?'Sincronizar ahora':'Sync now'}</button></div>`:''}
+    ${tr.liveSync? `<div class="collab-bar"><div class="collab-status"><span class="sync-dot"></span><span>${state.lang==='es'?'Sincronización colaborativa activa':'Live collaboration active'}${tr.lastSyncedAt?' · '+new Date(tr.lastSyncedAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):''}</span></div><div style="display:flex;gap:7px;flex-wrap:wrap;"><button class="btn btn-ghost btn-sm" onclick="openTripChat('${tr.id}')">💬 ${state.lang==='es'?'Chat':'Chat'}${Number(tr.chatUnread||0)>0?`<span class="chat-badge">${Math.min(99,Number(tr.chatUnread||0))}</span>`:''}</button><button class="btn btn-ghost btn-sm" onclick="syncTripNow('${tr.id}')">↻ ${state.lang==='es'?'Sincronizar ahora':'Sync now'}</button></div></div>`:''}
     ${tr.shareId? `<p class="field-hint" style="margin:-8px 0 14px;">${t.itinerary.sharedHint}</p>`:''}
     ${days.length? days.map((d,i)=>dayCard(tr,d,i,days.length)).join('') : `<div class="panel empty"><p>${t.itinerary.noDays}</p></div>`}
   `;
@@ -2447,7 +2568,7 @@ function renderModal(){
         <button class="btn btn-ghost" onclick="cancelConfirm()">${t.common.cancel}</button>
       </div>`;
   }
-  bg.innerHTML = `<div class="modal">${inner}</div>`;
+  bg.innerHTML = `<div class="modal ${ui.modal==='tripChat'?'chat-modal':''}">${inner}</div>`;
   document.body.appendChild(bg);
 }
 function closeModal(){ ui.modal=null; ui.editingTrip=null; render(); }

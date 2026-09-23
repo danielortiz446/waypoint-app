@@ -65,6 +65,14 @@ function notifyRevision(id,room){
   const msg=`event: revision\ndata: ${JSON.stringify({revision:room.revision,updatedAt:room.updatedAt})}\n\n`;
   for(const res of [...set]){ try{res.write(msg);}catch(e){set.delete(res);} }
 }
+
+function notifyChat(id,message){
+  const set=eventClients.get(id);
+  if(!set) return;
+  const msg=`event: chat\ndata: ${JSON.stringify({id:message.id,createdAt:message.createdAt,name:message.name})}\n\n`;
+  for(const res of [...set]){ try{res.write(msg);}catch(e){set.delete(res);} }
+}
+
 function addEventClient(id,res){
   if(!eventClients.has(id)) eventClients.set(id,new Set());
   eventClients.get(id).add(res);
@@ -78,7 +86,7 @@ const server=http.createServer(async(req,res)=>{
   try{
     const u=new URL(req.url,'http://localhost');
 
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'4.1.0',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'4.4.0',time:new Date().toISOString()});
 
     if(req.method==='GET'&&u.pathname==='/api/fx/rate'){
       const from=String(u.searchParams.get('from')||'').trim().toUpperCase();
@@ -125,6 +133,37 @@ const server=http.createServer(async(req,res)=>{
       return;
     }
 
+
+    const chatMatch=u.pathname.match(/^\/api\/trips\/([^/]+)\/chat$/);
+    if(chatMatch){
+      const id=decodeURIComponent(chatMatch[1]);
+      const room=rooms[id];
+      if(!room) return json(res,404,{error:'trip not found'});
+      if(req.method==='GET'){
+        const key=u.searchParams.get('key')||'';
+        if(hash(key)!==room.keyHash) return json(res,403,{error:'invalid edit key'});
+        return json(res,200,{messages:Array.isArray(room.chat)?room.chat:[]});
+      }
+      if(req.method==='POST'){
+        const editKey=String(req.headers['x-edit-key']||'');
+        if(hash(editKey)!==room.keyHash) return json(res,403,{error:'invalid edit key'});
+        const incoming=await readBody(req);
+        const textValue=String(incoming.text||'').trim();
+        const name=String(incoming.name||'Participant').trim().slice(0,60);
+        const participantId=String(incoming.participantId||'').trim().slice(0,100);
+        if(!textValue) return json(res,400,{error:'message is empty'});
+        if(textValue.length>500) return json(res,400,{error:'message too long'});
+        const message={id:crypto.randomUUID(),text:textValue,name:name||'Participant',participantId,createdAt:new Date().toISOString()};
+        if(!Array.isArray(room.chat)) room.chat=[];
+        room.chat.push(message);
+        if(room.chat.length>200) room.chat=room.chat.slice(-200);
+        persist();
+        notifyChat(id,message);
+        return json(res,201,{ok:true,message});
+      }
+      return json(res,405,{error:'method not allowed'});
+    }
+
     const apiMatch=u.pathname.match(/^\/api\/trips\/([^/]+)$/);
     if(apiMatch){
       const id=decodeURIComponent(apiMatch[1]);
@@ -148,7 +187,7 @@ const server=http.createServer(async(req,res)=>{
           return json(res,409,{error:'revision_conflict',revision:existing.revision,updatedAt:existing.updatedAt,data:existing.data});
         }
         const revision=(existing?.revision||0)+1;
-        rooms[id]={keyHash:existing?.keyHash||hash(editKey),revision,updatedAt:new Date().toISOString(),data:incoming.data};
+        rooms[id]={keyHash:existing?.keyHash||hash(editKey),revision,updatedAt:new Date().toISOString(),data:incoming.data,chat:Array.isArray(existing?.chat)?existing.chat:[]};
         persist(); notifyRevision(id,rooms[id]);
         return json(res,200,{ok:true,revision,updatedAt:rooms[id].updatedAt});
       }
@@ -183,4 +222,4 @@ const server=http.createServer(async(req,res)=>{
   }
 });
 
-server.listen(PORT,HOST,()=>console.log(`Waypoint 4.1.0 listening on http://${HOST}:${PORT}`));
+server.listen(PORT,HOST,()=>console.log(`Waypoint 4.4.0 listening on http://${HOST}:${PORT}`));

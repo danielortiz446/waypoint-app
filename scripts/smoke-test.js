@@ -47,7 +47,7 @@ async function sseNext(id,key){
     r=await fetch(base+'/manifest.webmanifest');
     results.push(['manifest',r.ok&&(await r.json()).name.includes('Waypoint')]);
     r=await fetch(base+'/health');
-    results.push(['health',r.ok&&(await r.json()).version==='4.1.0']);
+    results.push(['health',r.ok&&(await r.json()).version==='4.4.0']);
 
     const id='trip-test',key='secret-edit-key';
     r=await fetch(base+`/api/trips/${id}`,{method:'PUT',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({clientRevision:0,data:{waypointLive:1,trip:{name:'QA Trip'},days:[],bookings:[]}})});
@@ -69,6 +69,18 @@ async function sseNext(id,key){
     r=await fetch(base+`/api/trips/${id}`,{method:'PUT',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({clientRevision:1,data:{waypointLive:1,trip:{name:'QA Trip Updated'},days:[],bookings:[]}})});
     const event=await sse;
     results.push(['live SSE event',r.ok&&event.revision===2]);
+
+    r=await fetch(base+`/api/trips/${id}/chat`,{method:'POST',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({text:'Hello from QA',name:'QA User',participantId:'qa-user'})});
+    const sent=await r.json();
+    results.push(['chat send',r.status===201&&sent.message&&sent.message.text==='Hello from QA']);
+
+    r=await fetch(base+`/api/trips/${id}/chat?key=${encodeURIComponent(key)}`);
+    const chat=await r.json();
+    results.push(['chat read',r.ok&&Array.isArray(chat.messages)&&chat.messages.length===1&&chat.messages[0].name==='QA User']);
+
+    r=await fetch(base+`/api/trips/${id}/chat?key=wrong`);
+    results.push(['chat invalid key',r.status===403]);
+
 
     child.kill('SIGTERM');
     const failed=results.filter(x=>!x[1]);

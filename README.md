@@ -114,3 +114,9 @@ Reference exchange rates may differ from the final rate charged by a bank, credi
 The Budget converter is not tied to USD/COP or any fixed pair. Users can select any supported source and destination currency, swap the direction, use automatic daily reference rates when available, or enter a manual rate. Recent currency pairs are kept in the UI for quick reuse.
 
 The initial source currency follows the trip currency or the user's default currency. The destination currency remains user-selectable.
+
+## Collaborative trip chat
+
+Live collaborative trips include a lightweight private chat. Messages are stored with the shared trip on the Waypoint sync server, limited to the latest 200 messages per trip, and delivered in near real time using the existing SSE connection. Access uses the same private collaboration edit key as the trip.
+
+Chat messages are not included in ordinary local-only trips.
