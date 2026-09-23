@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0B1D30">
+<meta name="color-scheme" content="dark">
 <meta name="description" content="Planifica viajes, itinerarios, reservas, presupuesto y equipaje con Waypoint.">
 <meta name="application-name" content="Waypoint">
 <meta name="apple-mobile-web-app-title" content="Waypoint">
@@ -62,7 +63,12 @@ main{padding:0 18px 24px;animation:fadeIn .25s ease;}
 
 /* ---------- header ---------- */
 .topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;row-gap:8px;
-  padding:14px 16px;background:rgba(11,29,48,0.85);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  padding-top:calc(14px + env(safe-area-inset-top, 0px));
+  padding-right:calc(16px + env(safe-area-inset-right, 0px));
+  padding-bottom:14px;
+  padding-left:calc(16px + env(safe-area-inset-left, 0px));
+  min-height:calc(62px + env(safe-area-inset-top, 0px));
+  background:rgba(11,29,48,0.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
   border-bottom:1px solid rgba(255,255,255,0.07);}
 .brand{display:flex;align-items:center;gap:10px;min-width:0;}
 .brand-mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--brass),var(--brass-light));
@@ -514,6 +520,41 @@ body{transition:background .3s;}
 
 
 .trip-global-collab .btn-brass{white-space:nowrap;}
+
+
+/* iOS / installed PWA safe areas */
+html,body{min-height:100%;background:#0B1D30;}
+body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);}
+#app{min-height:100dvh;padding-bottom:env(safe-area-inset-bottom,0px);}
+.back-row{
+  padding-left:calc(16px + env(safe-area-inset-left,0px));
+  padding-right:calc(16px + env(safe-area-inset-right,0px));
+}
+@supports (padding:max(0px)){
+  .fab{
+    right:max(20px,calc(14px + env(safe-area-inset-right,0px)));
+    bottom:max(24px,calc(14px + env(safe-area-inset-bottom,0px)));
+  }
+  .trip-chat-launcher{
+    right:max(22px,calc(14px + env(safe-area-inset-right,0px)));
+    bottom:max(92px,calc(84px + env(safe-area-inset-bottom,0px)));
+  }
+}
+@media(max-width:520px){
+  .topbar{flex-wrap:nowrap;gap:10px;}
+  .brand{min-width:0;flex:1 1 auto;}
+  .brand h1{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .header-actions{flex:0 0 auto;gap:6px;}
+  .lang-toggle button{padding:6px 10px;}
+}
+@media(display-mode:standalone){
+  .topbar{
+    position:sticky;
+    top:0;
+    padding-top:calc(12px + env(safe-area-inset-top,0px));
+    min-height:calc(60px + env(safe-area-inset-top,0px));
+  }
+}
 
 </style>
 </head>
