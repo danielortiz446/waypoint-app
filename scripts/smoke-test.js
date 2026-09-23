@@ -47,7 +47,7 @@ async function sseNext(id,key){
     r=await fetch(base+'/manifest.webmanifest');
     results.push(['manifest',r.ok&&(await r.json()).name.includes('Waypoint')]);
     r=await fetch(base+'/health');
-    results.push(['health',r.ok&&(await r.json()).version==='4.4.1']);
+    results.push(['health',r.ok&&(await r.json()).version==='4.5.0']);
 
     const id='trip-test',key='secret-edit-key';
     r=await fetch(base+`/api/trips/${id}`,{method:'PUT',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({clientRevision:0,data:{waypointLive:1,trip:{name:'QA Trip'},days:[],bookings:[]}})});
@@ -80,6 +80,15 @@ async function sseNext(id,key){
 
     r=await fetch(base+`/api/trips/${id}/chat?key=wrong`);
     results.push(['chat invalid key',r.status===403]);
+
+    r=await fetch(base+`/api/trips/${id}/participants`,{method:'POST',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({name:'QA User',participantId:'qa-participant'})});
+    const participants=await r.json();
+    results.push(['participant identity',r.ok&&participants.participants.some(p=>p.name==='QA User')]);
+
+    r=await fetch(base+`/api/trips/${id}/participants?key=${encodeURIComponent(key)}`);
+    const participantList=await r.json();
+    results.push(['participant list',r.ok&&participantList.participants.length===1]);
+
 
 
     child.kill('SIGTERM');

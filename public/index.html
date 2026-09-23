@@ -996,18 +996,26 @@ function chatParticipantId(){
   if(!id){ id='p-'+randomKey(); localStorage.setItem('waypoint-chat-participant-id',id); }
   return id;
 }
-function chatParticipantName(){
+function chatParticipantName(tripId){
+  const tr=tripId?tripById(tripId):null;
+  const tripName=String(tr?.collabParticipantName||'').trim();
+  if(tripName) return tripName.slice(0,60);
   const saved=(state.profile&&state.profile.name||'').trim();
   if(saved) return saved.slice(0,60);
   const existing=(localStorage.getItem('waypoint-chat-name')||'').trim();
   return existing.slice(0,60);
 }
-function ensureChatName(){
-  let name=chatParticipantName();
+function ensureChatName(tripId){
+  let name=chatParticipantName(tripId);
   if(name) return name;
   const es=state.lang==='es';
-  name=(prompt(es?'Escribe el nombre que verán los demás participantes en el chat:':'Enter the name other participants will see in chat:','')||'').trim().slice(0,60);
-  if(name) localStorage.setItem('waypoint-chat-name',name);
+  name=(prompt(es?'Escribe tu nombre para identificarte en este viaje:':'Enter your name so other participants can identify you:','')||'').trim().slice(0,60);
+  if(name){
+    localStorage.setItem('waypoint-chat-name',name);
+    const tr=tripId?tripById(tripId):null;
+    if(tr) tr.collabParticipantName=name;
+    saveState();
+  }
   return name;
 }
 function formatChatTime(iso){
@@ -1064,7 +1072,7 @@ async function sendTripChat(tripId){
     return;
   }
 
-  const name=ensureChatName();
+  const name=ensureChatName(tripId);
   if(!name){
     input.focus();
     return;
@@ -1109,22 +1117,115 @@ function chatKeydown(e,tripId){
   }
 }
 
+
+async function registerCollabParticipant(tr){
+  if(!tr||!tr.liveSync||!tr.shareId||!tr.editKey) return false;
+  const name=ensureChatName(tr.id);
+  if(!name) return false;
+  tr.collabParticipantName=name;
+  tr.collabParticipantId=tr.collabParticipantId||chatParticipantId();
+  try{
+    const r=await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}/participants`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Edit-Key':tr.editKey},
+      body:JSON.stringify({name,participantId:tr.collabParticipantId})
+    });
+    if(!r.ok) throw new Error('participant '+r.status);
+    const j=await r.json();
+    tr.collabParticipants=Array.isArray(j.participants)?j.participants:[];
+    await saveState();
+    return true;
+  }catch(e){
+    console.error(e);
+    return false;
+  }
+}
+async function loadCollabParticipants(tripId){
+  const tr=tripById(tripId);
+  if(!tr||!tr.liveSync) return [];
+  try{
+    const r=await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}/participants?key=${encodeURIComponent(tr.editKey)}`,{cache:'no-store'});
+    if(!r.ok) return [];
+    const j=await r.json();
+    tr.collabParticipants=Array.isArray(j.participants)?j.participants:[];
+    return tr.collabParticipants;
+  }catch(e){ return []; }
+}
+function collabParticipantsText(tr){
+  const names=(tr?.collabParticipants||[]).map(p=>p.name).filter(Boolean);
+  if(!names.length) return '';
+  return names.slice(0,4).join(' · ')+(names.length>4?` +${names.length-4}`:'');
+}
+async function stopLiveCollaboration(tripId){
+  const tr=tripById(tripId); if(!tr) return;
+  const es=state.lang==='es';
+  if(!tr.collabOwner||!tr.ownerKey){
+    showToast(es?'Solo el propietario puede desactivar el enlace compartido.':'Only the owner can disable the shared link.');
+    return;
+  }
+  if(!confirm(es?'¿Dejar de compartir este viaje? El enlace actual dejará de funcionar para todos los participantes. Tu copia local se conservará.':'Stop sharing this trip? The current link will stop working for every participant. Your local copy will be kept.')) return;
+  try{
+    const r=await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}`,{
+      method:'DELETE',
+      headers:{'X-Owner-Key':tr.ownerKey}
+    });
+    if(!r.ok) throw new Error('revoke '+r.status);
+    closeLiveStream(tr.id);
+    tr.liveSync=false; tr.collabOwner=false;
+    delete tr.editKey; delete tr.ownerKey; delete tr.syncServer; delete tr.syncRevision; delete tr.lastSyncedAt;
+    delete tr.shareId; delete tr.collabParticipants; delete tr.chatUnread;
+    await saveState(); render();
+    showToast(es?'Colaboración desactivada. El enlace anterior ya no funciona.':'Collaboration stopped. The previous link no longer works.');
+  }catch(e){
+    console.error(e);
+    showToast(es?'No se pudo desactivar la colaboración.':'Could not stop collaboration.');
+  }
+}
+async function leaveLiveCollaboration(tripId){
+  const tr=tripById(tripId); if(!tr) return;
+  const es=state.lang==='es';
+  if(!confirm(es?'¿Salir de este viaje compartido? Conservarás una copia local, pero dejará de sincronizarse.':'Leave this shared trip? You will keep a local copy, but it will stop syncing.')) return;
+  closeLiveStream(tr.id);
+  tr.liveSync=false; tr.collabOwner=false;
+  delete tr.editKey; delete tr.ownerKey; delete tr.syncServer; delete tr.syncRevision; delete tr.lastSyncedAt;
+  delete tr.shareId; delete tr.collabParticipants; delete tr.chatUnread;
+  await saveState(); render();
+  showToast(es?'Saliste de la colaboración.':'You left the collaboration.');
+}
+
 async function startLiveCollaboration(tripId){
   const tr=tripById(tripId); if(!tr) return;
   const es=state.lang==='es';
+  const participantName=ensureChatName(tripId);
+  if(!participantName) return;
+
   let server=tr.syncServer||collabServer();
-  if(!server){ server=prompt(es?'Ingresa la URL de tu servidor Waypoint Sync (ej. https://sync.tudominio.com):':'Enter your Waypoint Sync server URL (e.g. https://sync.yourdomain.com):','')||''; }
+  if(!server){ server=prompt(es?'Ingresa la URL de tu servidor Waypoint Sync:':'Enter your Waypoint Sync server URL:','')||''; }
   server=server.trim().replace(/\/$/,''); if(!server) return;
-  setCollabServer(server); ensureShareId(tr); if(!tr.editKey) tr.editKey=randomKey();
-  tr.syncServer=server; tr.liveSync=true; tr.syncRevision=Number(tr.syncRevision||0);
+
+  setCollabServer(server);
+  ensureShareId(tr);
+  if(!tr.editKey) tr.editKey=randomKey();
+  if(!tr.ownerKey) tr.ownerKey=randomKey();
+  tr.collabOwner=true;
+  tr.collabParticipantName=participantName;
+  tr.collabParticipantId=tr.collabParticipantId||chatParticipantId();
+  tr.syncServer=server;
+  tr.liveSync=true;
+  tr.syncRevision=Number(tr.syncRevision||0);
+
   await saveState();
   const ok=await pushTripToCloud(tr,false); if(!ok) return;
+  await registerCollabParticipant(tr);
   ensureLiveStream(tr);
+
   const base=location.origin && location.origin!=='null' ? location.origin+location.pathname : location.href.split('#')[0];
+  // Owner key is deliberately NOT included in the invitation.
   const link=`${base}#collab=${encodeURIComponent(tr.shareId)}&key=${encodeURIComponent(tr.editKey)}&server=${encodeURIComponent(server)}`;
+
   try{
     if(navigator.share){
-      await navigator.share({title:tr.name,text:es?'Edita este itinerario conmigo en Waypoint:':'Edit this itinerary with me in Waypoint:',url:link});
+      await navigator.share({title:tr.name,text:es?'Te invito a colaborar conmigo en este viaje de Waypoint. Al abrir el enlace, identifícate con tu nombre:':'I’m inviting you to collaborate on this Waypoint trip. When you open the link, identify yourself with your name:',url:link});
     }else{
       await copyTextRobust(link);
       showToast(es?'Enlace colaborativo copiado':'Collaboration link copied');
@@ -1206,6 +1307,12 @@ function ensureLiveStream(tr){
         }
       }catch(e){}
     });
+    es.addEventListener('participants',async ()=>{
+      try{
+        await loadCollabParticipants(tr.id);
+        if(ui.modal==='tripChat') render();
+      }catch(e){}
+    });
     es.onerror=()=>{
       // EventSource reconnects automatically; polling remains active as a fallback.
     };
@@ -1221,13 +1328,13 @@ async function pushTripToCloud(tr,force=false){
   if(!tr||!tr.liveSync||!tr.syncServer||!tr.shareId||!tr.editKey) return false;
   try{
     const local=livePayload(tr);
-    let r=await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}`,{method:'PUT',headers:{'Content-Type':'application/json','X-Edit-Key':tr.editKey},body:JSON.stringify({data:local,clientRevision:Number(tr.syncRevision||0),force:!!force})});
+    let r=await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}`,{method:'PUT',headers:{'Content-Type':'application/json','X-Edit-Key':tr.editKey,...(tr.ownerKey?{'X-Owner-Key':tr.ownerKey}:{})},body:JSON.stringify({data:local,clientRevision:Number(tr.syncRevision||0),force:!!force})});
     if(r.status===409){
       const conflict=await r.json();
       const merged=mergeLivePayload(local,conflict.data||{});
       applyLivePayload(tr,merged);
       tr.syncRevision=Number(conflict.revision||0);
-      r=await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}`,{method:'PUT',headers:{'Content-Type':'application/json','X-Edit-Key':tr.editKey},body:JSON.stringify({data:merged,clientRevision:tr.syncRevision,force:false})});
+      r=await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}`,{method:'PUT',headers:{'Content-Type':'application/json','X-Edit-Key':tr.editKey,...(tr.ownerKey?{'X-Owner-Key':tr.ownerKey}:{})},body:JSON.stringify({data:merged,clientRevision:tr.syncRevision,force:false})});
     }
     if(!r.ok) throw new Error('sync '+r.status);
     const j=await r.json();
@@ -1240,7 +1347,16 @@ async function pushTripToCloud(tr,force=false){
 async function pullTripFromCloud(tr){
   if(!tr||!tr.liveSync||!tr.syncServer||!tr.shareId||!tr.editKey) return false;
   try{
-    const r=await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}?key=${encodeURIComponent(tr.editKey)}`); if(!r.ok) throw new Error('pull '+r.status); const j=await r.json();
+    const r=await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}?key=${encodeURIComponent(tr.editKey)}`);
+    if(r.status===404){
+      closeLiveStream(tr.id);
+      tr.liveSync=false; tr.collabOwner=false;
+      delete tr.editKey; delete tr.ownerKey; delete tr.syncServer; delete tr.syncRevision; delete tr.shareId;
+      await saveState(); render();
+      showToast(state.lang==='es'?'El propietario dejó de compartir este viaje. Conservas una copia local.':'The owner stopped sharing this trip. You still have a local copy.');
+      return false;
+    }
+    if(!r.ok) throw new Error('pull '+r.status); const j=await r.json();
     if(Number(j.revision||0)>Number(tr.syncRevision||0)){
       const d=j.data||{}; applyLivePayload(tr,d); tr.syncRevision=j.revision; tr.lastSyncedAt=new Date().toISOString(); await window.storage.set('waypoint-simple-data',JSON.stringify(state),false); render(); showToast(state.lang==='es'?'Cambios colaborativos actualizados':'Collaborative changes updated');
     }
@@ -1250,9 +1366,45 @@ async function pullTripFromCloud(tr){
 async function syncTripNow(id){ const tr=tripById(id); if(!tr) return; await pullTripFromCloud(tr); await pushTripToCloud(tr); render(); }
 async function syncAllLiveTrips(){ if(syncBusy) return; syncBusy=true; try{ for(const tr of state.trips.filter(x=>x.liveSync)) await pullTripFromCloud(tr); }finally{syncBusy=false;} }
 async function handleCollabLink(){
-  const h=new URLSearchParams(location.hash.replace(/^#/,'')); const shareId=h.get('collab'), key=h.get('key'), server=(h.get('server')||'').replace(/\/$/,''); if(!shareId||!key||!server) return;
+  const h=new URLSearchParams(location.hash.replace(/^#/,''));
+  const shareId=h.get('collab'), key=h.get('key'), server=(h.get('server')||'').replace(/\/$/,'');
+  if(!shareId||!key||!server) return;
   setCollabServer(server);
-  try{ const r=await fetch(`${server}/api/trips/${encodeURIComponent(shareId)}?key=${encodeURIComponent(key)}`); if(!r.ok) throw new Error('join'); const j=await r.json(); const d=j.data||{}; let tr=state.trips.find(x=>x.shareId===shareId); if(!tr){ const id=uid(); tr={id,name:(d.trip&&d.trip.name)||'Shared trip',destination:(d.trip&&d.trip.destination)||'',tripType:(d.trip&&d.trip.tripType)||'',start:(d.trip&&d.trip.start)||'',end:(d.trip&&d.trip.end)||'',budgetGoal:0,currency:state.profile.currency||'USD',passportExpiry:'',notes:'',coverPhoto:'',shareId}; state.trips.push(tr); } applyLivePayload(tr,d); tr.editKey=key; tr.syncServer=server; tr.liveSync=true; tr.syncRevision=j.revision||0; tr.lastSyncedAt=new Date().toISOString(); await window.storage.set('waypoint-simple-data',JSON.stringify(state),false); history.replaceState(null,'',location.pathname+location.search); ensureLiveStream(tr); openTrip(tr.id); showToast(state.lang==='es'?'Te uniste al itinerario colaborativo':'Joined collaborative itinerary'); }catch(e){ showToast(state.lang==='es'?'No se pudo abrir el viaje compartido':'Could not open shared trip'); }
+  const es=state.lang==='es';
+  try{
+    const r=await fetch(`${server}/api/trips/${encodeURIComponent(shareId)}?key=${encodeURIComponent(key)}`);
+    if(!r.ok) throw new Error('join');
+    const j=await r.json(); const d=j.data||{};
+    let tr=state.trips.find(x=>x.shareId===shareId);
+    if(!tr){
+      const id=uid();
+      tr={id,name:(d.trip&&d.trip.name)||'Shared trip',destination:(d.trip&&d.trip.destination)||'',tripType:(d.trip&&d.trip.tripType)||'',start:(d.trip&&d.trip.start)||'',end:(d.trip&&d.trip.end)||'',budgetGoal:0,currency:state.profile.currency||'USD',passportExpiry:'',notes:'',coverPhoto:'',shareId};
+      state.trips.push(tr);
+    }
+    applyLivePayload(tr,d);
+    tr.editKey=key; tr.syncServer=server; tr.liveSync=true; tr.collabOwner=false;
+    tr.syncRevision=j.revision||0; tr.lastSyncedAt=new Date().toISOString();
+    tr.collabParticipantId=tr.collabParticipantId||chatParticipantId();
+
+    // Identify the participant before joining so chat already knows who they are.
+    let name=String(tr.collabParticipantName||state.profile?.name||localStorage.getItem('waypoint-chat-name')||'').trim().slice(0,60);
+    if(!name){
+      name=(prompt(es?'Antes de unirte, escribe tu nombre. Así los demás sabrán quién eres en el chat y la colaboración:':'Before joining, enter your name so others can identify you in chat and collaboration:','')||'').trim().slice(0,60);
+    }
+    if(!name) throw new Error('name required');
+    tr.collabParticipantName=name;
+    localStorage.setItem('waypoint-chat-name',name);
+
+    await window.storage.set('waypoint-simple-data',JSON.stringify(state),false);
+    await registerCollabParticipant(tr);
+    history.replaceState(null,'',location.pathname+location.search);
+    ensureLiveStream(tr);
+    openTrip(tr.id);
+    showToast(es?`Te uniste como ${name}`:`Joined as ${name}`);
+  }catch(e){
+    console.error(e);
+    showToast(es?'No se pudo abrir el viaje compartido':'Could not open shared trip');
+  }
 }
 
 async function shareItineraryFile(tripId){
@@ -1745,21 +1897,120 @@ function viewBookingsSub(tr){
       <div class="booking-card">
         <div class="booking-top"><div><div class="booking-type">${labels[b.type]||labels.other}${b.date?' · '+escapeHtml(b.date):''}${b.time?' · '+escapeHtml(b.time):''}</div>
         <div class="booking-title">${escapeHtml(b.title)}</div>
-        <div class="booking-meta">${b.provider?escapeHtml(b.provider):''}${b.confirmation?`<br>${es?'Confirmación':'Confirmation'}: <strong>${escapeHtml(b.confirmation)}</strong>`:''}${b.location?`<br>📍 ${escapeHtml(b.location)}`:''}${b.notes?`<br>${escapeHtml(b.notes)}`:''}</div></div>
+        <div class="booking-meta">${b.provider?escapeHtml(b.provider):''}${b.confirmation?`<br>${es?'Confirmación':'Confirmation'}: <strong>${escapeHtml(b.confirmation)}</strong>`:''}${b.type==='flight'&&b.flightNumber?`<br>✈ <strong>${escapeHtml(b.flightNumber)}</strong>${b.origin||b.destination?` · ${escapeHtml(b.origin||'—')} → ${escapeHtml(b.destination||'—')}`:''}`:''}${b.location?`<br>📍 ${escapeHtml(b.location)}`:''}${b.notes?`<br>${escapeHtml(b.notes)}`:''}</div></div>
         <button class="btn btn-danger btn-sm" onclick="deleteBooking('${tr.id}','${b.id}')">✕</button></div>
-        ${b.location?`<div style="margin-top:9px;"><a class="btn btn-ghost btn-sm" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.location)}">🗺 ${es?'Abrir mapa':'Open map'}</a></div>`:''}
+        <div style="margin-top:9px;display:flex;gap:7px;flex-wrap:wrap;">
+          ${b.location?`<a class="btn btn-ghost btn-sm" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.location)}">🗺 ${es?'Abrir mapa':'Open map'}</a>`:''}
+          ${b.type==='flight'&&b.flightNumber?(b.flightAlertsActive
+            ?`<button class="btn btn-ghost btn-sm" onclick="disableFlightAlerts('${tr.id}','${b.id}')">🔔 ${es?'Alertas activas':'Alerts on'}</button>`
+            :`<button class="btn btn-brass btn-sm" onclick="enableFlightAlerts('${tr.id}',(state.bookings['${tr.id}']||[]).find(x=>x.id==='${b.id}'))">🔔 ${es?'Activar alertas':'Enable alerts'}</button>`):''}
+        </div>
       </div>`).join(''):
       `<div class="panel empty"><span class="ic">🎟</span><h3>${es?'Aún no hay reservas':'No bookings yet'}</h3><p>${es?'Guarda vuelos, hoteles, transporte y actividades con sus confirmaciones.':'Keep flights, hotels, transport and activity confirmations together.'}</p></div>`}
   `;
 }
+
+function toggleFlightFields(){
+  const type=document.getElementById('b-type')?.value;
+  const box=document.getElementById('flight-fields');
+  if(box) box.style.display=type==='flight'?'block':'none';
+}
+function urlBase64ToUint8Array(base64String){
+  const padding='='.repeat((4-base64String.length%4)%4);
+  const base64=(base64String+padding).replace(/-/g,'+').replace(/_/g,'/');
+  const rawData=atob(base64);
+  return Uint8Array.from([...rawData].map(ch=>ch.charCodeAt(0)));
+}
+async function getPushSubscription(){
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window)) throw new Error('push_unsupported');
+  let permission=Notification.permission;
+  if(permission==='default') permission=await Notification.requestPermission();
+  if(permission!=='granted') throw new Error('permission_denied');
+  const keyRes=await fetch('/api/notifications/vapid-public-key',{cache:'no-store'});
+  if(!keyRes.ok) throw new Error('push_not_configured');
+  const keyData=await keyRes.json();
+  const reg=await navigator.serviceWorker.ready;
+  let sub=await reg.pushManager.getSubscription();
+  if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlBase64ToUint8Array(keyData.publicKey)});
+  return sub.toJSON();
+}
+async function enableFlightAlerts(tripId,booking){
+  const es=state.lang==='es';
+  if(!booking?.flightNumber||!booking?.date){
+    showToast(es?'Para activar alertas necesitas número de vuelo y fecha.':'Flight number and date are required for alerts.');
+    return false;
+  }
+  try{
+    const subscription=await getPushSubscription();
+    const token=booking.flightWatchToken||randomKey()+randomKey();
+    const r=await fetch('/api/flight-watches',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        token,
+        flightNumber:booking.flightNumber.trim().toUpperCase(),
+        date:booking.date,
+        origin:(booking.origin||'').trim().toUpperCase(),
+        destination:(booking.destination||'').trim().toUpperCase(),
+        bookingTitle:booking.title||booking.flightNumber,
+        subscription
+      })
+    });
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(j.error||'watch_failed');
+    booking.flightWatchId=j.id;
+    booking.flightWatchToken=token;
+    booking.flightAlertsActive=true;
+    booking.flightAlertProvider=j.provider||'FlightAware';
+    booking.flightAlertStatus=j.status||'active';
+    await saveState();
+    render();
+    showToast(es?'Alertas de vuelo activadas.':'Flight alerts enabled.');
+    return true;
+  }catch(e){
+    console.error(e);
+    const msg=String(e.message||e);
+    if(msg.includes('permission_denied')) showToast(es?'Debes permitir notificaciones para recibir alertas de vuelo.':'Allow notifications to receive flight alerts.');
+    else if(msg.includes('push_unsupported')) showToast(es?'Este dispositivo no admite notificaciones web en este modo. En iPhone instala Waypoint en la pantalla de inicio.':'This device does not support web notifications in this mode. On iPhone, install Waypoint to the Home Screen.');
+    else if(msg.includes('flight_provider_not_configured')) showToast(es?'Las alertas están listas en Waypoint, pero falta conectar la API de vuelos en Railway.':'Waypoint is ready for flight alerts, but the flight API still needs to be connected in Railway.');
+    else showToast(es?'No se pudieron activar las alertas de vuelo.':'Could not enable flight alerts.');
+    return false;
+  }
+}
+async function disableFlightAlerts(tripId,bookingId){
+  const list=state.bookings[tripId]||[];
+  const b=list.find(x=>x.id===bookingId); if(!b) return;
+  try{
+    if(b.flightWatchId&&b.flightWatchToken){
+      await fetch(`/api/flight-watches/${encodeURIComponent(b.flightWatchId)}`,{
+        method:'DELETE',headers:{'X-Watch-Token':b.flightWatchToken}
+      });
+    }
+  }catch(e){}
+  delete b.flightWatchId; delete b.flightWatchToken; b.flightAlertsActive=false; b.flightAlertStatus='off';
+  await saveState(); render();
+  showToast(state.lang==='es'?'Alertas de vuelo desactivadas.':'Flight alerts disabled.');
+}
+
 function openBookingForm(){ ui.modal='booking'; render(); }
-function saveBookingForm(){
-  const g=id=>document.getElementById(id).value;
+async function saveBookingForm(){
+  const g=id=>document.getElementById(id)?.value||'';
   const title=g('b-title').trim(); if(!title) return;
-  const id=ui.currentTripId; if(!state.bookings[id]) state.bookings[id]=[];
-  state.bookings[id].push({id:uid(),type:g('b-type'),title,provider:g('b-provider').trim(),confirmation:g('b-confirm').trim(),
-    date:g('b-date'),time:getTime12PickerValue('b-time'),location:g('b-location').trim(),notes:g('b-notes').trim()});
-  ui.modal=null; saveState(); render();
+  const tripId=ui.currentTripId; if(!state.bookings[tripId]) state.bookings[tripId]=[];
+  const type=g('b-type');
+  const booking={
+    id:uid(),type,title,provider:g('b-provider').trim(),confirmation:g('b-confirm').trim(),
+    date:g('b-date'),time:getTime12PickerValue('b-time'),location:g('b-location').trim(),notes:g('b-notes').trim()
+  };
+  if(type==='flight'){
+    booking.flightNumber=g('b-flight-number').trim().toUpperCase();
+    booking.origin=g('b-origin').trim().toUpperCase();
+    booking.destination=g('b-destination').trim().toUpperCase();
+  }
+  const wantsAlerts=type==='flight'&&Boolean(document.getElementById('b-flight-alerts')?.checked);
+  state.bookings[tripId].push(booking);
+  ui.modal=null; await saveState(); render();
+  if(wantsAlerts) await enableFlightAlerts(tripId,booking);
 }
 function deleteBooking(tripId,id){
   const tr=tripById(tripId); if(tr&&tr.liveSync){ if(!tr.collabDeleted) tr.collabDeleted={days:[],activities:[],bookings:[]}; if(!tr.collabDeleted.bookings.includes(id)) tr.collabDeleted.bookings.push(id); }
@@ -1835,7 +2086,16 @@ function viewItinerarySub(tr){
       ${days.length? `<button class="btn btn-ghost btn-sm" onclick="openShareCenter('${tr.id}')">📤 ${t.itinerary.share}</button>`:''}
       ${days.length? `<button class="btn btn-brass btn-sm" onclick="startLiveCollaboration('${tr.id}')">👥 ${state.lang==='es'?'Colaborar en vivo':'Live collaboration'}</button>`:''}
     </div>
-    ${tr.liveSync? `<div class="collab-bar"><div class="collab-status"><span class="sync-dot"></span><span>${state.lang==='es'?'Sincronización colaborativa activa':'Live collaboration active'}${tr.lastSyncedAt?' · '+new Date(tr.lastSyncedAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):''}</span></div><div style="display:flex;gap:7px;flex-wrap:wrap;"><button class="btn btn-ghost btn-sm" onclick="openTripChat('${tr.id}')">💬 ${state.lang==='es'?'Chat':'Chat'}${Number(tr.chatUnread||0)>0?`<span class="chat-badge">${Math.min(99,Number(tr.chatUnread||0))}</span>`:''}</button><button class="btn btn-ghost btn-sm" onclick="syncTripNow('${tr.id}')">↻ ${state.lang==='es'?'Sincronizar ahora':'Sync now'}</button></div></div>`:''}
+    ${tr.liveSync? `<div class="collab-bar">
+  <div class="collab-status"><span class="sync-dot"></span><span>${state.lang==='es'?'Colaboración activa':'Live collaboration'}${tr.lastSyncedAt?' · '+new Date(tr.lastSyncedAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):''}${collabParticipantsText(tr)?`<br><small>👥 ${escapeHtml(collabParticipantsText(tr))}</small>`:''}</span></div>
+  <div style="display:flex;gap:7px;flex-wrap:wrap;">
+    <button class="btn btn-ghost btn-sm" onclick="openTripChat('${tr.id}')">💬 Chat${Number(tr.chatUnread||0)>0?`<span class="chat-badge">${Math.min(99,Number(tr.chatUnread||0))}</span>`:''}</button>
+    <button class="btn btn-ghost btn-sm" onclick="syncTripNow('${tr.id}')">↻ ${state.lang==='es'?'Sincronizar':'Sync'}</button>
+    ${tr.collabOwner&&tr.ownerKey
+      ?`<button class="btn btn-danger btn-sm" onclick="stopLiveCollaboration('${tr.id}')">⛔ ${state.lang==='es'?'Dejar de compartir':'Stop sharing'}</button>`
+      :`<button class="btn btn-ghost btn-sm" onclick="leaveLiveCollaboration('${tr.id}')">↩ ${state.lang==='es'?'Salir':'Leave'}</button>`}
+  </div>
+</div>`:''}
     ${tr.shareId? `<p class="field-hint" style="margin:-8px 0 14px;">${t.itinerary.sharedHint}</p>`:''}
     ${days.length? days.map((d,i)=>dayCard(tr,d,i,days.length)).join('') : `<div class="panel empty"><p>${t.itinerary.noDays}</p></div>`}
   `;
@@ -2503,7 +2763,7 @@ function renderModal(){
           <div class="chat-head">
             <div>
               <h3 style="margin-bottom:2px;">💬 ${es?'Chat del viaje':'Trip chat'}</h3>
-              <div class="chat-trip">${escapeHtml(tr.name||'')}</div>
+              <div class="chat-trip">${escapeHtml(tr.name||'')}${collabParticipantsText(tr)?`<br>👥 ${escapeHtml(collabParticipantsText(tr))}`:''}</div>
             </div>
             <button type="button" class="btn btn-ghost btn-sm" onclick="loadTripChat('${tr.id}')">↻ ${es?'Actualizar':'Refresh'}</button>
           </div>
@@ -2615,13 +2875,28 @@ function renderModal(){
     const es=state.lang==='es';
     inner = `
       <h3>${es?'Nueva reserva':'New booking'}</h3>
-      <div class="field"><label>${es?'Tipo':'Type'}</label><select id="b-type">
+      <div class="field"><label>${es?'Tipo':'Type'}</label><select id="b-type" onchange="toggleFlightFields()">
         <option value="flight">✈ ${es?'Vuelo':'Flight'}</option>
         <option value="hotel">🏨 Hotel</option>
         <option value="transport">🚗 ${es?'Transporte':'Transport'}</option>
         <option value="activity">🎟 ${es?'Actividad':'Activity'}</option>
         <option value="other">• ${es?'Otra':'Other'}</option>
       </select></div>
+      <div id="flight-fields" class="panel" style="padding:12px;margin-bottom:12px;">
+        <div class="form-row">
+          <div class="field"><label>${es?'Número de vuelo':'Flight number'}</label><input id="b-flight-number" placeholder="AA123" autocapitalize="characters"></div>
+          <div class="field"><label>${es?'Fecha del vuelo':'Flight date'}</label><div class="field-hint">${es?'Usa la fecha de la reserva indicada abajo.':'Uses the booking date below.'}</div></div>
+        </div>
+        <div class="form-row">
+          <div class="field"><label>${es?'Origen (IATA)':'Origin (IATA)'}</label><input id="b-origin" maxlength="3" placeholder="MIA" style="text-transform:uppercase"></div>
+          <div class="field"><label>${es?'Destino (IATA)':'Destination (IATA)'}</label><input id="b-destination" maxlength="3" placeholder="BOG" style="text-transform:uppercase"></div>
+        </div>
+        <label style="display:flex;align-items:flex-start;gap:9px;font-size:12px;color:var(--ink-text);">
+          <input id="b-flight-alerts" type="checkbox" style="width:18px;height:18px;accent-color:var(--brass);margin-top:1px;">
+          <span>🔔 ${es?'Recibir alertas del vuelo (salida, llegada, retrasos, cancelación y cambios disponibles)':'Receive flight alerts (departure, arrival, delays, cancellation and available changes)'}</span>
+        </label>
+        <div class="field-hint">${es?'En iPhone, Waypoint debe estar instalada en la pantalla de inicio para recibir Web Push.':'On iPhone, Waypoint must be installed on the Home Screen to receive Web Push.'}</div>
+      </div>
       <div class="field"><label>${es?'Nombre / ruta':'Name / route'}</label><input id="b-title" placeholder="${es?'Ej. MIA → BOG / Hotel Cartagena':'e.g. MIA → BOG / Cartagena Hotel'}"></div>
       <div class="form-row">
         <div class="field"><label>${es?'Proveedor':'Provider'}</label><input id="b-provider" placeholder="${es?'Aerolínea, hotel…':'Airline, hotel…'}"></div>

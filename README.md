@@ -120,3 +120,25 @@ The initial source currency follows the trip currency or the user's default curr
 Live collaborative trips include a lightweight private chat. Messages are stored with the shared trip on the Waypoint sync server, limited to the latest 200 messages per trip, and delivered in near real time using the existing SSE connection. Access uses the same private collaboration edit key as the trip.
 
 Chat messages are not included in ordinary local-only trips.
+
+## Waypoint 4.5 collaboration controls
+
+- The trip creator receives a private owner key that is never placed in invitation links.
+- **Stop sharing** revokes the collaborative room and invalidates the old invitation for everyone while keeping the owner's local copy.
+- Invitees receive a **Leave** action that stops synchronization only on their device and keeps a local copy.
+- People identify themselves when they first open an invitation. That identity is used automatically by trip chat and appears in the participant list.
+
+## Real-time flight alerts
+
+Flight bookings can include a flight number, origin, destination and an opt-in for flight notifications.
+
+Production flight alerts use:
+- FlightAware AeroAPI alert webhooks
+- standards-based Web Push
+- the existing Waypoint service worker
+
+Set `FLIGHTAWARE_API_KEY` in Railway Variables. Waypoint generates and persists its own VAPID key pair in `/data`, so no separate VAPID setup is required.
+
+On iPhone/iPad, Web Push requires Waypoint to be installed as a Home Screen web app. On Android and supported desktop browsers, permission is requested when the user enables flight alerts.
+
+Flight data is provided by the configured provider and should be verified with the airline/airport for critical travel decisions.
