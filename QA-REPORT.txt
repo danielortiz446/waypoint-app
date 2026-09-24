@@ -1,11 +1,75 @@
-WAYPOINT V10.0.7 PARTICIPANTS + ITINERARY QA
-==============================================================
+WAYPOINT V10.0.8 FINAL — OFFLINE + CROSS-PLATFORM TRAVEL MODE QA
+================================================================
 
-SYNTAX
-PASS frontend
-PASS server
-PASS service worker
-PASS smoke
+BUILD
+PASS package version 10.0.8
+PASS server health version 10.0.8
+PASS service worker cache version 10.0.8
+PASS service worker registration version 10.0.8
+PASS frontend metadata version 10.0.8
+
+SYNTAX / SERVER
+PASS frontend inline JavaScript syntax
+PASS server JavaScript syntax
+PASS service worker JavaScript syntax
+PASS full server smoke suite
+
+OFFLINE MODE
+PASS PWA shell pre-cache retained
+PASS local trip data retained on device
+PASS explicit Prepare offline action
+PASS service-worker MessageChannel cache confirmation
+PASS shell resources cached before marking trip ready
+PASS weather endpoint prepared for offline fallback
+PASS feature flags prepared for offline fallback
+PASS relevant FX pair prepared when known
+PASS offline preparation version stamped per trip
+PASS stale offline copy detected after app upgrade
+PASS Refresh offline action always available
+PASS offline preparation timestamp shown
+PASS last collaboration sync shown when available
+PASS cached-resource count shown
+PASS failed-resource count retained
+PASS current offline/online state shown
+PASS offline limitations disclosed in UI
+PASS offline weather uses emoji fallback if remote icon unavailable
+PASS offline preparation does not falsely report success with zero cached resources
+PASS offline refresh while already offline gives a clear message
+PASS automatic local backup history retains up to 5 snapshots
+PASS pending chat queue retained
+PASS cached FX fallback retained
+PASS small local attachments retained
+
+TRAVEL MODE PARITY
+PASS one Travel Mode feature surface for web, iPhone and Android
+PASS mobile changes layout only, not feature availability
+PASS same Today / Travel / Map / Bookings / Docs navigation in active Travel Mode
+PASS same travel quick actions across screen sizes
+PASS same Today schedule cockpit across screen sizes
+PASS same important documents cockpit across screen sizes
+PASS same emergency cockpit across screen sizes
+PASS same offline cockpit across screen sizes
+PASS mobile quick actions adapt 4 columns -> 2 columns only
+PASS mobile timeline reflows without removing actions
+PASS Travel Mode body class now derives only from the currently open trip
+PASS home trip-card rendering no longer mutates Travel Mode body state
+PASS inactive Travel tab never activates Travel Mode automatically
+PASS explicit activation remains the only Travel Mode toggle path
+
+REGRESSION
+PASS participant filtering cleanup retained
+PASS itinerary responsible field removal retained
+PASS collaboration security retained
+PASS viewer protections retained
+PASS cloud file protections retained
+PASS legal bilingual gate retained
+PASS single Calendar in More retained
+PASS smart text import retained
+PASS multicurrency retained
+PASS emergency mode retained
+PASS activity intelligence retained
+PASS travel toggle fix retained
+PASS copy-button fix retained
 
 FULL SMOKE SUITE
 PASS static index
@@ -49,7 +113,7 @@ PASS revoke editor register
 PASS participant remove
 PASS removed participant write blocked
 PASS missing participant write blocked
-PASS V10.0.7 health version
+PASS V10.0.8 health version
 PASS health hides room count
 PASS security nosniff
 PASS security CSP
@@ -70,30 +134,5 @@ PASS cloud file active participant allowed
 PASS file participant revoke
 PASS revoked participant file delete blocked
 
-FEATURE / REGRESSION AUDIT
-PASS internal participant ID detector
-PASS visible participant sanitizer
-PASS participants modal uses filtered people
-PASS chat header uses filtered people
-PASS participant counter uses filtered people
-PASS typing names sanitized
-PASS chat sender sanitized
-PASS reply sender sanitized
-PASS read receipts filtered
-PASS activity actor names sanitized
-PASS itinerary responsible label removed
-PASS itinerary responsible select removed
-PASS itinerary responsible display removed
-PASS new itinerary activity has no assignedTo
-PASS checklist assignee intentionally retained
-PASS Travel Mode toggle fix retained
-PASS Copy button fix retained
-PASS bilingual legal retained
-PASS offline retained
-PASS version package
-PASS version health
-PASS version service worker
-PASS version registration
-
-INLINE HANDLERS
-PASS no missing handlers
+NOTE
+Browser-level localhost automation is restricted in this environment, so UI behavior was validated through source-level cross-platform invariants, syntax checks, service-worker logic checks, and the complete server smoke suite.

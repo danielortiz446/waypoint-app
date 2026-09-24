@@ -440,7 +440,7 @@ When enabled:
 - The active cockpit renders only when `trip.travelMode === true`.
 - Exiting Travel Mode returns to Overview and restores the full planning interface.
 
-## Waypoint 10.0.7 — Participant display cleanup + itinerary simplification
+## Waypoint 10.0.8 — Participant display cleanup + itinerary simplification
 
 - Internal participant IDs are no longer shown as visible people in the app.
 - Participant lists, counters, chat header, typing indicator, read receipts, and activity actor labels now sanitize internal-ID-looking names.
@@ -449,3 +449,7 @@ When enabled:
 - Internal participant IDs remain in the data model for authorization, synchronization, and device identity.
 - Removed Assigned to / Responsable from itinerary activity creation and activity display.
 - Existing legacy `assignedTo` data is preserved internally for compatibility but is no longer shown in the itinerary.
+
+## Waypoint 10.0.8 — Offline + Travel Mode parity
+
+This release hardens offline preparation and keeps Travel Mode functionally identical across web, iPhone and Android. The mobile UI may reflow into fewer columns or bottom sheets, but it does not remove Travel Mode functions. Offline preparation now confirms service-worker caching before marking a trip ready, shows preparation and sync timestamps, identifies stale offline copies after upgrades, and provides a persistent refresh action. Live maps/ETA, collaboration sync/chat, and cloud-only files still require connectivity.
