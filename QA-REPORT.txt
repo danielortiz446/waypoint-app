@@ -1,14 +1,11 @@
-WAYPOINT 10.0.5 TRAVEL MODE QA
-======================================================
+WAYPOINT V10.0.7 PARTICIPANTS + ITINERARY QA
+==============================================================
 
 SYNTAX
 PASS frontend
 PASS server
 PASS service worker
-PASS smoke test
-
-INLINE HANDLERS
-PASS no missing handlers
+PASS smoke
 
 FULL SMOKE SUITE
 PASS static index
@@ -52,7 +49,7 @@ PASS revoke editor register
 PASS participant remove
 PASS removed participant write blocked
 PASS missing participant write blocked
-PASS V10.0.5 health version
+PASS V10.0.7 health version
 PASS health hides room count
 PASS security nosniff
 PASS security CSP
@@ -74,32 +71,29 @@ PASS file participant revoke
 PASS revoked participant file delete blocked
 
 FEATURE / REGRESSION AUDIT
-PASS travel toggle enters cockpit
-PASS travel toggle body class
-PASS travel active badge
-PASS travel exit button
-PASS travel quick actions
-PASS next ETA retained
-PASS day route retained
-PASS today schedule cockpit
-PASS important docs cockpit
-PASS emergency cockpit
-PASS offline cockpit
-PASS travel compact nav
-PASS planning tabs hidden in travel
-PASS stale heavy tab redirected
-PASS status propagates timeline
+PASS internal participant ID detector
+PASS visible participant sanitizer
+PASS participants modal uses filtered people
+PASS chat header uses filtered people
+PASS participant counter uses filtered people
+PASS typing names sanitized
+PASS chat sender sanitized
+PASS reply sender sanitized
+PASS read receipts filtered
+PASS activity actor names sanitized
+PASS itinerary responsible label removed
+PASS itinerary responsible select removed
+PASS itinerary responsible display removed
+PASS new itinerary activity has no assignedTo
+PASS checklist assignee intentionally retained
+PASS Travel Mode toggle fix retained
+PASS Copy button fix retained
 PASS bilingual legal retained
-PASS copy fix retained
-PASS offline PWA retained
-PASS cloud security retained
-PASS single calendar in More
+PASS offline retained
+PASS version package
+PASS version health
+PASS version service worker
+PASS version registration
 
-PWA ASSETS
-PASS manifest icons exist
-
-VERSION
-PASS package 10.0.5
-PASS health 10.0.5
-PASS service worker 10.0.5
-PASS registration 10.0.5
+INLINE HANDLERS
+PASS no missing handlers

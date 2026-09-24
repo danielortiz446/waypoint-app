@@ -1712,10 +1712,38 @@ function canEditTrip(tr){ return !tr?.liveSync || collabRole(tr)!=='viewer'; }
 function currentParticipantName(tr){
   return String(tr?.collabParticipantName||state.profile?.name||localStorage.getItem('waypoint-chat-name')||'Me').trim()||'Me';
 }
+function looksLikeInternalParticipantId(value,participantId=''){
+  const s=String(value||'').trim(),pid=String(participantId||'').trim();
+  if(!s)return true;
+  if(pid&&s===pid)return true;
+  if(/^p-[a-f0-9]{20,}$/i.test(s))return true;
+  if(/^[a-f0-9]{24,}$/i.test(s))return true;
+  if(/^[0-9a-f]{8}-[0-9a-f-]{20,}$/i.test(s))return true;
+  if(/^participant[-_ ]?[a-f0-9]{12,}$/i.test(s))return true;
+  return false;
+}
+function visibleParticipantName(name,participantId='',fallback=''){
+  const s=String(name||'').trim();
+  return looksLikeInternalParticipantId(s,participantId)?String(fallback||'').trim():s;
+}
+function visibleParticipants(tr){
+  const rows=Array.isArray(tr?.collabParticipants)?tr.collabParticipants:[];
+  const seen=new Set(),out=[];
+  for(const p of rows){
+    if(!p||p.revokedAt)continue;
+    const name=visibleParticipantName(p.name,p.participantId,'');
+    if(!name)continue;
+    const key=name.toLocaleLowerCase();
+    if(seen.has(key))continue;
+    seen.add(key);
+    out.push({...p,name});
+  }
+  return out;
+}
 function tripPeople(tr){
-  const names=(tr?.collabParticipants||[]).map(p=>p.name).filter(Boolean);
+  const names=visibleParticipants(tr).map(p=>p.name);
   const me=currentParticipantName(tr);
-  return [...new Set([me,...names])];
+  return [...new Set([me,...names].filter(Boolean))];
 }
 function ensureTripCollections(id){
   if(!state.ideas[id])state.ideas[id]=[];
@@ -2536,7 +2564,8 @@ function chatDayLabel(iso){
 }
 
 function activityText(a,es){
-  const actor=escapeHtml(a.actorName||(es?'Alguien':'Someone'));
+  const actorName=visibleParticipantName(a.actorName,a.actorId,es?'Alguien':'Someone')||(es?'Alguien':'Someone');
+  const actor=escapeHtml(actorName);
   const label=escapeHtml(a.label||'');
   const amount=escapeHtml(a.amount||'');
   const map={
@@ -2600,11 +2629,12 @@ function chatMessagesHtml(messages,me,es){
       body=`<div class="chat-text">${rendered}</div>`;
     }
     const replied=m.replyToId?msgMap.get(m.replyToId):null;
-    const quote=replied?`<div class="chat-quote"><strong>${escapeHtml(replied.name||'')}</strong><br>${escapeHtml(replied.kind==='gif'?'GIF':replied.kind==='photo'?(es?'Foto':'Photo'):String(replied.text||'').slice(0,120))}</div>`:'';
+    const repliedName=replied?visibleParticipantName(replied.name,replied.participantId,es?'Invitado':'Guest'):'';
+    const quote=replied?`<div class="chat-quote"><strong>${escapeHtml(repliedName)}</strong><br>${escapeHtml(replied.kind==='gif'?'GIF':replied.kind==='photo'?(es?'Foto':'Photo'):String(replied.text||'').slice(0,120))}</div>`:'';
     const reactions=Object.entries(m.reactions||{}).filter(([,ids])=>Array.isArray(ids)&&ids.length).map(([emoji,ids])=>`<button class="chat-reaction" onclick="reactChatMessage('${tr?.id||''}','${m.id}','${emoji}')">${emoji} ${ids.length}</button>`).join('');
     const actions=collabRole(tr)==='viewer'?'':`<div class="chat-msg-actions"><button onclick="setChatReply('${m.id}')">↩ ${es?'Responder':'Reply'}</button><button onclick="reactChatMessage('${tr?.id||''}','${m.id}','❤️')">❤️</button><button onclick="reactChatMessage('${tr?.id||''}','${m.id}','👍')">👍</button><button onclick="reactChatMessage('${tr?.id||''}','${m.id}','😂')">😂</button>${mine&&m.kind==='text'?`<button onclick="editOwnChatMessage('${tr?.id||''}','${m.id}')">✎</button><button onclick="deleteOwnChatMessage('${tr?.id||''}','${m.id}')">🗑</button>`:''}${collabRole(tr)==='owner'?`<button onclick="pinChatMessage('${tr?.id||''}','${m.id}')">📌</button>`:''}</div>`;
     return `${sep}<div class="chat-msg ${mine?'mine':''} ${m.editedAt?'edited':''} ${(m.kind==='gif'||m.kind==='photo')?'gif-message':''}" data-message-id="${escapeHtml(m.id||'')}">${m.pinned?`<div class="chat-pin">📌 ${es?'Fijado':'Pinned'}</div>`:''}
-      <div class="chat-meta"><span>${escapeHtml(m.name||(es?'Participante':'Participant'))}</span><span>·</span><span>${escapeHtml(formatChatTime(m.createdAt))}</span></div>
+      <div class="chat-meta"><span>${escapeHtml(visibleParticipantName(m.name,m.participantId,es?'Invitado':'Guest')||(es?'Invitado':'Guest'))}</span><span>·</span><span>${escapeHtml(formatChatTime(m.createdAt))}</span></div>
       ${quote}${body}
       ${reactions?`<div class="chat-reactions">${reactions}</div>`:''}
       ${actions}
@@ -2617,7 +2647,7 @@ function chatReadersForMessage(tr,m){
   const me=tr?.collabParticipantId||chatParticipantId();
   const created=Date.parse(m?.createdAt||0);
   if(!created)return [];
-  return (tr?.collabParticipants||[]).filter(p=>{
+  return visibleParticipants(tr).filter(p=>{
     if(!p||p.participantId===me)return false;
     const read=Date.parse(p.lastReadAt||0);
     return read>=created;
@@ -2627,8 +2657,8 @@ function chatReadReceiptHtml(tr,m,es){
   if(!tr||m.participantId!==(tr.collabParticipantId||chatParticipantId()))return '';
   const readers=chatReadersForMessage(tr,m);
   if(!readers.length)return `<div class="chat-status">${es?'Enviado':'Sent'} ✓</div>`;
-  const names=readers.map(x=>x.name).filter(Boolean);
-  const others=(tr.collabParticipants||[]).filter(p=>p.participantId!==(tr.collabParticipantId||chatParticipantId()));
+  const names=readers.map(x=>visibleParticipantName(x.name,x.participantId,'')).filter(Boolean);
+  const others=visibleParticipants(tr).filter(p=>p.participantId!==(tr.collabParticipantId||chatParticipantId()));
   if(others.length>0&&readers.length>=others.length){
     return `<div class="chat-read"><span class="checks">✓✓</span>${es?'Leído por todos':'Read by everyone'}</div>`;
   }
@@ -2843,7 +2873,7 @@ async function sendChatTyping(tripId,isTyping,force=false){
 }
 function updateTypingLine(names){
   ui.chatTypingNames=Array.isArray(names)?names:[]; const el=document.getElementById('chat-typing'); if(!el)return;
-  const es=state.lang==='es', clean=ui.chatTypingNames.filter(n=>n&&n!==chatParticipantName(ui.chatTripId));
+  const es=state.lang==='es', clean=ui.chatTypingNames.map(n=>visibleParticipantName(n,'','')).filter(n=>n&&n!==chatParticipantName(ui.chatTripId));
   if(!clean.length){el.textContent='';return;}
   el.textContent=clean.length===1?`${clean[0]} ${es?'está escribiendo…':'is typing…'}`:`${clean.slice(0,2).join(', ')} ${es?'están escribiendo…':'are typing…'}`;
 }
@@ -2909,8 +2939,8 @@ async function loadCollabParticipants(tripId){
   }catch(e){return [];}
 }
 function collabParticipantsText(tr){
-  const names=(tr?.collabParticipants||[]).map(p=>p.name).filter(Boolean);
-  if(!names.length) return '';
+  const names=visibleParticipants(tr).map(p=>p.name);
+  if(!names.length)return '';
   return names.slice(0,4).join(' · ')+(names.length>4?` +${names.length-4}`:'');
 }
 function participantDisplayRole(tr,p){
@@ -3576,7 +3606,7 @@ function viewTripDetail(){
         ${tr.lastSyncedAt?`<span class="field-hint">${state.lang==='es'?'Última sync':'Last sync'} ${escapeHtml(formatChatTime(tr.lastSyncedAt))}</span>`:''}
       </div>
       <div class="collab-actions">
-        <button class="btn btn-ghost btn-sm collab-count-btn" onclick="openTripParticipants('${tr.id}')" title="${state.lang==='es'?'Participantes':'Participants'}">👥 ${(tr.collabParticipants||[]).length||1}</button>
+        <button class="btn btn-ghost btn-sm collab-count-btn" onclick="openTripParticipants('${tr.id}')" title="${state.lang==='es'?'Participantes':'Participants'}">👥 ${visibleParticipants(tr).length||1}</button>
         <button class="btn btn-ghost btn-sm center-badge" onclick="openTripChat('${tr.id}')">💬 <span class="text-label">${state.lang==='es'?'Chat':'Chat'}</span>${Number(tr.chatUnread||0)>0?`<span class="chat-badge">${Math.min(99,Number(tr.chatUnread||0))}</span>`:''}</button>
         ${tr.collabOwner?`<details class="collab-menu"><summary class="btn btn-brass btn-sm">📤 <span class="text-label">${state.lang==='es'?'Compartir':'Share'}</span> ▾</summary><div class="collab-popup">
           <button onclick="shareCollaborationRole('${tr.id}','editor')">✎ ${state.lang==='es'?'Compartir como editor':'Share as editor'}</button>
@@ -4580,7 +4610,7 @@ function dayCard(tr,d,i,total){
     ${scheduleConflicts(tr,d.date||'').length?`<div class="schedule-alert">⚠ ${state.lang==='es'?'Hay actividades que se superponen o no dejan suficiente tiempo.':'Activities overlap or do not leave enough time.'}</div>`:''}
     ${activities.length? activities.map(a=>`
       <div class="act-row"><span class="time">${escapeHtml(formatTime12(a.time||''))}</span><span class="title">${escapeHtml(a.title)}
-      ${a.location?`<div class="activity-meta">📍 <a target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.location)}">${escapeHtml(a.location)}</a></div>`:''}<div class="activity-duration">${state.lang==='es'?'Duración':'Duration'} ${Number(a.durationMinutes||60)} min${Number(a.travelBufferMinutes||0)?` · +${Number(a.travelBufferMinutes)} min ${state.lang==='es'?'traslado':'travel'}`:''}${a.assignedTo?` · 👤 ${escapeHtml(a.assignedTo)}`:''}</div><div class="activity-actions"><span class="activity-state ${a.status||'planned'}">${a.status==='done'?'✓ '+(state.lang==='es'?'Hecha':'Done'):a.status==='skipped'?'↷ '+(state.lang==='es'?'Omitida':'Skipped'):(state.lang==='es'?'Planificada':'Planned')}</span><button class="btn btn-ghost btn-sm" onclick="setActivityStatus('${tr.id}','${d.id}','${a.id}','done')">✓</button><button class="btn btn-ghost btn-sm" onclick="setActivityStatus('${tr.id}','${d.id}','${a.id}','skipped')">↷</button><button class="btn btn-ghost btn-sm" onclick="editActivityNote('${tr.id}','${d.id}','${a.id}')">💬</button><button class="btn btn-ghost btn-sm" onclick="copyActivity('${tr.id}','${d.id}','${a.id}')">⧉</button></div>${a.note?`<div class="field-hint">💬 ${escapeHtml(a.note)}</div>`:''}</span>
+      ${a.location?`<div class="activity-meta">📍 <a target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.location)}">${escapeHtml(a.location)}</a></div>`:''}<div class="activity-duration">${state.lang==='es'?'Duración':'Duration'} ${Number(a.durationMinutes||60)} min${Number(a.travelBufferMinutes||0)?` · +${Number(a.travelBufferMinutes)} min ${state.lang==='es'?'traslado':'travel'}`:''}</div><div class="activity-actions"><span class="activity-state ${a.status||'planned'}">${a.status==='done'?'✓ '+(state.lang==='es'?'Hecha':'Done'):a.status==='skipped'?'↷ '+(state.lang==='es'?'Omitida':'Skipped'):(state.lang==='es'?'Planificada':'Planned')}</span><button class="btn btn-ghost btn-sm" onclick="setActivityStatus('${tr.id}','${d.id}','${a.id}','done')">✓</button><button class="btn btn-ghost btn-sm" onclick="setActivityStatus('${tr.id}','${d.id}','${a.id}','skipped')">↷</button><button class="btn btn-ghost btn-sm" onclick="editActivityNote('${tr.id}','${d.id}','${a.id}')">💬</button><button class="btn btn-ghost btn-sm" onclick="copyActivity('${tr.id}','${d.id}','${a.id}')">⧉</button></div>${a.note?`<div class="field-hint">💬 ${escapeHtml(a.note)}</div>`:''}</span>
       <button class="del" onclick="deleteActivity('${tr.id}','${d.id}','${a.id}')">✕</button></div>`).join('')
       : `<p style="color:var(--muted);font-size:12px;margin:6px 0;">${t.itinerary.empty}</p>`}
     <div class="add-act-row">
@@ -4601,7 +4631,6 @@ function dayCard(tr,d,i,total){
           <span class="activity-unit">min</span>
         </div>
       </div>
-      <div class="activity-meta-field" style="flex-basis:150px"><label class="activity-mini-label">${state.lang==='es'?'Responsable':'Assigned to'}</label><select id="aassign-${d.id}"><option value="">—</option>${tripPeople(tr).map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('')}</select></div>
       <label class="tag" style="cursor:pointer"><input id="arepeat-${d.id}" type="checkbox" style="width:auto;margin-right:5px">${state.lang==='es'?'Repetir todos los días':'Repeat daily'}</label>
       <button class="btn btn-brass btn-sm" onclick="addActivity('${tr.id}','${d.id}')">${t.itinerary.addActivity}</button>
     </div>
@@ -4696,12 +4725,11 @@ function addActivity(tripId,dayId){
   const location=locEl?locEl.value.trim():'';
   const durationMinutes=Math.max(0,Math.min(1440,Number(document.getElementById('adur-'+dayId)?.value||60)));
   const travelBufferMinutes=Math.max(0,Math.min(360,Number(document.getElementById('abuf-'+dayId)?.value||0)));
-  const assignedTo=document.getElementById('aassign-'+dayId)?.value||'';
   const repeatDaily=Boolean(document.getElementById('arepeat-'+dayId)?.checked);
   if(!title)return;
   const day=(state.itineraries[tripId]||[]).find(d=>d.id===dayId);
   if(!day)return;
-  const base={time,title,location,durationMinutes,travelBufferMinutes,assignedTo,status:'planned'};
+  const base={time,title,location,durationMinutes,travelBufferMinutes,status:'planned'};
   day.activities.push({id:uid(),...base});
   if(repeatDaily){for(const other of state.itineraries[tripId]||[]){if(other.id!==dayId&&!other.activities.some(a=>a.title===title&&a.time===time))other.activities.push({id:uid(),...base});}}
   day.activities.sort((a,b)=>(a.time||'99').localeCompare(b.time||'99'));
@@ -5375,7 +5403,7 @@ function diagnosticsHtml(){
 function viewSettings(){
   const t=tt();
   return `
-    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v10.0.6</div></div></div>
+    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v10.0.7</div></div></div>
     <div class="panel">
       <h3 style="margin:0 0 12px;font-size:16px;color:var(--paper);">${t.settings.account}</h3>
       <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px;">
@@ -5406,7 +5434,7 @@ function viewSettings(){
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><a class="btn btn-ghost btn-sm" href="/privacy.html" target="_blank" rel="noopener">${state.lang==='es'?'Política de Privacidad':'Privacy Policy'}</a><a class="btn btn-ghost btn-sm" href="/terms.html" target="_blank" rel="noopener">${state.lang==='es'?'Términos de Uso':'Terms of Use'}</a></div>
     </div>
     <div class="panel"><h3 style="margin:0 0 8px;color:var(--paper)">☁ ${state.lang==='es'?'Offline y copias locales':'Offline & local backups'}</h3><p class="field-hint">${state.lang==='es'?'Waypoint guarda automáticamente hasta 5 copias recientes en este dispositivo.':'Waypoint automatically keeps up to 5 recent backups on this device.'}</p><div class="backup-list">${(state.offlineSnapshots||[]).map(s=>`<div class="backup-row"><span>${escapeHtml(new Date(s.at).toLocaleString())}</span><button class="btn btn-ghost btn-sm" onclick="restoreSnapshot('${s.id}')">${state.lang==='es'?'Restaurar':'Restore'}</button></div>`).join('')||`<div class="field-hint">${state.lang==='es'?'Aún no hay copias':'No backups yet'}</div>`}</div></div>
-    <div class="panel"><h3 style="margin:0 0 8px;font-size:16px;color:var(--paper);">🩺 ${state.lang==='es'?'Diagnóstico':'Diagnostics'}</h3><p class="field-hint">${state.lang==='es'?'Comprueba conexión, servidor e integraciones principales.':'Check connection, server and core integrations.'}</p>${diagnosticsHtml()}<div class="participant-last" style="margin-top:10px">Waypoint v10.0.6 · ${state.trips.length} ${state.lang==='es'?'viaje(s) local(es)':'local trip(s)'}</div><div style="margin-top:12px">${integrationStatusHtml()}</div></div>
+    <div class="panel"><h3 style="margin:0 0 8px;font-size:16px;color:var(--paper);">🩺 ${state.lang==='es'?'Diagnóstico':'Diagnostics'}</h3><p class="field-hint">${state.lang==='es'?'Comprueba conexión, servidor e integraciones principales.':'Check connection, server and core integrations.'}</p>${diagnosticsHtml()}<div class="participant-last" style="margin-top:10px">Waypoint v10.0.7 · ${state.trips.length} ${state.lang==='es'?'viaje(s) local(es)':'local trip(s)'}</div><div style="margin-top:12px">${integrationStatusHtml()}</div></div>
     <div class="panel">
       <h3 style="margin:0 0 6px;font-size:16px;color:var(--paper);">${t.settings.data}</h3>
       <p style="font-size:12px;color:var(--muted);margin:0 0 12px;">${t.settings.dataSub}</p>
@@ -5559,7 +5587,7 @@ function renderModal(){
     const tr=tripById(ui.participantsTripId);
     if(tr){
       const es=state.lang==='es';
-      const people=Array.isArray(tr.collabParticipants)?tr.collabParticipants:[];
+      const people=visibleParticipants(tr);
       const ownerCount=people.filter(p=>participantDisplayRole(tr,p)==='owner').length;
       const editorCount=people.filter(p=>participantDisplayRole(tr,p)==='editor').length;
       const viewerCount=people.filter(p=>participantDisplayRole(tr,p)==='viewer').length;
@@ -5603,7 +5631,7 @@ function renderModal(){
       const es=state.lang==='es';
       const messages=Array.isArray(ui.chatMessages)?ui.chatMessages:[];
       const me=chatParticipantId();
-      const people=(tr.collabParticipants||[]).map(p=>p.name).filter(Boolean);
+      const people=visibleParticipants(tr).map(p=>p.name);
       const draft=ui.chatDraft??getChatDraft(tr.id);
       inner=`<div class="chat-shell">
         <div class="chat-head">
@@ -5812,7 +5840,7 @@ document.addEventListener('change', (e)=>{
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('/service-worker.js?v=10.0.6',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('/service-worker.js?v=10.0.7',{updateViaCache:'none'});
       await reg.update();
       let reloading=false;
       navigator.serviceWorker.addEventListener('controllerchange',()=>{

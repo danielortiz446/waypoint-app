@@ -349,7 +349,7 @@ const server=http.createServer(async(req,res)=>{
     const u=new URL(req.url,'http://localhost');
     if((u.pathname.startsWith('/api/')||u.pathname==='/health')&&!allowRate(req))return json(res,429,{error:'rate limit exceeded'});
 
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'10.0.6',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'10.0.7',time:new Date().toISOString()});
 
     if(req.method==='GET'&&u.pathname==='/api/fx/rate'){
       const from=String(u.searchParams.get('from')||'').trim().toUpperCase();
@@ -870,4 +870,4 @@ const server=http.createServer(async(req,res)=>{
   }
 });
 
-server.listen(PORT,HOST,()=>console.log(`Waypoint 10.0.6 listening on http://${HOST}:${PORT}`));
+server.listen(PORT,HOST,()=>console.log(`Waypoint 10.0.7 listening on http://${HOST}:${PORT}`));
