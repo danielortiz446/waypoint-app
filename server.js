@@ -31,6 +31,21 @@ function notifyTyping(id){
 
 const fxCache=new Map();
 
+const FILE_ROOT=process.env.WAYPOINT_FILE_DIR||path.join(path.dirname(DATA_FILE),'waypoint-files');
+function ensureFileRoot(){fs.mkdirSync(FILE_ROOT,{recursive:true});}
+function safeStoredFilePath(roomId,fileId){
+  const roomDir=path.join(FILE_ROOT,String(roomId).replace(/[^a-zA-Z0-9_-]/g,'_'));
+  fs.mkdirSync(roomDir,{recursive:true});
+  return path.join(roomDir,String(fileId).replace(/[^a-zA-Z0-9_-]/g,'_'));
+}
+function cleanupRoomFiles(roomId){
+  try{fs.rmSync(path.join(FILE_ROOT,String(roomId).replace(/[^a-zA-Z0-9_-]/g,'_')),{recursive:true,force:true});}catch(e){}
+}
+function parseDurationSeconds(v){
+  const m=String(v||'').match(/([\d.]+)s/);return m?Math.round(Number(m[1])):0;
+}
+
+
 function ensureDataDir(){ fs.mkdirSync(path.dirname(DATA_FILE),{recursive:true}); }
 function loadRooms(){
   try{ return JSON.parse(fs.readFileSync(DATA_FILE,'utf8'))||{}; }catch(e){ return {}; }
@@ -58,6 +73,16 @@ function accessRole(room,key){
 function hasReadAccess(room,key){return Boolean(accessRole(room,key));}
 function hasEditAccess(room,key){return accessRole(room,key)==='editor';}
 function accessKeyFromRequest(req){return String(req.headers['x-access-key']||req.headers['x-edit-key']||req.headers['x-view-key']||'');}
+
+function requireActiveWriteParticipant(room,req){
+  if(!room||!(room.participants||[]).length)return {ok:true,participant:null};
+  const participantId=String(req.headers['x-participant-id']||'').trim().slice(0,100);
+  const participant=(room.participants||[]).find(p=>p.participantId===participantId&&!p.revokedAt);
+  if(!participantId||!participant)return {ok:false,status:403,error:'active participant required'};
+  if(participant.role==='viewer')return {ok:false,status:403,error:'participant is view only'};
+  return {ok:true,participant};
+}
+
 function addSecurity(room,type,message,meta={}){
   room.securityLog=Array.isArray(room.securityLog)?room.securityLog:[];
   room.securityLog.push({id:crypto.randomUUID(),type,message,createdAt:new Date().toISOString(),...meta});
@@ -86,7 +111,7 @@ function readBody(req){
     req.on('data',chunk=>{
       if(ended) return;
       data+=chunk;
-      if(Buffer.byteLength(data,'utf8')>3_000_000){ ended=true; reject(Object.assign(new Error('payload too large'),{status:413})); req.destroy(); }
+      if(Buffer.byteLength(data,'utf8')>8_500_000){ ended=true; reject(Object.assign(new Error('payload too large'),{status:413})); req.destroy(); }
     });
     req.on('end',()=>{ if(ended)return; try{resolve(JSON.parse(data||'{}'));}catch(e){reject(Object.assign(new Error('invalid json'),{status:400}));}});
     req.on('error',reject);
@@ -324,7 +349,7 @@ const server=http.createServer(async(req,res)=>{
     const u=new URL(req.url,'http://localhost');
     if((u.pathname.startsWith('/api/')||u.pathname==='/health')&&!allowRate(req))return json(res,429,{error:'rate limit exceeded'});
 
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'9.0.0',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'10.0.1',time:new Date().toISOString()});
 
     if(req.method==='GET'&&u.pathname==='/api/fx/rate'){
       const from=String(u.searchParams.get('from')||'').trim().toUpperCase();
@@ -457,13 +482,89 @@ const server=http.createServer(async(req,res)=>{
       }
     }
 
+
+    const fileCollectionMatch=u.pathname.match(/^\/api\/trips\/([^/]+)\/files$/);
+    if(fileCollectionMatch&&req.method==='POST'){
+      const id=decodeURIComponent(fileCollectionMatch[1]),room=rooms[id];if(!room)return json(res,404,{error:'trip not found'});
+      const key=accessKeyFromRequest(req);if(!hasEditAccess(room,key))return json(res,403,{error:'edit access required'});
+      const writeParticipant=requireActiveWriteParticipant(room,req);if(!writeParticipant.ok)return json(res,writeParticipant.status,{error:writeParticipant.error});
+      const body=await readBody(req),name=String(body.name||'file').slice(0,160),type=String(body.type||'application/octet-stream').slice(0,120),dataUrl=String(body.dataUrl||'');
+      const m=dataUrl.match(/^data:([^;]+);base64,(.+)$/s);if(!m)return json(res,400,{error:'invalid file payload'});
+      const buf=Buffer.from(m[2],'base64');if(!buf.length||buf.length>5_000_000)return json(res,413,{error:'file too large'});
+      const fileId=crypto.randomUUID(),filePath=safeStoredFilePath(id,fileId);fs.writeFileSync(filePath,buf);
+      room.files=Array.isArray(room.files)?room.files:[];
+      const meta={id:fileId,name,type,size:buf.length,createdAt:new Date().toISOString()};
+      room.files.push(meta);persist();addSecurity(room,'file_uploaded',`File uploaded: ${name}`,{fileId});
+      return json(res,201,{ok:true,file:meta});
+    }
+    const fileItemMatch=u.pathname.match(/^\/api\/trips\/([^/]+)\/files\/([^/]+)$/);
+    if(fileItemMatch){
+      const id=decodeURIComponent(fileItemMatch[1]),fileId=decodeURIComponent(fileItemMatch[2]),room=rooms[id];if(!room)return json(res,404,{error:'trip not found'});
+      const key=String(u.searchParams.get('key')||accessKeyFromRequest(req));if(!hasReadAccess(room,key))return json(res,403,{error:'read access required'});
+      const meta=(room.files||[]).find(f=>f.id===fileId);if(!meta)return json(res,404,{error:'file not found'});
+      const filePath=safeStoredFilePath(id,fileId);if(!fs.existsSync(filePath))return json(res,404,{error:'file missing'});
+      if(req.method==='GET'){
+        res.writeHead(200,{...securityHeaders(),'Content-Type':meta.type||'application/octet-stream','Content-Length':String(meta.size||fs.statSync(filePath).size),'Content-Disposition':`inline; filename="${String(meta.name||'file').replace(/"/g,'')}"`,'Cache-Control':'private, no-store'});
+        return fs.createReadStream(filePath).pipe(res);
+      }
+      if(req.method==='DELETE'){
+        if(!hasEditAccess(room,key))return json(res,403,{error:'edit access required'});
+        const writeParticipant=requireActiveWriteParticipant(room,req);if(!writeParticipant.ok)return json(res,writeParticipant.status,{error:writeParticipant.error});
+        try{fs.unlinkSync(filePath);}catch(e){}
+        room.files=(room.files||[]).filter(f=>f.id!==fileId);persist();addSecurity(room,'file_deleted',`File deleted: ${meta.name}`,{fileId});
+        return json(res,200,{ok:true,deleted:true});
+      }
+      return json(res,405,{error:'method not allowed'});
+    }
+
+    if(req.method==='GET'&&u.pathname==='/api/route/eta'){
+      const apiKey=String(process.env.GOOGLE_ROUTES_API_KEY||'').trim();
+      const origin=String(u.searchParams.get('origin')||'').trim().slice(0,240),destination=String(u.searchParams.get('destination')||'').trim().slice(0,240);
+      const modeRaw=String(u.searchParams.get('mode')||'DRIVE').toUpperCase();
+      const mode=['DRIVE','WALK','BICYCLE','TRANSIT'].includes(modeRaw)?modeRaw:'DRIVE';
+      if(!apiKey)return json(res,200,{enabled:false,reason:'api_key_required',provider:'Google Routes'});
+      if(!origin||!destination)return json(res,400,{error:'origin and destination required'});
+      try{
+        const body={origin:{address:origin},destination:{address:destination},travelMode:mode,computeAlternativeRoutes:false,units:'IMPERIAL'};
+        if(mode==='DRIVE')body.routingPreference='TRAFFIC_AWARE';
+        const rr=await fetch('https://routes.googleapis.com/directions/v2:computeRoutes',{
+          method:'POST',
+          headers:{'content-type':'application/json','X-Goog-Api-Key':apiKey,'X-Goog-FieldMask':'routes.duration,routes.distanceMeters,routes.staticDuration'},
+          body:JSON.stringify(body)
+        });
+        const data=await rr.json().catch(()=>({}));if(!rr.ok)return json(res,502,{enabled:true,provider:'Google Routes',error:String(data?.error?.message||'route lookup failed').slice(0,180)});
+        const route=data.routes?.[0];if(!route)return json(res,404,{enabled:true,provider:'Google Routes',error:'route not found'});
+        return json(res,200,{enabled:true,provider:'Google Routes',mode,durationSeconds:parseDurationSeconds(route.duration),staticDurationSeconds:parseDurationSeconds(route.staticDuration),distanceMeters:Number(route.distanceMeters||0)});
+      }catch(e){return json(res,502,{enabled:true,provider:'Google Routes',error:'route provider unavailable'});}
+    }
+
+    if(req.method==='POST'&&u.pathname==='/api/ocr/receipt'){
+      const endpoint=String(process.env.OCR_API_URL||'').trim(),apiKey=String(process.env.OCR_API_KEY||'').trim();
+      if(!endpoint)return json(res,200,{enabled:false,reason:'provider_not_configured'});
+      const body=await readBody(req);
+      try{
+        const rr=await fetch(endpoint,{method:'POST',headers:{'content-type':'application/json',...(apiKey?{'authorization':`Bearer ${apiKey}`}:{})},body:JSON.stringify({imageDataUrl:body.imageDataUrl||'',mode:'receipt'})});
+        const data=await rr.json().catch(()=>({}));if(!rr.ok)return json(res,502,{enabled:true,error:'ocr provider failed'});
+        return json(res,200,{enabled:true,text:String(data.text||data.result?.text||''),raw:data});
+      }catch(e){return json(res,502,{enabled:true,error:'ocr provider unavailable'});}
+    }
+
     if(req.method==='GET'&&u.pathname==='/api/giphy-config'){
       const key=String(process.env.GIPHY_API_KEY||'').trim();
       return json(res,200,{enabled:Boolean(key),apiKey:key||null,provider:key?'GIPHY':null});
     }
 
     if(req.method==='GET'&&u.pathname==='/api/features'){
-      return json(res,200,{giphy:Boolean(process.env.GIPHY_API_KEY),weather:Boolean(process.env.WEATHERAPI_KEY)});
+      return json(res,200,{
+        giphy:Boolean(process.env.GIPHY_API_KEY),
+        weather:Boolean(process.env.WEATHERAPI_KEY),
+        traffic:Boolean(process.env.GOOGLE_ROUTES_API_KEY),
+        cloudFiles:true,
+        ocr:Boolean(process.env.OCR_API_URL),
+        push:false,
+        emailImport:false,
+        smartTextImport:true
+      });
     }
 
     const eventMatch=u.pathname.match(/^\/api\/trips\/([^/]+)\/events$/);
@@ -743,7 +844,7 @@ const server=http.createServer(async(req,res)=>{
         }else{
           if(!editKey||hash(editKey)!==existing.keyHash) return json(res,403,{error:'invalid edit key'});
         }
-        delete rooms[id]; persist();
+        cleanupRoomFiles(id);delete rooms[id];persist();
         return json(res,200,{ok:true,deleted:true});
       }
       return json(res,405,{error:'method not allowed'});
@@ -769,4 +870,4 @@ const server=http.createServer(async(req,res)=>{
   }
 });
 
-server.listen(PORT,HOST,()=>console.log(`Waypoint 9.0.0 listening on http://${HOST}:${PORT}`));
+server.listen(PORT,HOST,()=>console.log(`Waypoint 10.0.1 listening on http://${HOST}:${PORT}`));

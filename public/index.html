@@ -998,6 +998,23 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   .unit-converter .btn{grid-column:1/-1}
 }
 
+
+/* Waypoint 10.0 Cloud & Smart Travel */
+.smart-integration-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.integration-card{padding:12px;border-radius:12px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
+.integration-card.ready{border-color:rgba(75,180,125,.22);background:rgba(75,180,125,.055)}
+.integration-card .k{font:9px var(--font-mono);text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.integration-card .v{font-size:13px;font-weight:850;color:var(--paper);margin-top:4px}
+.eta-card{padding:11px;border-radius:11px;background:rgba(78,145,205,.08);border:1px solid rgba(78,145,205,.18);margin:8px 0}
+.eta-big{font-size:20px;font-weight:900;color:var(--paper)}
+.import-preview{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.import-preview .field{margin:0}
+.cloud-file{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px;background:rgba(78,145,205,.08);border:1px solid rgba(78,145,205,.16);font-size:9px}
+.provider-note{font-size:9px;color:var(--muted);line-height:1.45}
+@media(max-width:700px){
+  .smart-integration-grid,.import-preview{grid-template-columns:1fr}
+}
+
 </style>
 </head>
 <body><a class="skip-link" href="#app">Skip to content</a>
@@ -1294,6 +1311,25 @@ function ensureTripAdvanced(tripId){
   if(!state.categoryBudgets[tripId])state.categoryBudgets[tripId]={};
 }
 
+
+async function getFeatureFlags(force=false){
+  if(!force&&ui.featureFlags&&Date.now()-Number(ui.featureFlagsAt||0)<5*60*1000)return ui.featureFlags;
+  try{const r=await fetch('/api/features',{cache:'no-store'});const j=await r.json();ui.featureFlags=j;ui.featureFlagsAt=Date.now();return j;}catch(e){return ui.featureFlags||{};}
+}
+function integrationStatusHtml(){
+  const f=ui.featureFlags||{},es=state.lang==='es';
+  const card=(name,ready,desc)=>`<div class="integration-card ${ready?'ready':''}"><div class="k">${name}</div><div class="v">${ready?'✓ '+(es?'Listo':'Ready'):'○ '+(es?'No configurado':'Not configured')}</div><div class="provider-note">${desc}</div></div>`;
+  return `<div class="smart-integration-grid">${card('Cloud Files',Boolean(f.cloudFiles),es?'Archivos compartidos en el volumen del servidor.':'Shared files on server storage.')}${card('Traffic / ETA',Boolean(f.traffic),es?'Requiere GOOGLE_ROUTES_API_KEY.':'Requires GOOGLE_ROUTES_API_KEY.')}${card('Receipt OCR',Boolean(f.ocr),es?'Requiere OCR_API_URL.':'Requires OCR_API_URL.')}${card('Push',Boolean(f.push),es?'Aún requiere proveedor de push.':'Still requires a push provider.')}${card('Email import',Boolean(f.emailImport),es?'Importación directa desde correo aún requiere conector.':'Direct email import still requires a connector.')}${card('Smart text import',Boolean(f.smartTextImport),es?'Funciona pegando una confirmación o recibo.':'Works by pasting confirmation or receipt text.')}</div>`;
+}
+
+
+function hasDestinationCoords(tr){
+  const lat=tr?.destinationLat,lon=tr?.destinationLon;
+  if(lat===null||lat===undefined||lat===''||lon===null||lon===undefined||lon==='')return false;
+  const a=Number(lat),b=Number(lon);
+  return Number.isFinite(a)&&Number.isFinite(b)&&a>=-90&&a<=90&&b>=-180&&b<=180;
+}
+
 function weatherForTrip(tr){return ui.weatherCache?.[tr?.id]||null;}
 function resolvedTripTimezone(tr){
   const w=weatherForTrip(tr);
@@ -1319,7 +1355,7 @@ function smartResolvedPlaceHtml(tr){
   const resolved=w?.location||tr.resolvedLocation||tr.destinationCanonical||'';
   if(!resolved)return '';
   const es=state.lang==='es';
-  const confirmed=Number.isFinite(Number(tr.destinationLat))&&Number.isFinite(Number(tr.destinationLon));
+  const confirmed=hasDestinationCoords(tr);
   return `<div class="smart-place"><span>${confirmed?'✓':'📍'} ${confirmed?(es?'Destino confirmado':'Confirmed destination'):(es?'Ubicación detectada':'Detected location')}: <strong>${escapeHtml(resolved)}</strong>${tr.destinationCountry?`<br><span class="field-hint">${escapeHtml(tr.destinationCountry)}</span>`:''}</span><button class="btn btn-ghost btn-sm viewer-safe" onclick="openTripForm('${tr.id}')">${es?'Cambiar':'Change'}</button></div>`;
 }
 
@@ -1898,7 +1934,7 @@ function buildItineraryPayload(tr){
     waypointShare: 3,
     shareId: ensureShareId(tr),
     updatedAt:new Date().toISOString(),
-    trip:{name:tr.name,destination:tr.destination,tripType:tr.tripType||'',start:tr.start,end:tr.end,budgetGoal:tr.budgetGoal||0,currency:tr.currency||'USD',passportExpiry:tr.passportExpiry||'',timezone:tr.timezone||'',localCurrency:tr.localCurrency||'',localLanguage:tr.localLanguage||'',emergencyInfo:tr.emergencyInfo||'',powerInfo:tr.powerInfo||'',destinationCanonical:tr.destinationCanonical||'',destinationName:tr.destinationName||'',destinationRegion:tr.destinationRegion||'',destinationCountry:tr.destinationCountry||'',destinationLat:Number.isFinite(Number(tr.destinationLat))?Number(tr.destinationLat):null,destinationLon:Number.isFinite(Number(tr.destinationLon))?Number(tr.destinationLon):null,autoTimezone:tr.autoTimezone||'',autoPractical:tr.autoPractical||{},resolvedLocation:tr.resolvedLocation||'',detectedCountry:tr.detectedCountry||'',practicalUpdatedAt:tr.practicalUpdatedAt||'',notes:tr.notes||''},
+    trip:{name:tr.name,destination:tr.destination,tripType:tr.tripType||'',start:tr.start,end:tr.end,budgetGoal:tr.budgetGoal||0,currency:tr.currency||'USD',passportExpiry:tr.passportExpiry||'',timezone:tr.timezone||'',localCurrency:tr.localCurrency||'',localLanguage:tr.localLanguage||'',emergencyInfo:tr.emergencyInfo||'',powerInfo:tr.powerInfo||'',destinationCanonical:tr.destinationCanonical||'',destinationName:tr.destinationName||'',destinationRegion:tr.destinationRegion||'',destinationCountry:tr.destinationCountry||'',destinationLat:hasDestinationCoords(tr)?Number(tr.destinationLat):null,destinationLon:hasDestinationCoords(tr)?Number(tr.destinationLon):null,autoTimezone:tr.autoTimezone||'',autoPractical:tr.autoPractical||{},resolvedLocation:tr.resolvedLocation||'',detectedCountry:tr.detectedCountry||'',practicalUpdatedAt:tr.practicalUpdatedAt||'',notes:tr.notes||''},
     name:tr.name,destination:tr.destination,tripType:tr.tripType||'',start:tr.start,end:tr.end,
     days:state.itineraries[tr.id]||[],
     bookings:state.bookings[tr.id]||[],
@@ -2534,7 +2570,7 @@ async function registerCollabParticipant(tr){
   try{
     const r=await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}/participants`,{
       method:'POST',
-      headers:{'Content-Type':'application/json','X-Access-Key':collabAccessKey(tr)},
+      headers:{'Content-Type':'application/json','X-Access-Key':collabAccessKey(tr),'X-Participant-Id':tr.collabParticipantId||chatParticipantId()},
       body:JSON.stringify({name,participantId:tr.collabParticipantId,role:collabRole(tr)})
     });
     if(!r.ok) throw new Error('participant '+r.status);
@@ -2762,7 +2798,7 @@ function livePayload(tr){
     trip:{
       name:tr.name,destination:tr.destination,tripType:tr.tripType||'',start:tr.start,end:tr.end,
       budgetGoal:roundMoney(tr.budgetGoal||0),currency:tr.currency||'USD',
-      passportExpiry:tr.passportExpiry||'',timezone:tr.timezone||'',localCurrency:tr.localCurrency||'',localLanguage:tr.localLanguage||'',emergencyInfo:tr.emergencyInfo||'',powerInfo:tr.powerInfo||'',destinationCanonical:tr.destinationCanonical||'',destinationName:tr.destinationName||'',destinationRegion:tr.destinationRegion||'',destinationCountry:tr.destinationCountry||'',destinationLat:Number.isFinite(Number(tr.destinationLat))?Number(tr.destinationLat):null,destinationLon:Number.isFinite(Number(tr.destinationLon))?Number(tr.destinationLon):null,autoTimezone:tr.autoTimezone||'',autoPractical:tr.autoPractical||{},resolvedLocation:tr.resolvedLocation||'',detectedCountry:tr.detectedCountry||'',practicalUpdatedAt:tr.practicalUpdatedAt||'',notes:tr.notes||''
+      passportExpiry:tr.passportExpiry||'',timezone:tr.timezone||'',localCurrency:tr.localCurrency||'',localLanguage:tr.localLanguage||'',emergencyInfo:tr.emergencyInfo||'',powerInfo:tr.powerInfo||'',destinationCanonical:tr.destinationCanonical||'',destinationName:tr.destinationName||'',destinationRegion:tr.destinationRegion||'',destinationCountry:tr.destinationCountry||'',destinationLat:hasDestinationCoords(tr)?Number(tr.destinationLat):null,destinationLon:hasDestinationCoords(tr)?Number(tr.destinationLon):null,autoTimezone:tr.autoTimezone||'',autoPractical:tr.autoPractical||{},resolvedLocation:tr.resolvedLocation||'',detectedCountry:tr.detectedCountry||'',practicalUpdatedAt:tr.practicalUpdatedAt||'',notes:tr.notes||''
     },
     days:state.itineraries[tr.id]||[],
     bookings:state.bookings[tr.id]||[],
@@ -3395,7 +3431,7 @@ async function loadTripWeather(tripId,force=false){
   const cached=ui.weatherCache?.[tripId];
   if(!force&&cached&&Date.now()-Number(cached._ts||0)<30*60*1000)return;
   try{
-    const hasCoords=Number.isFinite(Number(tr.destinationLat))&&Number.isFinite(Number(tr.destinationLon));
+    const hasCoords=hasDestinationCoords(tr);
     const params=new URLSearchParams({location:tr.destinationCanonical||tr.destination});
     if(hasCoords){
       params.set('lat',String(Number(tr.destinationLat)));
@@ -3520,6 +3556,36 @@ function viewRecapSub(tr){
   <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:12px;"><button class="btn btn-brass btn-sm viewer-safe" onclick="exportTripCalendar('${tr.id}')">📅 ${es?'Exportar calendario':'Export calendar'}</button><button class="btn btn-ghost btn-sm viewer-safe" onclick="printItinerary('${tr.id}')">🖨 ${es?'Itinerario':'Itinerary'}</button><button class="btn btn-brass btn-sm viewer-safe" onclick="printTripBook('${tr.id}')">📘 Trip Book PDF</button></div></div>`;
 }
 
+
+function previousLocationForItem(tr,date,item){
+  const items=tripTimelineItems(tr,date),idx=items.findIndex(x=>x.id===item?.id);
+  for(let i=idx-1;i>=0;i--)if(items[i].location)return items[i].location;
+  return (state.bookings[tr.id]||[]).find(b=>b.type==='hotel')?.location||tr.resolvedLocation||tr.destinationCanonical||tr.destination||'';
+}
+async function loadNextEta(tripId,mode='DRIVE'){
+  const tr=tripById(tripId),date=tripFocusDate(tr),items=tripTimelineItems(tr,date).filter(x=>x.time),nowMins=new Date().getHours()*60+new Date().getMinutes();
+  const next=items.find(x=>date!==todayIsoLocal()||timeToMinutes(x.time)>=nowMins)||items[0];if(!next?.location){showToast(state.lang==='es'?'La próxima actividad no tiene ubicación.':'The next activity has no location.');return;}
+  const origin=previousLocationForItem(tr,date,next);if(!origin){showToast(state.lang==='es'?'Agrega una ubicación anterior u hotel para calcular el traslado.':'Add a previous location or hotel to calculate travel time.');return;}
+  ui.etaLoading=true;render();
+  try{
+    const r=await fetch(`/api/route/eta?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(next.location)}&mode=${encodeURIComponent(mode)}`,{cache:'no-store'});
+    const j=await r.json();ui.etaLoading=false;
+    if(!r.ok||!j.enabled){ui.nextEta={error:true,reason:j.reason||j.error||'not configured'};render();return;}
+    const mins=Math.max(1,Math.ceil(Number(j.durationSeconds||0)/60)),start=timeToMinutes(next.time),leave=start==null?null:start-mins-Math.max(0,Number(next.travelBufferMinutes||0));
+    ui.nextEta={tripId,date,itemId:next.id,origin,destination:next.location,mode,minutes:mins,distanceMeters:Number(j.distanceMeters||0),leaveMinutes:leave,provider:j.provider||'Routes'};render();
+  }catch(e){ui.etaLoading=false;ui.nextEta={error:true,reason:'network'};render();}
+}
+function etaCardHtml(tr,next,date){
+  const es=state.lang==='es',e=ui.nextEta;
+  if(ui.etaLoading)return `<div class="eta-card">${es?'Calculando traslado…':'Calculating travel time…'}</div>`;
+  if(e&&e.tripId===tr.id&&e.itemId===next?.id&&!e.error){
+    const leave=e.leaveMinutes==null?'—':formatTime12(`${String(Math.floor((e.leaveMinutes+1440)%1440/60)).padStart(2,'0')}:${String((e.leaveMinutes+1440)%60).padStart(2,'0')}`);
+    return `<div class="eta-card"><div class="booking-type">${es?'Traslado estimado':'Estimated travel'}</div><div class="eta-big">${e.minutes} min</div><div class="field-hint">${Math.round(e.distanceMeters/1609.344*10)/10} mi · ${escapeHtml(e.mode)}</div>${e.leaveMinutes!=null?`<div style="margin-top:7px"><strong>${es?'Sal aproximadamente':'Leave around'} ${leave}</strong></div>`:''}</div>`;
+  }
+  if(e?.error)return `<div class="eta-card"><div class="field-hint">${es?'ETA no disponible. Configura Google Routes API o usa el mapa manualmente.':'ETA unavailable. Configure Google Routes API or use maps manually.'}</div></div>`;
+  return next?.location?`<button class="btn btn-ghost btn-sm" onclick="loadNextEta('${tr.id}','DRIVE')">🚗 ${es?'Calcular ETA':'Calculate ETA'}</button>`:'';
+}
+
 function viewTodaySub(tr){
   const es=state.lang==='es';const date=tripFocusDate(tr);const items=tripTimelineItems(tr,date);
   const nowMins=new Date().getHours()*60+new Date().getMinutes();
@@ -3535,7 +3601,7 @@ function viewTodaySub(tr){
       ${tripCount?`<div class="countdown-card" style="margin-bottom:10px"><div class="booking-type">${es?'Estado del viaje':'Trip status'}</div><div class="countdown-big">${tripCount.kind==='before'?(es?`Faltan ${tripCount.days} días`:`${tripCount.days} days to go`):tripCount.kind==='during'?(es?`Día ${tripCount.day} de ${tripCount.total}`:`Day ${tripCount.day} of ${tripCount.total}`):(es?`Terminó hace ${tripCount.days} días`:`Ended ${tripCount.days} days ago`)}</div></div>`:''}
       ${count?`<div class="panel" style="margin-bottom:10px;padding:11px"><div class="booking-type">${es?'Cuenta regresiva':'Countdown'}</div><div class="booking-title">${count.minutes<60?(es?`${count.minutes} min para ${escapeHtml(count.item.title)}`:`${count.minutes} min until ${escapeHtml(count.item.title)}`):(es?`${Math.floor(count.minutes/60)} h ${count.minutes%60} min para ${escapeHtml(count.item.title)}`:`${Math.floor(count.minutes/60)}h ${count.minutes%60}m until ${escapeHtml(count.item.title)}`)}</div></div>`:''}
       ${conflicts.length?`<div class="schedule-alert">⚠ ${es?`${conflicts.length} conflicto(s) de horario detectado(s). Ajusta duración o tiempo de traslado.`:`${conflicts.length} schedule conflict(s) detected. Adjust duration or travel buffer.`}</div>`:''}
-      ${next?`<div class="panel" style="margin-bottom:10px;padding:11px"><div class="booking-type">${es?'Próximo':'Up next'}</div><div class="booking-title">${escapeHtml(formatTime12(next.time||''))} ${escapeHtml(next.title)}</div>${next.location?`<div class="booking-meta">📍 ${escapeHtml(next.location)}</div>`:''}</div>`:''}
+      ${next?`<div class="panel" style="margin-bottom:10px;padding:11px"><div class="booking-type">${es?'Próximo':'Up next'}</div><div class="booking-title">${escapeHtml(formatTime12(next.time||''))} ${escapeHtml(next.title)}</div>${next.location?`<div class="booking-meta">📍 ${escapeHtml(next.location)}</div>`:''}</div>`:''}${next?etaCardHtml(tr,next,date):''}
       <div class="day-tools">${items.length?`<a class="btn btn-brass btn-sm viewer-safe" target="_blank" rel="noopener" href="${dayRouteUrl(tr,date)}">🧭 ${es?'Ruta del día':'Day route'}</a>`:''}<button class="btn btn-ghost btn-sm" onclick="setTripSubTab('calendar')">📅 ${es?'Calendario':'Calendar'}</button></div>
       <div class="timeline">${items.length?items.map(x=>`<div class="timeline-row ${timelineNowClass(date,x.time)}"><div class="timeline-time">${escapeHtml(formatTime12(x.time||''))||'—'}</div><div><div style="font-size:12px;font-weight:750">${x.kind==='booking'?'🎟 ':'• '}${escapeHtml(x.title)}</div>${x.location?`<div class="field-hint">📍 ${escapeHtml(x.location)}</div>`:''}${x.kind==='activity'?`<div class="activity-duration">${es?'Duración':'Duration'} ${x.durationMinutes||60} min${x.travelBufferMinutes?` · +${x.travelBufferMinutes} min ${es?'traslado':'travel'}`:''}</div>`:''}</div></div>`).join(''):`<div class="chat-empty">${es?'No hay actividades ni reservas para este día.':'No activities or bookings for this day.'}</div>`}</div>
     </div>
@@ -3952,13 +4018,45 @@ function findNextActivity(tr){
   return items[0]||null;
 }
 
+
+function parseConfirmationText(text){
+  const raw=String(text||''),lines=raw.split(/\r?\n/).map(x=>x.trim()).filter(Boolean),joined=lines.join(' ');
+  const flight=(joined.match(/\b([A-Z]{2}|[A-Z]\d|\d[A-Z])\s?(\d{2,4})\b/i)||[]);
+  const confirmation=(joined.match(/\b(?:confirmation|confirmación|record locator|booking reference|reservation)[\s:#-]*([A-Z0-9]{5,10})\b/i)||[])[1]||'';
+  const date=(joined.match(/\b(20\d{2})[-\/](\d{1,2})[-\/](\d{1,2})\b/)||[]);
+  const iso=date.length?`${date[1]}-${String(date[2]).padStart(2,'0')}-${String(date[3]).padStart(2,'0')}`:'';
+  const time=(joined.match(/\b(\d{1,2}:\d{2}\s?(?:AM|PM)?)\b/i)||[])[1]||'';
+  const iatas=[...joined.matchAll(/\b([A-Z]{3})\b/g)].map(m=>m[1]).filter(x=>!['USD','EUR','COP','JPY','EST','PST'].includes(x));
+  const hotel=/hotel|check[- ]?in|check[- ]?out|room/i.test(joined);
+  return {
+    type:flight.length?'flight':hotel?'hotel':'other',
+    title:flight.length?`${flight[1].toUpperCase()}${flight[2]}${iatas.length>=2?` ${iatas[0]} → ${iatas[1]}`:''}`:(lines[0]||'Imported booking'),
+    provider:'',
+    confirmation,
+    date:iso,
+    time,
+    origin:iatas[0]||'',
+    destination:iatas[1]||'',
+    notes:raw.slice(0,1200)
+  };
+}
+function openSmartBookingImport(){ui.modal='smartBookingImport';ui.importBookingPreview=null;render();}
+function previewSmartBookingImport(){
+  const text=document.getElementById('smart-booking-text')?.value||'';ui.importBookingPreview=parseConfirmationText(text);renderModal();
+}
+function saveSmartBookingImport(){
+  const p=ui.importBookingPreview;if(!p)return;const tripId=ui.currentTripId;state.bookings[tripId]=state.bookings[tripId]||[];
+  state.bookings[tripId].push({id:uid(),type:p.type,title:p.title,provider:p.provider||'',confirmation:p.confirmation||'',date:p.date||'',time:normalizeTime24(p.time||''),durationMinutes:0,travelBufferMinutes:0,location:'',notes:p.notes||'',flightNumber:p.type==='flight'?p.title.split(' ')[0]:'',origin:p.origin||'',destination:p.destination||''});
+  ui.modal=null;ui.importBookingPreview=null;saveState();render();showToast(state.lang==='es'?'Reserva importada':'Booking imported');
+}
+
 function viewBookingsSub(tr){
   const es=state.lang==='es';
   const list=state.bookings[tr.id]||[];
   const labels={flight:es?'Vuelo':'Flight',hotel:'Hotel',transport:es?'Transporte':'Transport',train:es?'Tren':'Train',car:es?'Auto de alquiler':'Rental car',restaurant:es?'Restaurante':'Restaurant',activity:es?'Actividad':'Activity',other:es?'Otra':'Other'};
   return `
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
-      <button class="btn btn-brass btn-sm" onclick="openBookingForm()">+ ${es?'Agregar reserva':'Add booking'}</button>
+      <button class="btn btn-brass btn-sm" onclick="openBookingForm()">+ ${es?'Agregar reserva':'Add booking'}</button><button class="btn btn-ghost btn-sm" onclick="openSmartBookingImport()">✨ ${es?'Importar confirmación':'Import confirmation'}</button>
     </div>
     ${list.length?list.slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(b=>`
       <div class="booking-card">
@@ -4319,7 +4417,7 @@ function viewBudgetSub(tr){
       <div class="stat"><div class="label">${t.budget.spent}</div><div class="value ${over?'coral':''}">${money(spent,tr.currency)}</div></div>
       <div class="stat"><div class="label">${over? t.budget.overBy : t.budget.remaining}</div><div class="value ${over?'coral':'green'}">${money(Math.abs(remaining),tr.currency)}</div></div>
     </div>
-    <div style="margin-bottom:14px;"><button class="btn btn-brass btn-sm" onclick="openExpenseForm()">+ ${t.budget.addExpense}</button></div>
+    <div style="margin-bottom:14px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-brass btn-sm" onclick="openExpenseForm()">+ ${t.budget.addExpense}</button><button class="btn btn-ghost btn-sm" onclick="openReceiptImport()">🧾 ${state.lang==='es'?'Importar recibo':'Import receipt'}</button></div>
     ${catsHtml? `<div class="panel"><div class="row-list">${catsHtml}</div></div>` : ''}
     <div class="panel">
       <h3 style="margin:0 0 8px;font-size:16px;color:var(--paper);">${t.budget.log}</h3>
@@ -4587,6 +4685,32 @@ function calcConvert(){
   ui.convResult={value:roundMoney(amount*rate),to:ui.convDraft.to||'—',rate,date:ui.convDraft.rateDate||''};
   render();
 }
+
+function parseReceiptText(text){
+  const raw=String(text||''),lines=raw.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  const amounts=[...raw.matchAll(/(?:\$|USD|EUR|COP|JPY|GBP|CAD)?\s?(\d{1,6}(?:[.,]\d{2}))/g)].map(m=>Number(String(m[1]).replace(',','.'))).filter(Number.isFinite);
+  const amount=amounts.length?Math.max(...amounts):0;
+  const dateMatch=raw.match(/\b(20\d{2})[-\/](\d{1,2})[-\/](\d{1,2})\b/);
+  const date=dateMatch?`${dateMatch[1]}-${String(dateMatch[2]).padStart(2,'0')}-${String(dateMatch[3]).padStart(2,'0')}`:todayIsoLocal();
+  return {desc:lines[0]||'',amount,date,text:raw};
+}
+function openReceiptImport(){ui.modal='receiptImport';ui.receiptPreview=null;render();}
+function previewReceiptText(){
+  const text=document.getElementById('receipt-text')?.value||'';ui.receiptPreview=parseReceiptText(text);renderModal();
+}
+async function ocrReceiptFile(){
+  const file=document.getElementById('receipt-image')?.files?.[0];if(!file)return;
+  try{
+    const dataUrl=await readFileAsDataUrl(file,4000000);
+    const r=await fetch('/api/ocr/receipt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({imageDataUrl:dataUrl})});
+    const j=await r.json();if(!r.ok||!j.enabled||!j.text)throw new Error(j.error||'ocr unavailable');
+    ui.receiptPreview=parseReceiptText(j.text);renderModal();
+  }catch(e){showToast(state.lang==='es'?'OCR no está configurado o no pudo leer el recibo. Puedes pegar el texto manualmente.':'OCR is not configured or could not read the receipt. You can paste the text manually.');}
+}
+function saveReceiptPreview(){
+  const p=ui.receiptPreview;if(!p)return;ui.modal='expense';ui.expenseDraft={cat:CATS[0],desc:p.desc,amount:String(p.amount||''),date:p.date};render();
+}
+
 function openExpenseForm(){
   ui.modal='expense';
   ui.expenseDraft = {cat:CATS[0], desc:'', amount:'', date:new Date().toISOString().slice(0,10)};
@@ -4736,6 +4860,39 @@ function deleteChecklistItem(id){
 
 /* ---- notes sub ---- */
 
+
+async function readFileAsDataUrl(file,maxBytes=5000000){
+  return new Promise((resolve,reject)=>{
+    if(!file)return resolve(null);
+    if(file.size>maxBytes)return reject(new Error('too_large'));
+    const r=new FileReader();r.onload=()=>resolve(String(r.result||''));r.onerror=reject;r.readAsDataURL(file);
+  });
+}
+async function uploadCloudTripFile(tr,file){
+  if(!tr?.liveSync||!navigator.onLine)throw new Error('cloud_unavailable');
+  const dataUrl=await readFileAsDataUrl(file,5000000);
+  const r=await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}/files`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-Access-Key':collabAccessKey(tr)},
+    body:JSON.stringify({name:file.name,type:file.type||'application/octet-stream',dataUrl})
+  });
+  const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'upload failed');
+  return j.file;
+}
+function cloudFileUrl(tr,fileId){
+  return `${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}/files/${encodeURIComponent(fileId)}`;
+}
+async function openDocAttachment(tripId,docId){
+  const tr=tripById(tripId),d=(state.tripDocs[tripId]||[]).find(x=>x.id===docId);if(!d)return;
+  if(d.cloudFile?.id){
+    try{
+      const r=await fetch(cloudFileUrl(tr,d.cloudFile.id),{headers:{'X-Access-Key':collabAccessKey(tr)}});if(!r.ok)throw new Error('file');
+      const blob=await r.blob(),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.target='_blank';a.rel='noopener';a.download=d.cloudFile.name||'file';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);return;
+    }catch(e){showToast(state.lang==='es'?'No se pudo abrir el archivo compartido.':'Could not open shared file.');return;}
+  }
+  downloadDocAttachment(tripId,docId);
+}
+
 function readSmallAttachment(file,maxBytes=650000){
   return new Promise((resolve,reject)=>{
     if(!file)return resolve(null);
@@ -4754,14 +4911,14 @@ function viewNotesSub(tr){
   return `
     <p style="color:var(--muted);font-size:12.5px;margin:0 0 14px;">${t.notes.sub}</p>
     ${docs.length? `<div class="panel"><div class="row-list">${docs.map(d=>`
-      <div class="li ${d.important?'doc-important':''}"><div class="main"><div class="t">${d.important?'⭐ ':''}${escapeHtml(d.label)}</div><div class="s">${d.type?escapeHtml(d.type)+' · ':''}${escapeHtml(d.value)}</div>${d.attachment?`<button class="file-pill" onclick="downloadDocAttachment('${tr.id}','${d.id}')">📎 ${escapeHtml(d.attachment.name)} · ${Math.round(Number(d.attachment.size||0)/1024)} KB</button>`:''}</div>
+      <div class="li ${d.important?'doc-important':''}"><div class="main"><div class="t">${d.important?'⭐ ':''}${escapeHtml(d.label)}</div><div class="s">${d.type?escapeHtml(d.type)+' · ':''}${escapeHtml(d.value)}</div>${d.cloudFile?`<button class="cloud-file" onclick="openDocAttachment('${tr.id}','${d.id}')">☁ ${escapeHtml(d.cloudFile.name)} · ${Math.round(Number(d.cloudFile.size||0)/1024)} KB</button>`:(d.attachment?`<button class="file-pill" onclick="openDocAttachment('${tr.id}','${d.id}')">📎 ${escapeHtml(d.attachment.name)} · ${Math.round(Number(d.attachment.size||0)/1024)} KB</button>`:'')}</div>
       <button class="del" onclick="deleteDoc('${tr.id}','${d.id}')">✕</button></div>`).join('')}</div></div>`
       : `<div class="panel empty"><p>${t.notes.empty}</p></div>`}
     <div class="panel">
       <div class="field"><label>${t.notes.label}</label><input id="doc-label" placeholder="${t.notes.labelPlaceholder}"></div>
       <div class="form-row"><div class="field"><label>${state.lang==='es'?'Tipo':'Type'}</label><select id="doc-type"><option value="document">${state.lang==='es'?'Documento':'Document'}</option><option value="confirmation">${state.lang==='es'?'Confirmación':'Confirmation'}</option><option value="insurance">${state.lang==='es'?'Seguro':'Insurance'}</option><option value="address">${state.lang==='es'?'Dirección':'Address'}</option><option value="contact">${state.lang==='es'?'Contacto':'Contact'}</option></select></div><div class="field"><label>${state.lang==='es'?'Importante':'Important'}</label><select id="doc-important"><option value="0">${state.lang==='es'?'Normal':'Normal'}</option><option value="1">⭐ ${state.lang==='es'?'Importante':'Important'}</option></select></div></div>
       <div class="field"><label>${t.notes.value}</label><input id="doc-value" placeholder="${t.notes.valuePlaceholder}"></div>
-      <div class="field"><label>📎 ${state.lang==='es'?'Adjunto pequeño (PDF/imagen, máx. 650 KB)':'Small attachment (PDF/image, max 650 KB)'}</label><input id="doc-file" type="file" accept="application/pdf,image/*"></div>
+      <div class="field"><label>📎 ${state.lang==='es'?'Adjunto (offline ≤650 KB · nube compartida ≤5 MB)':'Attachment (offline ≤650 KB · shared cloud ≤5 MB)'}</label><input id="doc-file" type="file" accept="application/pdf,image/*"></div>
       <button class="btn btn-brass btn-sm btn-block" onclick="addDoc('${tr.id}')">+ ${t.notes.addEntry}</button>
       <p class="field-hint" style="margin:12px 0 4px;">${t.notes.presets}</p>
       <div class="chips-wrap">${DOC_PRESETS[state.lang].map(p=>`<button class="chip" style="cursor:pointer;" onclick="quickAddDoc('${p.replace(/'/g,"\\'")}')"><span>+ ${p}</span></button>`).join('')}</div>
@@ -4769,38 +4926,45 @@ function viewNotesSub(tr){
   `;
 }
 async function addDoc(tripId){
-  const label=document.getElementById('doc-label').value.trim();
-  const value=document.getElementById('doc-value').value.trim();
-  const file=document.getElementById('doc-file')?.files?.[0]||null;
-  if(!label||(!value&&!file))return;
-  let attachment=null;
-  try{
-    attachment=await readSmallAttachment(file);
-    const currentBytes=(state.tripDocs[tripId]||[]).reduce((s,d)=>s+Number(d.attachment?.size||0),0);
-    if(attachment&&currentBytes+Number(attachment.size||0)>2000000)throw new Error('trip_attachment_quota');
-  }catch(e){showToast(state.lang==='es'?'El archivo es demasiado grande o el viaje ya alcanzó 2 MB de adjuntos offline.':'The file is too large or this trip has reached the 2 MB offline attachment limit.');return;}
+  const tr=tripById(tripId),label=document.getElementById('doc-label').value.trim(),value=document.getElementById('doc-value').value.trim();
+  const file=document.getElementById('doc-file')?.files?.[0]||null;if(!label||(!value&&!file))return;
+  let attachment=null,cloudFile=null;
+  if(file){
+    if(file.size<=650000){
+      try{attachment=await readSmallAttachment(file);}catch(e){}
+    }else if(file.size<=5000000&&tr?.liveSync&&navigator.onLine!==false){
+      try{showToast(state.lang==='es'?'Subiendo archivo…':'Uploading file…');cloudFile=await uploadCloudTripFile(tr,file);}catch(e){showToast(state.lang==='es'?'No se pudo subir el archivo compartido.':'Could not upload shared file.');return;}
+    }else{
+      showToast(state.lang==='es'?'Para archivos de más de 650 KB activa colaboración y conexión a Internet. Máximo 5 MB.':'For files over 650 KB, enable collaboration and Internet. Maximum 5 MB.');return;
+    }
+    const localBytes=(state.tripDocs[tripId]||[]).reduce((s,d)=>s+Number(d.attachment?.size||0),0);
+    if(attachment&&localBytes+Number(attachment.size||0)>2000000){showToast(state.lang==='es'?'Este viaje ya alcanzó 2 MB de adjuntos offline. Usa almacenamiento compartido.':'This trip has reached the 2 MB offline attachment limit. Use shared storage.');return;}
+  }
   if(!state.tripDocs[tripId])state.tripDocs[tripId]=[];
-  state.tripDocs[tripId].push({id:uid(),label,value,type:document.getElementById('doc-type')?.value||'document',important:document.getElementById('doc-important')?.value==='1',attachment});
+  state.tripDocs[tripId].push({id:uid(),label,value,type:document.getElementById('doc-type')?.value||'document',important:document.getElementById('doc-important')?.value==='1',attachment,cloudFile});
   await saveState();render();
 }
 function quickAddDoc(label){
   const el = document.getElementById('doc-label');
   if(el){ el.value = label; document.getElementById('doc-value').focus(); }
 }
-function deleteDoc(tripId,docId){
-  const tr=tripById(tripId);
+async function deleteDoc(tripId,docId){
+  const tr=tripById(tripId),doc=(state.tripDocs[tripId]||[]).find(d=>d.id===docId);
   if(tr&&tr.liveSync){
     if(!tr.collabDeleted)tr.collabDeleted={days:[],activities:[],bookings:[],expenses:[],checklists:[],docs:[],ideas:[],polls:[]};
     if(!tr.collabDeleted.docs.includes(docId))tr.collabDeleted.docs.push(docId);
+    if(doc?.cloudFile?.id&&navigator.onLine!==false){
+      try{await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}/files/${encodeURIComponent(doc.cloudFile.id)}`,{method:'DELETE',headers:{'X-Access-Key':collabAccessKey(tr),'X-Participant-Id':tr.collabParticipantId||chatParticipantId()}});}catch(e){}
+    }
   }
   state.tripDocs[tripId]=(state.tripDocs[tripId]||[]).filter(d=>d.id!==docId);
-  saveState();render();
+  await saveState();render();
 }
 
 /* ===================== SETTINGS ===================== */
 
 async function runDiagnostics(){
-  ui.diag={loading:true};render();
+  ui.diag={loading:true};render();await getFeatureFlags(true);
   const out={time:new Date().toISOString(),online:navigator.onLine,storage:true,health:null,features:null};
   try{const r=await fetch('/health',{cache:'no-store'});out.health=await r.json();out.healthOk=r.ok;}catch(e){out.healthOk=false;}
   try{const r=await fetch('/api/features',{cache:'no-store'});out.features=await r.json();out.featuresOk=r.ok;}catch(e){out.featuresOk=false;}
@@ -4817,7 +4981,7 @@ function diagnosticsHtml(){
 function viewSettings(){
   const t=tt();
   return `
-    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v9.0.0</div></div></div>
+    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v10.0.1</div></div></div>
     <div class="panel">
       <h3 style="margin:0 0 12px;font-size:16px;color:var(--paper);">${t.settings.account}</h3>
       <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px;">
@@ -4841,7 +5005,7 @@ function viewSettings(){
       <div class="field" style="margin-top:16px;max-width:280px;"><label>${t.settings.defaultCurrency}</label>${currencySelectHtml('pf-currency', state.profile.currency||'USD')}</div>
     </div>
     <div class="panel"><h3 style="margin:0 0 8px;color:var(--paper)">☁ ${state.lang==='es'?'Offline y copias locales':'Offline & local backups'}</h3><p class="field-hint">${state.lang==='es'?'Waypoint guarda automáticamente hasta 5 copias recientes en este dispositivo.':'Waypoint automatically keeps up to 5 recent backups on this device.'}</p><div class="backup-list">${(state.offlineSnapshots||[]).map(s=>`<div class="backup-row"><span>${escapeHtml(new Date(s.at).toLocaleString())}</span><button class="btn btn-ghost btn-sm" onclick="restoreSnapshot('${s.id}')">${state.lang==='es'?'Restaurar':'Restore'}</button></div>`).join('')||`<div class="field-hint">${state.lang==='es'?'Aún no hay copias':'No backups yet'}</div>`}</div></div>
-    <div class="panel"><h3 style="margin:0 0 8px;font-size:16px;color:var(--paper);">🩺 ${state.lang==='es'?'Diagnóstico':'Diagnostics'}</h3><p class="field-hint">${state.lang==='es'?'Comprueba conexión, servidor e integraciones principales.':'Check connection, server and core integrations.'}</p>${diagnosticsHtml()}<div class="participant-last" style="margin-top:10px">Waypoint v9.0.0 · ${state.trips.length} ${state.lang==='es'?'viaje(s) local(es)':'local trip(s)'}</div></div>
+    <div class="panel"><h3 style="margin:0 0 8px;font-size:16px;color:var(--paper);">🩺 ${state.lang==='es'?'Diagnóstico':'Diagnostics'}</h3><p class="field-hint">${state.lang==='es'?'Comprueba conexión, servidor e integraciones principales.':'Check connection, server and core integrations.'}</p>${diagnosticsHtml()}<div class="participant-last" style="margin-top:10px">Waypoint v10.0.1 · ${state.trips.length} ${state.lang==='es'?'viaje(s) local(es)':'local trip(s)'}</div><div style="margin-top:12px">${integrationStatusHtml()}</div></div>
     <div class="panel">
       <h3 style="margin:0 0 6px;font-size:16px;color:var(--paper);">${t.settings.data}</h3>
       <p style="font-size:12px;color:var(--muted);margin:0 0 12px;">${t.settings.dataSub}</p>
@@ -4953,9 +5117,9 @@ function renderModal(){
         <input type="hidden" id="f-dest-name" value="${escapeHtml(tr.destinationName||'')}">
         <input type="hidden" id="f-dest-region" value="${escapeHtml(tr.destinationRegion||'')}">
         <input type="hidden" id="f-dest-country" value="${escapeHtml(tr.destinationCountry||tr.detectedCountry||'')}">
-        <input type="hidden" id="f-dest-lat" value="${Number.isFinite(Number(tr.destinationLat))?escapeHtml(String(tr.destinationLat)):''}">
-        <input type="hidden" id="f-dest-lon" value="${Number.isFinite(Number(tr.destinationLon))?escapeHtml(String(tr.destinationLon)):''}">
-        <div id="destination-selected">${Number.isFinite(Number(tr.destinationLat))&&Number.isFinite(Number(tr.destinationLon))?`<div class="destination-selected">✓ ${state.lang==='es'?'Destino confirmado':'Destination confirmed'}: <strong>${escapeHtml(tr.destinationCanonical||tr.destination||'')}</strong></div>`:''}</div>
+        <input type="hidden" id="f-dest-lat" value="${hasDestinationCoords(tr)?escapeHtml(String(tr.destinationLat)):''}">
+        <input type="hidden" id="f-dest-lon" value="${hasDestinationCoords(tr)?escapeHtml(String(tr.destinationLon)):''}">
+        <div id="destination-selected">${hasDestinationCoords(tr)?`<div class="destination-selected">✓ ${state.lang==='es'?'Destino confirmado':'Destination confirmed'}: <strong>${escapeHtml(tr.destinationCanonical||tr.destination||'')}</strong></div>`:''}</div>
         <div id="destination-results" class="destination-results"></div>
         <p class="field-hint">${state.lang==='es'?'Busca y selecciona la ubicación correcta para evitar ciudades con nombres iguales.':'Search and select the correct location to avoid places with the same name.'}</p>
       </div>
@@ -5215,6 +5379,16 @@ function renderModal(){
         <button class="btn btn-ghost" onclick="closeModal()">${es?'Cancelar':'Cancel'}</button>
       </div>`;
   }
+
+  if(ui.modal==='smartBookingImport'){
+    const es=state.lang==='es',p=ui.importBookingPreview;
+    inner=`<h3>✨ ${es?'Importar confirmación':'Import confirmation'}</h3><p class="field-hint">${es?'Pega el texto de un email, SMS o confirmación. Waypoint intentará reconocer vuelo, hotel, fecha y código.':'Paste email, SMS, or confirmation text. Waypoint will try to detect flight, hotel, date, and confirmation code.'}</p><div class="field"><textarea id="smart-booking-text" style="min-height:180px" placeholder="${es?'Pega aquí la confirmación…':'Paste confirmation here…'}">${p?escapeHtml(p.notes||''):''}</textarea></div><button class="btn btn-ghost btn-sm" onclick="previewSmartBookingImport()">🔎 ${es?'Analizar':'Analyze'}</button>${p?`<div class="panel" style="margin-top:10px"><div class="import-preview"><div><div class="participant-last">${es?'Tipo':'Type'}</div><strong>${escapeHtml(p.type)}</strong></div><div><div class="participant-last">${es?'Título':'Title'}</div><strong>${escapeHtml(p.title)}</strong></div><div><div class="participant-last">${es?'Confirmación':'Confirmation'}</div><strong>${escapeHtml(p.confirmation||'—')}</strong></div><div><div class="participant-last">${es?'Fecha':'Date'}</div><strong>${escapeHtml(p.date||'—')}</strong></div></div><div class="form-actions" style="margin-top:10px"><button class="btn btn-brass btn-block" onclick="saveSmartBookingImport()">${es?'Guardar reserva':'Save booking'}</button></div></div>`:''}<div class="form-actions"><button class="btn btn-ghost" onclick="closeModal()">${es?'Cerrar':'Close'}</button></div>`;
+  }
+
+  if(ui.modal==='receiptImport'){
+    const es=state.lang==='es',p=ui.receiptPreview;
+    inner=`<h3>🧾 ${es?'Importar recibo':'Import receipt'}</h3><p class="field-hint">${es?'Puedes pegar el texto del recibo. Si OCR está configurado, también puedes subir una foto.':'Paste receipt text. If OCR is configured, you can also upload an image.'}</p><div class="field"><label>${es?'Texto del recibo':'Receipt text'}</label><textarea id="receipt-text" style="min-height:140px">${p?escapeHtml(p.text||''):''}</textarea></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-ghost btn-sm" onclick="previewReceiptText()">🔎 ${es?'Analizar texto':'Analyze text'}</button></div><div class="field" style="margin-top:12px"><label>${es?'Foto del recibo (OCR opcional)':'Receipt image (optional OCR)'}</label><input id="receipt-image" type="file" accept="image/*"><button class="btn btn-ghost btn-sm" style="margin-top:7px" onclick="ocrReceiptFile()">📷 OCR</button></div>${p?`<div class="panel"><div class="import-preview"><div><div class="participant-last">${es?'Comercio':'Merchant'}</div><strong>${escapeHtml(p.desc||'—')}</strong></div><div><div class="participant-last">${es?'Monto detectado':'Detected amount'}</div><strong>${escapeHtml(String(p.amount||0))}</strong></div><div><div class="participant-last">${es?'Fecha':'Date'}</div><strong>${escapeHtml(p.date||'')}</strong></div></div><div class="form-actions" style="margin-top:10px"><button class="btn btn-brass btn-block" onclick="saveReceiptPreview()">${es?'Usar en gasto':'Use for expense'}</button></div></div>`:''}<div class="form-actions"><button class="btn btn-ghost" onclick="closeModal()">${es?'Cerrar':'Close'}</button></div>`;
+  }
   if(ui.modal==='confirm'){
     inner = `
       <h3>${ui.confirmDanger? '⚠ ' : ''}${t.common.pleaseConfirm}</h3>
@@ -5237,7 +5411,7 @@ document.addEventListener('change', (e)=>{
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('/service-worker.js?v=9.0.0',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('/service-worker.js?v=10.0.1',{updateViaCache:'none'});
       await reg.update();
       let reloading=false;
       navigator.serviceWorker.addEventListener('controllerchange',()=>{

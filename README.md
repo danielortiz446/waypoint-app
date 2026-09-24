@@ -360,3 +360,34 @@ Infrastructure-dependent features are intentionally not faked:
 - Structured auto-backups deliberately omit large binary photos/files to reduce browser-storage failures.
 - Offline attachments are limited to 650 KB each and 2 MB total per trip.
 - Google/Apple Maps themselves are external services and are not made available offline by Waypoint; saved itinerary locations remain visible offline and navigation links resume when connectivity returns.
+
+## Waypoint 10.0 — Cloud & Smart Travel
+
+New production-ready capabilities:
+- Shared server-side trip files (up to 5 MB each) stored on the persistent Waypoint data volume for live-collaboration trips.
+- Small files remain available offline locally; larger shared files use server storage.
+- Google Routes ETA adapter using `GOOGLE_ROUTES_API_KEY`; supports driving/walking/bicycle/transit requests and traffic-aware driving duration.
+- Today view can calculate estimated travel time to the next located activity and derive an approximate leave time.
+- Smart booking import from pasted email/SMS/confirmation text, with local parsing for flight number, IATA route, confirmation code, date, and time.
+- Receipt import from pasted text with local merchant/amount/date extraction.
+- Optional OCR adapter via `OCR_API_URL` and `OCR_API_KEY`; Waypoint expects a JSON response containing `text`.
+- Integration status cards in Diagnostics expose what is truly configured versus unavailable.
+- Feature flags explicitly report traffic, cloud files, OCR, push, direct email import, and smart text import.
+
+Intentionally not faked:
+- Server push remains disabled until a real push provider/backend is connected.
+- Direct Gmail/Outlook import remains disabled until an authenticated email connector is connected.
+- Cloud file storage currently uses the persistent Waypoint/Railway volume, not S3/R2. It is suitable for the current architecture but should migrate to object storage for larger scale.
+- Google Routes and OCR cannot be live-tested without the operator's provider credentials; the application falls back cleanly when they are not configured.
+
+### V10 integrity details
+- Removing a document that points to a shared cloud file also removes that server-side file when online.
+- Automated QA covers shared-file upload/read/delete and verifies that traffic, OCR, push, and direct-email features fail closed or report unconfigured instead of pretending to work.
+
+## Waypoint 10.0.1 Final QA hardening
+
+- Cloud-file upload/delete now enforces the same active-participant checks as collaborative trip edits.
+- Removed/revoked participants cannot use a retained generic edit credential to modify cloud files.
+- Shared files are opened through authenticated `fetch` + Blob URLs so trip access credentials are not placed in the visible browser URL/history.
+- Fixed a legacy destination-coordinate edge case where `null` coordinates could be treated as numeric `0,0`.
+- Added regression tests for cloud-file participant security and retained all V10 smart/offline features.

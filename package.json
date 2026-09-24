@@ -1,6 +1,6 @@
 {
   "name": "waypoint-trip-planner",
-  "version": "9.0.0",
+  "version": "10.0.1",
   "private": true,
   "description": "Waypoint production web/PWA and live collaboration server",
   "scripts": {

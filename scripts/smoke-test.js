@@ -47,7 +47,7 @@ async function sseNext(id,key){
     r=await fetch(base+'/manifest.webmanifest');
     results.push(['manifest',r.ok&&(await r.json()).name.includes('Waypoint')]);
     r=await fetch(base+'/health');
-    results.push(['health',r.ok&&(await r.json()).version==='9.0.0']);
+    results.push(['health',r.ok&&(await r.json()).version==='10.0.1']);
 
     const id='trip-test',key='secret-edit-key',viewKey='secret-view-key';
     r=await fetch(base+`/api/trips/${id}`,{method:'PUT',headers:{'content-type':'application/json','x-edit-key':key,'x-view-key':viewKey},body:JSON.stringify({clientRevision:0,data:{waypointLive:1,trip:{name:'QA Trip'},days:[],bookings:[]}})});
@@ -195,7 +195,7 @@ r=await fetch(base+'/api/giphy-config');
     // V8.0.1: security headers and health privacy.
     r=await fetch(base+'/health');
     const healthQa=await r.json();
-    results.push(['V9 health version',r.ok&&healthQa.version==='9.0.0']);
+    results.push(['V10.0.1 health version',r.ok&&healthQa.version==='10.0.1']);
     results.push(['health hides room count',!Object.prototype.hasOwnProperty.call(healthQa,'rooms')]);
     results.push(['security nosniff',String(r.headers.get('x-content-type-options')||'').toLowerCase()==='nosniff']);
     results.push(['security CSP',Boolean(r.headers.get('content-security-policy'))]);
@@ -204,6 +204,52 @@ r=await fetch(base+'/api/giphy-config');
     let normalRateOk=true;
     for(let i=0;i<5;i++){const rr=await fetch(base+'/health');if(!rr.ok)normalRateOk=false;}
     results.push(['normal API traffic allowed',normalRateOk]);
+
+
+    // V10 integrations: feature flags, cloud files, and graceful unconfigured adapters.
+    r=await fetch(base+'/api/features');
+    let feat=await r.json();
+    results.push(['V10 cloud files feature',r.ok&&feat.cloudFiles===true]);
+    results.push(['V10 smart text import feature',feat.smartTextImport===true]);
+    results.push(['V10 push not faked',feat.push===false]);
+    results.push(['V10 direct email not faked',feat.emailImport===false]);
+
+    const cloudTrip='trip-cloud-test',cloudEdit='cloud-edit-key',cloudOwner='cloud-owner-key';
+    r=await fetch(base+`/api/trips/${cloudTrip}`,{method:'PUT',headers:{'content-type':'application/json','x-edit-key':cloudEdit,'x-owner-key':cloudOwner},body:JSON.stringify({clientRevision:0,data:{waypointLive:3,trip:{name:'Cloud QA'},days:[],bookings:[]}})});
+    results.push(['cloud room create',r.ok]);
+    r=await fetch(base+`/api/trips/${cloudTrip}/files`,{method:'POST',headers:{'content-type':'application/json','x-access-key':cloudEdit},body:JSON.stringify({name:'qa.txt',type:'text/plain',dataUrl:'data:text/plain;base64,aGVsbG8gd2F5cG9pbnQ='})});
+    let cloudUpload=await r.json().catch(()=>({}));
+    results.push(['cloud file upload',r.status===201&&Boolean(cloudUpload.file?.id)]);
+    if(cloudUpload.file?.id){
+      r=await fetch(base+`/api/trips/${cloudTrip}/files/${cloudUpload.file.id}?key=${encodeURIComponent(cloudEdit)}`);
+      results.push(['cloud file read',r.ok&&(await r.text())==='hello waypoint']);
+      r=await fetch(base+`/api/trips/${cloudTrip}/files/${cloudUpload.file.id}?key=${encodeURIComponent(cloudEdit)}`,{method:'DELETE'});
+      results.push(['cloud file delete',r.ok]);
+    }
+    r=await fetch(base+'/api/route/eta?origin=A&destination=B');
+    let etaGate=await r.json();
+    results.push(['traffic config gate',r.ok&&etaGate.enabled===false]);
+    r=await fetch(base+'/api/ocr/receipt',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({imageDataUrl:'data:image/png;base64,'})});
+    let ocrGate=await r.json();
+    results.push(['ocr config gate',r.ok&&ocrGate.enabled===false]);
+
+
+    // V10.0.1: cloud-file writes must honor active participant enforcement.
+    const fileSecTrip='trip-file-security',fileSecEdit='file-sec-edit',fileSecOwner='file-sec-owner';
+    r=await fetch(base+`/api/trips/${fileSecTrip}`,{method:'PUT',headers:{'content-type':'application/json','x-edit-key':fileSecEdit,'x-owner-key':fileSecOwner},body:JSON.stringify({clientRevision:0,data:{waypointLive:3,trip:{name:'File Security'},days:[],bookings:[]}})});
+    r=await fetch(base+`/api/trips/${fileSecTrip}/participants`,{method:'POST',headers:{'content-type':'application/json','x-access-key':fileSecEdit},body:JSON.stringify({name:'File Editor',participantId:'file-editor-1',role:'editor'})});
+    results.push(['file security participant register',r.ok]);
+    r=await fetch(base+`/api/trips/${fileSecTrip}/files`,{method:'POST',headers:{'content-type':'application/json','x-access-key':fileSecEdit},body:JSON.stringify({name:'blocked.txt',type:'text/plain',dataUrl:'data:text/plain;base64,YmxvY2tlZA=='})});
+    results.push(['cloud file missing participant blocked',r.status===403]);
+    r=await fetch(base+`/api/trips/${fileSecTrip}/files`,{method:'POST',headers:{'content-type':'application/json','x-access-key':fileSecEdit,'x-participant-id':'file-editor-1'},body:JSON.stringify({name:'allowed.txt',type:'text/plain',dataUrl:'data:text/plain;base64,YWxsb3dlZA=='})});
+    let securedUpload=await r.json().catch(()=>({}));
+    results.push(['cloud file active participant allowed',r.status===201&&Boolean(securedUpload.file?.id)]);
+    if(securedUpload.file?.id){
+      r=await fetch(base+`/api/trips/${fileSecTrip}/participants/file-editor-1`,{method:'DELETE',headers:{'x-owner-key':fileSecOwner}});
+      results.push(['file participant revoke',r.ok]);
+      r=await fetch(base+`/api/trips/${fileSecTrip}/files/${securedUpload.file.id}`,{method:'DELETE',headers:{'x-access-key':fileSecEdit,'x-participant-id':'file-editor-1'}});
+      results.push(['revoked participant file delete blocked',r.status===403]);
+    }
 
 
 
