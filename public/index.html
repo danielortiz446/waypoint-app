@@ -1015,6 +1015,47 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   .smart-integration-grid,.import-preview{grid-template-columns:1fr}
 }
 
+
+/* Waypoint 10.0.2 — Day header Copy button */
+.day-card .dh .ctl .day-copy-btn{
+  width:auto;
+  min-width:72px;
+  height:26px;
+  padding:0 9px;
+  gap:5px;
+  white-space:nowrap;
+  flex:0 0 auto;
+}
+.day-copy-btn .copy-icon{
+  font-size:12px;
+  line-height:1;
+}
+.day-copy-btn .copy-label{
+  display:inline;
+  line-height:1;
+}
+@media(max-width:520px){
+  .day-card .dh{
+    align-items:flex-start;
+  }
+  .day-card .dh .lbl{
+    min-width:0;
+    line-height:1.25;
+    padding-right:4px;
+  }
+  .day-card .dh .ctl{
+    gap:4px;
+  }
+  .day-card .dh .ctl .day-copy-btn{
+    width:30px;
+    min-width:30px;
+    padding:0;
+  }
+  .day-copy-btn .copy-label{
+    display:none;
+  }
+}
+
 </style>
 </head>
 <body><a class="skip-link" href="#app">Skip to content</a>
@@ -4180,7 +4221,7 @@ function dayCard(tr,d,i,total){
       <div class="ctl">
         <button class="btn btn-ghost" ${i===0?'disabled style="opacity:.3"':''} onclick="moveDay('${tr.id}','${d.id}',-1)">${t.common.up}</button>
         <button class="btn btn-ghost" ${i===total-1?'disabled style="opacity:.3"':''} onclick="moveDay('${tr.id}','${d.id}',1)">${t.common.down}</button>
-        <button class="btn btn-ghost btn-sm" onclick="copyDay('${tr.id}','${d.id}')">⧉ ${state.lang==='es'?'Copiar':'Copy'}</button><button class="btn btn-danger btn-sm" onclick="deleteDay('${tr.id}','${d.id}')">✕</button>
+        <button class="btn btn-ghost btn-sm day-copy-btn" title="${state.lang==='es'?'Copiar día':'Copy day'}" aria-label="${state.lang==='es'?'Copiar día':'Copy day'}" onclick="copyDay('${tr.id}','${d.id}')"><span class="copy-icon">⧉</span><span class="copy-label">${state.lang==='es'?'Copiar':'Copy'}</span></button><button class="btn btn-danger btn-sm" title="${state.lang==='es'?'Eliminar día':'Delete day'}" aria-label="${state.lang==='es'?'Eliminar día':'Delete day'}" onclick="deleteDay('${tr.id}','${d.id}')">✕</button>
       </div>
     </div>
     ${scheduleConflicts(tr,d.date||'').length?`<div class="schedule-alert">⚠ ${state.lang==='es'?'Hay actividades que se superponen o no dejan suficiente tiempo.':'Activities overlap or do not leave enough time.'}</div>`:''}
@@ -4981,7 +5022,7 @@ function diagnosticsHtml(){
 function viewSettings(){
   const t=tt();
   return `
-    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v10.0.1</div></div></div>
+    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v10.0.2</div></div></div>
     <div class="panel">
       <h3 style="margin:0 0 12px;font-size:16px;color:var(--paper);">${t.settings.account}</h3>
       <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px;">
@@ -5005,7 +5046,7 @@ function viewSettings(){
       <div class="field" style="margin-top:16px;max-width:280px;"><label>${t.settings.defaultCurrency}</label>${currencySelectHtml('pf-currency', state.profile.currency||'USD')}</div>
     </div>
     <div class="panel"><h3 style="margin:0 0 8px;color:var(--paper)">☁ ${state.lang==='es'?'Offline y copias locales':'Offline & local backups'}</h3><p class="field-hint">${state.lang==='es'?'Waypoint guarda automáticamente hasta 5 copias recientes en este dispositivo.':'Waypoint automatically keeps up to 5 recent backups on this device.'}</p><div class="backup-list">${(state.offlineSnapshots||[]).map(s=>`<div class="backup-row"><span>${escapeHtml(new Date(s.at).toLocaleString())}</span><button class="btn btn-ghost btn-sm" onclick="restoreSnapshot('${s.id}')">${state.lang==='es'?'Restaurar':'Restore'}</button></div>`).join('')||`<div class="field-hint">${state.lang==='es'?'Aún no hay copias':'No backups yet'}</div>`}</div></div>
-    <div class="panel"><h3 style="margin:0 0 8px;font-size:16px;color:var(--paper);">🩺 ${state.lang==='es'?'Diagnóstico':'Diagnostics'}</h3><p class="field-hint">${state.lang==='es'?'Comprueba conexión, servidor e integraciones principales.':'Check connection, server and core integrations.'}</p>${diagnosticsHtml()}<div class="participant-last" style="margin-top:10px">Waypoint v10.0.1 · ${state.trips.length} ${state.lang==='es'?'viaje(s) local(es)':'local trip(s)'}</div><div style="margin-top:12px">${integrationStatusHtml()}</div></div>
+    <div class="panel"><h3 style="margin:0 0 8px;font-size:16px;color:var(--paper);">🩺 ${state.lang==='es'?'Diagnóstico':'Diagnostics'}</h3><p class="field-hint">${state.lang==='es'?'Comprueba conexión, servidor e integraciones principales.':'Check connection, server and core integrations.'}</p>${diagnosticsHtml()}<div class="participant-last" style="margin-top:10px">Waypoint v10.0.2 · ${state.trips.length} ${state.lang==='es'?'viaje(s) local(es)':'local trip(s)'}</div><div style="margin-top:12px">${integrationStatusHtml()}</div></div>
     <div class="panel">
       <h3 style="margin:0 0 6px;font-size:16px;color:var(--paper);">${t.settings.data}</h3>
       <p style="font-size:12px;color:var(--muted);margin:0 0 12px;">${t.settings.dataSub}</p>
@@ -5411,7 +5452,7 @@ document.addEventListener('change', (e)=>{
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('/service-worker.js?v=10.0.1',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('/service-worker.js?v=10.0.2',{updateViaCache:'none'});
       await reg.update();
       let reloading=false;
       navigator.serviceWorker.addEventListener('controllerchange',()=>{

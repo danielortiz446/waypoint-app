@@ -391,3 +391,11 @@ Intentionally not faked:
 - Shared files are opened through authenticated `fetch` + Blob URLs so trip access credentials are not placed in the visible browser URL/history.
 - Fixed a legacy destination-coordinate edge case where `null` coordinates could be treated as numeric `0,0`.
 - Added regression tests for cloud-file participant security and retained all V10 smart/offline features.
+
+## Waypoint 10.0.2 — Day Copy Button UI Fix
+
+- Fixed the itinerary day-header Copy button overflowing into the Delete button.
+- Copy now has a dedicated content-sized control on normal screens.
+- On narrow mobile screens it automatically becomes an icon-only 30px button, with accessible title/aria-label retained.
+- Added a tooltip/accessibility label to the day Delete button.
+- No itinerary behavior changed; this is a responsive UI correction on top of V10.0.1.
