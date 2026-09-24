@@ -430,3 +430,12 @@ When enabled:
 - A clear “Exit mode” button restores the full planning interface.
 - Existing chat/collaboration continues to work.
 - Stale hidden planning tabs are automatically redirected back to the Travel cockpit while Travel Mode is active.
+
+## Waypoint 10.0.6 — Travel Mode activation fix
+
+- Opening the Travel tab no longer visually or logically activates Travel Mode.
+- The inactive Travel screen now clearly says Travel Mode is off and presents an explicit Turn on / Activar button.
+- Only `enableTravelMode()` changes the `trip.travelMode` state.
+- Navigation through `setTripSubTab('travel')` remains state-neutral.
+- The active cockpit renders only when `trip.travelMode === true`.
+- Exiting Travel Mode returns to Overview and restores the full planning interface.

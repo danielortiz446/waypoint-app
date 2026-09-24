@@ -47,7 +47,7 @@ async function sseNext(id,key){
     r=await fetch(base+'/manifest.webmanifest');
     results.push(['manifest',r.ok&&(await r.json()).name.includes('Waypoint')]);
     r=await fetch(base+'/health');
-    results.push(['health',r.ok&&(await r.json()).version==='10.0.5']);
+    results.push(['health',r.ok&&(await r.json()).version==='10.0.6']);
 
     const id='trip-test',key='secret-edit-key',viewKey='secret-view-key';
     r=await fetch(base+`/api/trips/${id}`,{method:'PUT',headers:{'content-type':'application/json','x-edit-key':key,'x-view-key':viewKey},body:JSON.stringify({clientRevision:0,data:{waypointLive:1,trip:{name:'QA Trip'},days:[],bookings:[]}})});
@@ -195,7 +195,7 @@ r=await fetch(base+'/api/giphy-config');
     // V8.0.1: security headers and health privacy.
     r=await fetch(base+'/health');
     const healthQa=await r.json();
-    results.push(['V10.0.5 health version',r.ok&&healthQa.version==='10.0.5']);
+    results.push(['V10.0.6 health version',r.ok&&healthQa.version==='10.0.6']);
     results.push(['health hides room count',!Object.prototype.hasOwnProperty.call(healthQa,'rooms')]);
     results.push(['security nosniff',String(r.headers.get('x-content-type-options')||'').toLowerCase()==='nosniff']);
     results.push(['security CSP',Boolean(r.headers.get('content-security-policy'))]);
