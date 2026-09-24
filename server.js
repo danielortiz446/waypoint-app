@@ -45,8 +45,24 @@ function hash(v){ return crypto.createHash('sha256').update(String(v||'')).diges
 
 function isEditKey(room,key){return Boolean(room&&key&&hash(key)===room.keyHash);}
 function isViewKey(room,key){return Boolean(room&&key&&room.viewKeyHash&&hash(key)===room.viewKeyHash);}
-function hasReadAccess(room,key){return isEditKey(room,key)||isViewKey(room,key);}
+function activeInvite(room,key){
+  if(!room||!key||!Array.isArray(room.invites))return null;
+  const h=hash(key),now=Date.now();
+  return room.invites.find(i=>i.tokenHash===h&&!i.revokedAt&&(!i.expiresAt||Date.parse(i.expiresAt)>now))||null;
+}
+function accessRole(room,key){
+  if(isEditKey(room,key))return 'editor';
+  if(isViewKey(room,key))return 'viewer';
+  return activeInvite(room,key)?.role||null;
+}
+function hasReadAccess(room,key){return Boolean(accessRole(room,key));}
+function hasEditAccess(room,key){return accessRole(room,key)==='editor';}
 function accessKeyFromRequest(req){return String(req.headers['x-access-key']||req.headers['x-edit-key']||req.headers['x-view-key']||'');}
+function addSecurity(room,type,message,meta={}){
+  room.securityLog=Array.isArray(room.securityLog)?room.securityLog:[];
+  room.securityLog.push({id:crypto.randomUUID(),type,message,createdAt:new Date().toISOString(),...meta});
+  if(room.securityLog.length>200)room.securityLog=room.securityLog.slice(-200);
+}
 
 function securityHeaders(){
   return {
@@ -174,7 +190,7 @@ const server=http.createServer(async(req,res)=>{
   try{
     const u=new URL(req.url,'http://localhost');
 
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'6.0.4',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'7.0.0',time:new Date().toISOString()});
 
     if(req.method==='GET'&&u.pathname==='/api/fx/rate'){
       const from=String(u.searchParams.get('from')||'').trim().toUpperCase();
@@ -289,6 +305,41 @@ const server=http.createServer(async(req,res)=>{
 
 
 
+
+    const inviteMatch=u.pathname.match(/^\/api\/trips\/([^/]+)\/invites$/);
+    if(inviteMatch){
+      const id=decodeURIComponent(inviteMatch[1]),room=rooms[id];if(!room)return json(res,404,{error:'trip not found'});
+      const ownerKey=String(req.headers['x-owner-key']||'');if(!room.ownerKeyHash||hash(ownerKey)!==room.ownerKeyHash)return json(res,403,{error:'owner authorization required'});
+      if(req.method==='GET')return json(res,200,{invites:(room.invites||[]).map(({tokenHash,...i})=>i)});
+      if(req.method==='POST'){
+        const incoming=await readBody(req),role=String(incoming.role||'viewer')==='editor'?'editor':'viewer',label=String(incoming.label||'Invite').trim().slice(0,60),days=Math.max(0,Math.min(365,Number(incoming.expiresDays||0)));
+        const token=crypto.randomBytes(32).toString('base64url'),invite={id:crypto.randomUUID(),tokenHash:hash(token),label,role,createdAt:new Date().toISOString(),expiresAt:days?new Date(Date.now()+days*86400000).toISOString():null,revokedAt:null};
+        room.invites=Array.isArray(room.invites)?room.invites:[];room.invites.push(invite);addSecurity(room,'invite_created',`Invite created: ${label} (${role})`,{inviteId:invite.id});persist();
+        return json(res,201,{ok:true,token,invite:{id:invite.id,label,role,createdAt:invite.createdAt,expiresAt:invite.expiresAt}});
+      }
+      return json(res,405,{error:'method not allowed'});
+    }
+    const inviteIdMatch=u.pathname.match(/^\/api\/trips\/([^/]+)\/invites\/([^/]+)$/);
+    if(inviteIdMatch&&req.method==='DELETE'){
+      const id=decodeURIComponent(inviteIdMatch[1]),inviteId=decodeURIComponent(inviteIdMatch[2]),room=rooms[id];if(!room)return json(res,404,{error:'trip not found'});
+      const ownerKey=String(req.headers['x-owner-key']||'');if(!room.ownerKeyHash||hash(ownerKey)!==room.ownerKeyHash)return json(res,403,{error:'owner authorization required'});
+      const inv=(room.invites||[]).find(i=>i.id===inviteId);if(!inv)return json(res,404,{error:'invite not found'});inv.revokedAt=new Date().toISOString();addSecurity(room,'invite_revoked',`Invite revoked: ${inv.label||inviteId}`,{inviteId});persist();notifyParticipants(id);return json(res,200,{ok:true});
+    }
+    const securityMatch=u.pathname.match(/^\/api\/trips\/([^/]+)\/security-log$/);
+    if(securityMatch&&req.method==='GET'){
+      const id=decodeURIComponent(securityMatch[1]),room=rooms[id];if(!room)return json(res,404,{error:'trip not found'});
+      const ownerKey=String(req.headers['x-owner-key']||'');if(!room.ownerKeyHash||hash(ownerKey)!==room.ownerKeyHash)return json(res,403,{error:'owner authorization required'});
+      return json(res,200,{events:Array.isArray(room.securityLog)?room.securityLog:[]});
+    }
+    const participantIdMatch=u.pathname.match(/^\/api\/trips\/([^/]+)\/participants\/([^/]+)$/);
+    if(participantIdMatch&&(req.method==='PATCH'||req.method==='DELETE')){
+      const id=decodeURIComponent(participantIdMatch[1]),participantId=decodeURIComponent(participantIdMatch[2]),room=rooms[id];if(!room)return json(res,404,{error:'trip not found'});
+      const ownerKey=String(req.headers['x-owner-key']||'');if(!room.ownerKeyHash||hash(ownerKey)!==room.ownerKeyHash)return json(res,403,{error:'owner authorization required'});
+      const p=(room.participants||[]).find(x=>x.participantId===participantId);if(!p)return json(res,404,{error:'participant not found'});if(p.role==='owner')return json(res,409,{error:'owner cannot be changed'});
+      if(req.method==='PATCH'){const incoming=await readBody(req),role=String(incoming.role||'viewer')==='editor'?'editor':'viewer';p.role=role;addSecurity(room,'participant_role',`${p.name} role changed to ${role}`,{participantId});persist();notifyParticipants(id);return json(res,200,{ok:true,participant:p});}
+      p.revokedAt=new Date().toISOString();if(p.inviteId){const inv=(room.invites||[]).find(i=>i.id===p.inviteId);if(inv&&!inv.revokedAt)inv.revokedAt=new Date().toISOString();}addSecurity(room,'participant_removed',`${p.name} removed`,{participantId});persist();notifyParticipants(id);return json(res,200,{ok:true});
+    }
+
     const participantMatch=u.pathname.match(/^\/api\/trips\/([^/]+)\/participants$/);
     if(participantMatch){
       const id=decodeURIComponent(participantMatch[1]); const room=rooms[id];
@@ -296,7 +347,7 @@ const server=http.createServer(async(req,res)=>{
       if(req.method==='GET'){
         const key=u.searchParams.get('key')||'';
         if(!hasReadAccess(room,key)) return json(res,403,{error:'invalid access key'});
-        return json(res,200,{participants:Array.isArray(room.participants)?room.participants:[]});
+        return json(res,200,{participants:(Array.isArray(room.participants)?room.participants:[]).filter(p=>!p.revokedAt)});
       }
       if(req.method==='POST'){
         const accessKey=accessKeyFromRequest(req);
@@ -309,9 +360,11 @@ const server=http.createServer(async(req,res)=>{
         const existing=room.participants.find(p=>p.participantId===participantId);
         const requestedRole=String(incoming.role||'editor');
         const ownerKey=String(req.headers['x-owner-key']||'');
-        const role=(ownerKey&&room.ownerKeyHash&&hash(ownerKey)===room.ownerKeyHash)?'owner':requestedRole==='viewer'?'viewer':'editor';
-        if(existing){ existing.name=name; existing.role=role; existing.lastSeenAt=new Date().toISOString(); }
-        else room.participants.push({participantId,name,role,joinedAt:new Date().toISOString(),lastSeenAt:new Date().toISOString()});
+        const invite=activeInvite(room,accessKey);
+        const role=(ownerKey&&room.ownerKeyHash&&hash(ownerKey)===room.ownerKeyHash)?'owner':invite?.role||(requestedRole==='viewer'?'viewer':'editor');
+        if(existing){ existing.name=name; existing.role=role; existing.inviteId=invite?.id||existing.inviteId||null; existing.revokedAt=null; existing.lastSeenAt=new Date().toISOString(); }
+        else room.participants.push({participantId,name,role,inviteId:invite?.id||null,joinedAt:new Date().toISOString(),lastSeenAt:new Date().toISOString(),revokedAt:null});
+        addSecurity(room,'participant_joined',`${name} joined as ${role}`,{participantId,inviteId:invite?.id||null});
         room.participants=room.participants.slice(-50);
         persist(); notifyParticipants(id);
         return json(res,200,{ok:true,participants:room.participants});
@@ -329,7 +382,7 @@ const server=http.createServer(async(req,res)=>{
       if(!hasReadAccess(room,accessKey))return json(res,403,{error:'invalid access key'});
       const incoming=await readBody(req);
       const participantId=String(incoming.participantId||'').trim().slice(0,100);
-      const participant=(room.participants||[]).find(p=>p.participantId===participantId);
+      const participant=(room.participants||[]).find(p=>p.participantId===participantId&&!p.revokedAt);
       if(!participant)return json(res,403,{error:'participant not registered'});
       const messages=Array.isArray(room.chat)?room.chat:[];
       const requestedId=String(incoming.lastMessageId||'').trim().slice(0,100);
@@ -350,23 +403,42 @@ const server=http.createServer(async(req,res)=>{
     const typingMatch=u.pathname.match(/^\/api\/trips\/([^/]+)\/typing$/);
     if(typingMatch&&req.method==='POST'){
       const id=decodeURIComponent(typingMatch[1]), room=rooms[id]; if(!room)return json(res,404,{error:'trip not found'});
-      const editKey=String(req.headers['x-edit-key']||''); if(hash(editKey)!==room.keyHash)return json(res,403,{error:'invalid edit key'});
+      const editKey=String(req.headers['x-edit-key']||''); if(!hasEditAccess(room,editKey))return json(res,403,{error:'invalid edit key'});
       const incoming=await readBody(req), participantId=String(incoming.participantId||'').trim().slice(0,100);
-      if(!participantId||(room.participants||[]).every(p=>p.participantId!==participantId)) return json(res,403,{error:'participant not registered'});
+      const typingParticipant=(room.participants||[]).find(p=>p.participantId===participantId&&!p.revokedAt);
+      if(!typingParticipant||typingParticipant.role==='viewer') return json(res,403,{error:'participant not allowed'});
       if(!typingState.has(id))typingState.set(id,new Map());
       const map=typingState.get(id); if(incoming.typing)map.set(participantId,Date.now()+3500); else map.delete(participantId);
       notifyTyping(id); return json(res,200,{ok:true});
     }
 
 
+
+    const chatItemMatch=u.pathname.match(/^\/api\/trips\/([^/]+)\/chat\/([^/]+)$/);
+    if(chatItemMatch&&(req.method==='PATCH'||req.method==='DELETE')){
+      const id=decodeURIComponent(chatItemMatch[1]),messageId=decodeURIComponent(chatItemMatch[2]),room=rooms[id];if(!room)return json(res,404,{error:'trip not found'});
+      const editKey=String(req.headers['x-edit-key']||'');if(!hasEditAccess(room,editKey))return json(res,403,{error:'invalid edit key'});
+      const incoming=await readBody(req),participantId=String(incoming.participantId||'').trim().slice(0,100),p=(room.participants||[]).find(x=>x.participantId===participantId&&!x.revokedAt),m=(room.chat||[]).find(x=>x.id===messageId);
+      if(!p||!m)return json(res,404,{error:'message or participant not found'});if(p.role==='viewer')return json(res,403,{error:'participant is view only'});if(m.participantId!==participantId)return json(res,403,{error:'only author can modify'});
+      if(req.method==='PATCH'){if(m.kind!=='text')return json(res,409,{error:'only text can be edited'});const text=String(incoming.text||'').trim().slice(0,500);if(!text)return json(res,400,{error:'message empty'});m.text=text;m.editedAt=new Date().toISOString();persist();notifyChat(id,m);return json(res,200,{ok:true,message:m});}
+      room.chat=room.chat.filter(x=>x.id!==messageId);persist();notifyChat(id,{id:messageId,deleted:true});return json(res,200,{ok:true,deleted:true});
+    }
+    const pinMatch=u.pathname.match(/^\/api\/trips\/([^/]+)\/chat\/([^/]+)\/pin$/);
+    if(pinMatch&&req.method==='POST'){
+      const id=decodeURIComponent(pinMatch[1]),messageId=decodeURIComponent(pinMatch[2]),room=rooms[id];if(!room)return json(res,404,{error:'trip not found'});
+      const ownerKey=String(req.headers['x-owner-key']||'');if(!room.ownerKeyHash||hash(ownerKey)!==room.ownerKeyHash)return json(res,403,{error:'owner authorization required'});
+      const m=(room.chat||[]).find(x=>x.id===messageId);if(!m)return json(res,404,{error:'message not found'});m.pinned=!m.pinned;persist();notifyChat(id,m);return json(res,200,{ok:true,message:m});
+    }
+
     const reactionMatch=u.pathname.match(/^\/api\/trips\/([^/]+)\/chat\/([^/]+)\/reactions$/);
     if(reactionMatch&&req.method==='POST'){
       const id=decodeURIComponent(reactionMatch[1]), messageId=decodeURIComponent(reactionMatch[2]), room=rooms[id];
       if(!room)return json(res,404,{error:'trip not found'});
       const editKey=String(req.headers['x-edit-key']||'');
-      if(!isEditKey(room,editKey))return json(res,403,{error:'invalid edit key'});
+      if(!hasEditAccess(room,editKey))return json(res,403,{error:'invalid edit key'});
       const incoming=await readBody(req), participantId=String(incoming.participantId||'').trim().slice(0,100), emoji=String(incoming.emoji||'').trim();
-      if(!participantId||(room.participants||[]).every(p=>p.participantId!==participantId))return json(res,403,{error:'participant not registered'});
+      const reactingParticipant=(room.participants||[]).find(p=>p.participantId===participantId&&!p.revokedAt);
+      if(!reactingParticipant||reactingParticipant.role==='viewer')return json(res,403,{error:'participant not allowed'});
       if(!['❤️','👍','😂','🔥','✈️','👏'].includes(emoji))return json(res,400,{error:'unsupported reaction'});
       const message=(room.chat||[]).find(m=>m.id===messageId);if(!message)return json(res,404,{error:'message not found'});
       message.reactions=message.reactions||{};
@@ -388,7 +460,7 @@ const server=http.createServer(async(req,res)=>{
       }
       if(req.method==='POST'){
         const editKey=String(req.headers['x-edit-key']||'');
-        if(hash(editKey)!==room.keyHash) return json(res,403,{error:'invalid edit key'});
+        if(!hasEditAccess(room,editKey)) return json(res,403,{error:'invalid edit key'});
         const incoming=await readBody(req);
         const rawKind=String(incoming.kind||'text');
         const kind=rawKind==='gif'?'gif':rawKind==='photo'?'photo':'text';
@@ -406,7 +478,7 @@ const server=http.createServer(async(req,res)=>{
         if(kind==='photo'&&(!/^data:image\/(?:jpeg|png|webp);base64,/.test(photoData)||photoData.length>450000)) return json(res,400,{error:'invalid photo'});
         if(kind==='photo'&&(room.chat||[]).filter(m=>m.kind==='photo').length>=30) return json(res,409,{error:'photo limit reached'});
         if(!participantId) return json(res,400,{error:'participant identity required'});
-        const participant=(room.participants||[]).find(p=>p.participantId===participantId);
+        const participant=(room.participants||[]).find(p=>p.participantId===participantId&&!p.revokedAt);
         if(!participant) return json(res,403,{error:'participant not registered'});
         if(!chatRateAllowed(id,participantId)) return json(res,429,{error:'too many messages'});
         if(!Array.isArray(room.chat)) room.chat=[];
@@ -443,7 +515,7 @@ const server=http.createServer(async(req,res)=>{
         if(!room) return json(res,404,{error:'trip not found'});
         const key=u.searchParams.get('key')||'';
         if(!hasReadAccess(room,key)) return json(res,403,{error:'invalid access key'});
-        return json(res,200,{revision:room.revision,updatedAt:room.updatedAt,data:room.data});
+        return json(res,200,{revision:room.revision,updatedAt:room.updatedAt,data:room.data,accessRole:accessRole(room,key),inviteId:activeInvite(room,key)?.id||null});
       }
       if(req.method==='PUT'){
         const editKey=String(req.headers['x-edit-key']||'');
@@ -451,7 +523,10 @@ const server=http.createServer(async(req,res)=>{
         const incoming=await readBody(req);
         if(!incoming.data||typeof incoming.data!=='object') return json(res,400,{error:'missing data'});
         const existing=rooms[id];
-        if(existing&&hash(editKey)!==existing.keyHash) return json(res,403,{error:'invalid edit key'});
+        if(existing&&!hasEditAccess(existing,editKey)) return json(res,403,{error:'invalid edit key'});
+        const participantIdForEdit=String(req.headers['x-participant-id']||'').trim().slice(0,100);
+        const editParticipant=(existing?.participants||[]).find(p=>p.participantId===participantIdForEdit&&!p.revokedAt);
+        if(existing&&editParticipant&&editParticipant.role==='viewer') return json(res,403,{error:'participant is view only'});
         const clientRevision=Number(incoming.clientRevision||0);
         if(existing&&incoming.force!==true&&clientRevision!==Number(existing.revision||0)){
           return json(res,409,{error:'revision_conflict',revision:existing.revision,updatedAt:existing.updatedAt,data:existing.data});
@@ -470,7 +545,9 @@ const server=http.createServer(async(req,res)=>{
           revision,updatedAt:new Date().toISOString(),data:incoming.data,
           chat:Array.isArray(existing?.chat)?existing.chat:[],
           activity,
-          participants:Array.isArray(existing?.participants)?existing.participants:[]
+          participants:Array.isArray(existing?.participants)?existing.participants:[],
+          invites:Array.isArray(existing?.invites)?existing.invites:[],
+          securityLog:Array.isArray(existing?.securityLog)?existing.securityLog:[]
         };
         persist(); notifyRevision(id,rooms[id]); notifyActivity(id,newEvents);
         return json(res,200,{ok:true,revision,updatedAt:rooms[id].updatedAt,activityAdded:newEvents.length});
@@ -511,4 +588,4 @@ const server=http.createServer(async(req,res)=>{
   }
 });
 
-server.listen(PORT,HOST,()=>console.log(`Waypoint 6.0.4 listening on http://${HOST}:${PORT}`));
+server.listen(PORT,HOST,()=>console.log(`Waypoint 7.0.0 listening on http://${HOST}:${PORT}`));

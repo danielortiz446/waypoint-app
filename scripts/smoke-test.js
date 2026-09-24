@@ -47,7 +47,7 @@ async function sseNext(id,key){
     r=await fetch(base+'/manifest.webmanifest');
     results.push(['manifest',r.ok&&(await r.json()).name.includes('Waypoint')]);
     r=await fetch(base+'/health');
-    results.push(['health',r.ok&&(await r.json()).version==='6.0.4']);
+    results.push(['health',r.ok&&(await r.json()).version==='7.0.0']);
 
     const id='trip-test',key='secret-edit-key',viewKey='secret-view-key';
     r=await fetch(base+`/api/trips/${id}`,{method:'PUT',headers:{'content-type':'application/json','x-edit-key':key,'x-view-key':viewKey},body:JSON.stringify({clientRevision:0,data:{waypointLive:1,trip:{name:'QA Trip'},days:[],bookings:[]}})});
@@ -138,6 +138,42 @@ r=await fetch(base+'/api/giphy-config');
     r=await fetch(base+`/api/trips/${id}/typing`,{method:'POST',headers:{'content-type':'application/json','x-edit-key':key},body:JSON.stringify({participantId:'qa-user',typing:true})});
     results.push(['typing indicator endpoint',r.ok]);
 
+
+
+    // Waypoint V7: owner-managed individual invitations and revocation.
+    r=await fetch(base+`/api/trips/${id}/invites`,{method:'POST',headers:{'content-type':'application/json','x-owner-key':'wrong-owner'},body:JSON.stringify({label:'QA Invite',role:'viewer',expiresDays:7})});
+    results.push(['invite owner auth',r.status===403]);
+
+    const ownerTrip='trip-owner-test',ownerEdit='owner-edit-key',ownerSecret='owner-secret-key',ownerView='owner-view-key';
+    r=await fetch(base+`/api/trips/${ownerTrip}`,{method:'PUT',headers:{'content-type':'application/json','x-edit-key':ownerEdit,'x-owner-key':ownerSecret,'x-view-key':ownerView},body:JSON.stringify({clientRevision:0,data:{waypointLive:3,trip:{name:'Owner QA'},days:[],bookings:[]}})});
+    results.push(['owner room create',r.ok]);
+
+    r=await fetch(base+`/api/trips/${ownerTrip}/invites`,{method:'POST',headers:{'content-type':'application/json','x-owner-key':ownerSecret},body:JSON.stringify({label:'Jessica QA',role:'viewer',expiresDays:7})});
+    const inviteCreated=await r.json();
+    results.push(['individual invite create',r.ok&&Boolean(inviteCreated.token)&&inviteCreated.invite?.role==='viewer']);
+    const inviteToken=inviteCreated.token;
+
+    r=await fetch(base+`/api/trips/${ownerTrip}?key=${encodeURIComponent(inviteToken)}`);
+    const inviteRead=await r.json();
+    results.push(['individual invite read access',r.ok&&inviteRead.accessRole==='viewer']);
+
+    r=await fetch(base+`/api/trips/${ownerTrip}/participants`,{method:'POST',headers:{'content-type':'application/json','x-access-key':inviteToken},body:JSON.stringify({name:'Jessica QA',participantId:'invite-user',role:'editor'})});
+    const invitedParticipant=await r.json();
+    results.push(['invite role enforced',r.ok&&invitedParticipant.participants.some(p=>p.participantId==='invite-user'&&p.role==='viewer')]);
+
+    r=await fetch(base+`/api/trips/${ownerTrip}/participants/invite-user`,{method:'PATCH',headers:{'content-type':'application/json','x-owner-key':ownerSecret},body:JSON.stringify({role:'editor'})});
+    const changedRole=await r.json();
+    results.push(['owner participant role change',r.ok&&changedRole.participant?.role==='editor']);
+
+    r=await fetch(base+`/api/trips/${ownerTrip}/security-log`,{headers:{'x-owner-key':ownerSecret}});
+    const sec=await r.json();
+    results.push(['security log',r.ok&&Array.isArray(sec.events)&&sec.events.length>=2]);
+
+    r=await fetch(base+`/api/trips/${ownerTrip}/invites/${inviteCreated.invite.id}`,{method:'DELETE',headers:{'x-owner-key':ownerSecret}});
+    results.push(['invite revoke',r.ok]);
+
+    r=await fetch(base+`/api/trips/${ownerTrip}?key=${encodeURIComponent(inviteToken)}`);
+    results.push(['revoked invite blocked',r.status===403]);
 
 
 

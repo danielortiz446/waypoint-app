@@ -217,3 +217,13 @@ The chat drawer now respects iOS safe areas when Waypoint is launched from the H
 ## Waypoint 6.0.4 participant list
 
 Every shared trip now has a Participants button in the global collaboration bar. It opens a trip-scoped participant list showing display name, owner/editor/viewer role, whether the row is the current device, and recent activity. The list refreshes from the collaboration server and updates through participant SSE events. Participant lists remain isolated per shared trip.
+
+## Waypoint 7.0 Collaboration & Travel Pro
+
+This release adds owner-controlled participant management, individual expiring invitations, individual invite revocation, security logs, clearer sync state, notification center, trip calendar export, travel mode, destination timezone/practical information, trip recap, chat editing/deletion/pinning/mentions, category budgets, custom percentage splits and recorded settlements.
+
+### Security model
+Legacy editor/viewer links still work for compatibility. For revocable per-person access, create an individual invitation from Participants or Security. Individual invitation tokens are stored only as hashes on the server and can expire. Removing a participant also revokes that participant's individual invite when one is associated.
+
+### Features intentionally not faked
+Exact server push while an iPhone PWA is fully terminated, real-time driving/transit duration between places, native App Store/Play Store distribution, and an unlimited shared photo gallery require additional infrastructure or provider credentials. Waypoint does not pretend these capabilities are available when they are not.
