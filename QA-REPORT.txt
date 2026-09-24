@@ -1,131 +1,110 @@
-Waypoint 4.0 Production QA
-Date: 2026-09-23
+WAYPOINT 8.0.1 FINAL QA
+================================================
 
-Automated checks completed:
-PASS server.js syntax
-PASS frontend inline JavaScript syntax
-PASS static index response
-PASS PWA manifest response
-PASS health endpoint
-PASS collaboration trip creation
-PASS collaboration trip read
-PASS invalid edit key rejected
-PASS stale revision conflict detected
-PASS near-real-time SSE revision event
+SYNTAX CHECKS
+PASS frontend inline JS
+PASS server.js
+PASS service worker
+PASS smoke-test.js
 
-Architecture:
-- Same-origin frontend + API
-- Persistent JSON data file configurable by WAYPOINT_DATA_FILE
-- Recommended production mount: /data
-- SSE live updates with polling fallback
-- PWA manifest + service worker
-- Web / iPhone Safari PWA / Android Chrome PWA
+FULL SMOKE SUITE
+PASS static index
+PASS manifest
+PASS health
+PASS create
+PASS read
+PASS viewer read access
+PASS viewer write blocked
+PASS invalid key
+PASS revision conflict
+PASS live SSE event
+PASS participant preregistration
+PASS giphy config endpoint
+PASS participant identity
+PASS participant list
+PASS viewer participant registration
+PASS viewer chat read
+PASS viewer chat send blocked
+PASS read receipt participant
+PASS chat read receipt
+PASS chat trusted participant name
+PASS chat reactions
+PASS chat photo and reply
+PASS weather config gate
+PASS chat idempotent duplicate
+PASS chat rejects unregistered sender
+PASS typing indicator endpoint
+PASS invite owner auth
+PASS owner room create
+PASS individual invite create
+PASS individual invite read access
+PASS invite role enforced
+PASS owner participant role change
+PASS security log
+PASS invite revoke
+PASS revoked invite blocked
+PASS revoke room create
+PASS revoke owner register
+PASS revoke editor register
+PASS participant remove
+PASS removed participant write blocked
+PASS missing participant write blocked
+PASS V8 health version
+PASS health hides room count
+PASS security nosniff
+PASS security CSP
+PASS normal API traffic allowed
 
-Manual pre-launch checks still required on the actual production HTTPS domain:
-- iPhone system share sheet
-- Android system share sheet
-- print/PDF UI on each target OS
-- Add to Home Screen / Install app
-- final privacy/support contact details
-- DNS/custom domain
+STATIC / INTEGRATION AUDIT
+PASS no missing inline handlers
+PASS destination search route
+PASS destination coordinates persisted
+PASS weather uses destination coordinates
+PASS automatic practical info
+PASS schedule conflict engine
+PASS activity duration
+PASS booking duration
+PASS daily route
+PASS calendar view
+PASS smart packing
+PASS documents center
+PASS diagnostics
+PASS collaboration participants
+PASS individual invites
+PASS removed participant protection
+PASS viewer write block
+PASS chat edit/delete/pin
+PASS settlement sync
+PASS category budget sync
+PASS iPhone More sheet
+PASS chat iOS safe area
+PASS WeatherAPI server secret
+PASS GIPHY only
+PASS Open-Meteo absent
+PASS security CSP
+PASS rate limiting
+PASS public health privacy
 
+PWA ASSET AUDIT
+PASS manifest icon files
 
-Waypoint 4.1 additions:
-PASS generated itinerary day labels localize dynamically ES/EN
-PASS frontend JavaScript syntax after localization changes
-PASS server JavaScript syntax after FX proxy changes
-PASS currency converter supports selectable source/target currency
-PASS automatic/manual conversion modes
-PASS source/target swap action
-PASS same-currency automatic rate endpoint
-PASS core server smoke suite after V4.1 changes
+VERSION CONSISTENCY
+PASS no executable V8.0.0 version markers
 
-External FX network note:
-The execution sandbox used to build this release cannot reach external APIs from Node, so an end-to-end live Frankfurter request cannot be executed here. The integration follows Frankfurter v2's documented `/v2/rate/{base}/{quote}` endpoint. Verify one live USD/COP conversion after deployment on the public HTTPS host.
-
-
-Waypoint 4.2.1 hotfix:
-PASS itinerary renderer variable fix (`i` instead of undefined `index`)
-PASS legacy/imported days without `activities` arrays no longer crash rendering
-PASS malformed non-array itinerary values fall back safely to an empty itinerary
-PASS bilingual day labels preserved
-
-
-Waypoint 4.3 readiness engine:
-PASS weighted readiness totals 100%
-PASS trip details validity is scored proportionally
-PASS itinerary score uses trip-day coverage, active-day coverage, and activity depth
-PASS booking score measures field completeness per reservation
-PASS packing score is quantity-aware
-PASS budget score decreases proportionally when spending exceeds budget
-PASS travel information/documents score checks completed notes and passport validity when supplied
-PASS readiness UI displays section percentage and weighted contribution
-
-
-Waypoint 4.3.1 readiness UI polish:
-PASS technical weighting explanation removed from customer-facing UI
-PASS weighted score remains unchanged internally
-PASS professional readiness status labels added
-PASS visual progress card and progress bars added
-PASS next recommended action added
-PASS internal contribution math hidden from end users
-
-
-Waypoint 4.3.3 FX reliability:
-PASS automatic FX first tries Waypoint server endpoint
-PASS standalone HTML falls back to direct Frankfurter v2 pair endpoint
-PASS secondary Frankfurter rates endpoint fallback added
-PASS last successful exchange rate cached per currency pair on device
-PASS offline/provider failure can use last known rate with visible status
-PASS manual rate remains available as final fallback
-
-
-Waypoint 4.3.4 FX UI cleanup:
-PASS recent conversions section removed
-PASS recent conversion reuse controls removed
-PASS automatic daily FX retained
-PASS manual FX retained
-PASS currency swap retained
-PASS last-known-rate cache retained
-
-
-Waypoint 4.3.5 monetary precision:
-PASS budget and expense monetary inputs support 0.01 increments
-PASS monetary fields use decimal keyboard hints on mobile
-PASS stored budget and expense values are rounded to cents
-PASS converter amount and converted monetary result are rounded to two decimals
-PASS exchange-rate field retains high precision for accurate FX calculations
-PASS money formatting always displays two decimal places
-PASS accumulated trip spending is rounded to cents to avoid floating-point artifacts
-
-WAYPOINT 4.8.1 STABILITY REVIEW
-- Removed unfinished/paid real-time flight-alert integration and all FlightAware/Web Push controls.
-- Retained normal flight reservation fields (flight number, origin, destination, date/time, confirmation, notes).
-- Fixed active-collaboration re-sharing so invitees cannot be promoted locally to owner.
-- Reviewed GIPHY/privacy disclosures.
-- Re-ran JavaScript syntax and server smoke tests.
-
-WAYPOINT 6.0 COMPLETE TRAVEL SUITE
-- Added Today/Up Next view.
-- Added Map hub and route handoff.
-- Added optional commercial-key-gated weather.
-- Added shared expenses, balances and settle-up suggestions.
-- Added packing assignments.
-- Added owner/editor/viewer access with server-enforced view-only key.
-- Added dedicated activity history.
-- Added ideas/favorites and collaborative polls.
-- Added chat replies, reactions and compressed photo messages.
-- Added offline dirty-state recovery and reconnect sync.
-- Added PWA local reminders with service-worker notification display.
-- Added smarter Home trip pulse.
-- Fixed trip duplication to strip collaboration credentials and deep-copy related trip data.
-
-WAYPOINT 7.0.5 PRE-DEPLOYMENT AUDIT
-- Fixed existing-trip save target after modal close.
-- Fixed advanced trip fields not being persisted by saveTripForm.
-- Fixed stale practical data after destination changes.
-- Fixed participant role changes not updating local permissions.
-- Hardened server writes against removed/unregistered participant IDs.
-- Added collaboration sync for settlements and category budgets.
-- Fixed itinerary import/export coverage for advanced data.
-- Fixed trip delete/undo coverage for settlements/category budgets.
+FIXES APPLIED
+- Included Calendar in the More-button active state.
+- Localized calendar weekday labels.
+- Made Diagnostics tolerant of both supported /api/features response shapes.
+- Restored Enter-key activity creation in itinerary inputs.
+- Bookings no longer receive an implicit 60-minute duration in schedule-conflict detection.
+- Conflict engine now defaults duration only for itinerary activities.
+- Added optional booking duration and travel-buffer fields.
+- Booking duration/buffer now persist.
+- Booking cards now show duration and travel buffer.
+- Capped daily Google Maps intermediate waypoints to a practical limit.
+- Smart packing avoids assuming an international trip when profile country is unknown.
+- Diagnostics now show app version and local trip count.
+- Rate limiting now targets API/health traffic instead of static PWA assets.
+- Added tighter rate limiting for destination search.
+- Removed shared-room count from public /health metadata.
+- Added a Content-Security-Policy compatible with current Waypoint features.

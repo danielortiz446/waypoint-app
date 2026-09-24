@@ -875,6 +875,26 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   .destination-search-row .btn{white-space:nowrap}
 }
 
+
+/* Waypoint 8.0 travel intelligence */
+.schedule-alert{padding:9px 10px;border-radius:10px;background:rgba(255,140,90,.09);border:1px solid rgba(255,140,90,.20);font-size:10px;margin:8px 0}
+.countdown-card{padding:13px;border-radius:12px;background:rgba(201,162,39,.09);border:1px solid rgba(201,162,39,.18)}
+.countdown-big{font-size:24px;font-weight:900;color:var(--paper);letter-spacing:-.03em}
+.day-tools{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0 12px}
+.activity-duration{font:9px var(--font-mono);color:var(--muted);margin-top:3px}
+.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.calendar-cell{min-height:74px;padding:7px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
+.calendar-cell .n{font:9px var(--font-mono);color:var(--muted)}
+.calendar-cell.has-events{border-color:rgba(201,162,39,.22);background:rgba(201,162,39,.055)}
+.doc-important{border-color:rgba(201,162,39,.25)!important;background:rgba(201,162,39,.055)!important}
+.diag-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.diag-row:last-child{border-bottom:0}
+.status-ok{color:#75d6a1}.status-warn{color:#f0c66d}.status-bad{color:#ff927d}
+@media(max-width:620px){
+  .calendar-cell{min-height:58px;padding:5px}
+  .calendar-cell .event-label{font-size:8px}
+}
+
 </style>
 </head>
 <body><a class="skip-link" href="#app">Skip to content</a>
@@ -2989,7 +3009,7 @@ function viewTripDetail(){
         <button class="${ui.tripSubTab==='itinerary'?'active':''}" onclick="setTripSubTab('itinerary')"><span class="ic">▥</span>${t.tabs.itinerary}</button>
         <button class="${ui.tripSubTab==='map'?'active':''}" onclick="setTripSubTab('map')"><span class="ic">🗺</span>${state.lang==='es'?'Mapa':'Map'}</button>
         <button class="${ui.tripSubTab==='bookings'?'active':''}" onclick="setTripSubTab('bookings')"><span class="ic">🎟</span>${state.lang==='es'?'Reservas':'Bookings'}</button>
-        <button class="trip-more-btn ${['budget','checklist','ideas','polls','activity','notes','recap'].includes(ui.tripSubTab)?'active':''}" onclick="toggleTripMoreMenu(event)" aria-expanded="${ui.tripMoreOpen?'true':'false'}"><span class="ic">•••</span>${state.lang==='es'?'Más':'More'}</button>
+        <button class="trip-more-btn ${['budget','checklist','ideas','polls','activity','calendar','notes','recap'].includes(ui.tripSubTab)?'active':''}" onclick="toggleTripMoreMenu(event)" aria-expanded="${ui.tripMoreOpen?'true':'false'}"><span class="ic">•••</span>${state.lang==='es'?'Más':'More'}</button>
       </div>
       ${ui.tripMoreOpen?`
       <div class="trip-more-backdrop" onclick="closeTripMoreMenu()" aria-hidden="true"></div>
@@ -3005,6 +3025,8 @@ function viewTripDetail(){
           <button class="${ui.tripSubTab==='ideas'?'active':''}" onclick="setTripSubTab('ideas')">☆ ${state.lang==='es'?'Ideas':'Ideas'}</button>
           <button class="${ui.tripSubTab==='polls'?'active':''}" onclick="setTripSubTab('polls')">☷ ${state.lang==='es'?'Encuestas':'Polls'}</button>
           <button class="${ui.tripSubTab==='activity'?'active':''}" onclick="setTripSubTab('activity')">◴ ${state.lang==='es'?'Actividad':'Activity'}</button>
+          <button class="${ui.tripSubTab==='calendar'?'active':''}" onclick="setTripSubTab('calendar')">📅 ${state.lang==='es'?'Calendario':'Calendar'}</button>
+            <button class="${ui.tripSubTab==='calendar'?'active':''}" onclick="setTripSubTab('calendar')">📅 ${state.lang==='es'?'Calendario':'Calendar'}</button>
           <button class="${ui.tripSubTab==='notes'?'active':''}" onclick="setTripSubTab('notes')">📄 ${t.tabs.notes}</button>
           <button class="${ui.tripSubTab==='recap'?'active':''}" onclick="setTripSubTab('recap')">★ ${state.lang==='es'?'Resumen final':'Recap'}</button>
         </div>
@@ -3078,6 +3100,7 @@ function renderTripSubTab(tr){
   if(ui.tripSubTab==='activity') return viewActivitySub(tr);
   if(ui.tripSubTab==='notes') return viewNotesSub(tr);
   if(ui.tripSubTab==='recap') return viewRecapSub(tr);
+  if(ui.tripSubTab==='calendar') return viewCalendarSub(tr);
   return '';
 }
 
@@ -3087,11 +3110,65 @@ function todayIsoLocal(){
   const d=new Date(); const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
   return `${y}-${m}-${day}`;
 }
+
+function timeToMinutes(value){
+  const t=normalizeTime24(value);const m=t.match(/^(\d{2}):(\d{2})$/);return m?Number(m[1])*60+Number(m[2]):null;
+}
+function activityDurationMinutes(a){return Math.max(0,Number(a?.durationMinutes||60));}
+function scheduleConflicts(tr,date){
+  const items=tripTimelineItems(tr,date).filter(x=>x.time);
+  const out=[];
+  for(let i=0;i<items.length-1;i++){
+    const a=items[i],b=items[i+1],start=timeToMinutes(a.time),next=timeToMinutes(b.time);
+    if(start==null||next==null)continue;
+    const dur=Math.max(0,Number(a.durationMinutes||(a.kind==='activity'?60:0)));
+    const buffer=Math.max(0,Number(a.travelBufferMinutes||0));
+    const end=start+dur+buffer;
+    if(end>next)out.push({a,b,minutes:end-next});
+  }
+  return out;
+}
+function countdownToTrip(tr){
+  if(!tr?.start)return null;
+  const now=new Date(),start=new Date(`${tr.start}T00:00:00`);
+  const diff=start-now;
+  if(diff>0)return {kind:'before',days:Math.ceil(diff/86400000)};
+  if(tr.end){
+    const end=new Date(`${tr.end}T23:59:59`);
+    if(now<=end){
+      const day=Math.max(1,Math.floor((now-start)/86400000)+1);
+      const total=Math.max(1,Math.floor((end-start)/86400000)+1);
+      return {kind:'during',day,total};
+    }
+    return {kind:'after',days:Math.floor((now-end)/86400000)};
+  }
+  return null;
+}
+function nextItemCountdown(tr){
+  const date=tripFocusDate(tr),items=tripTimelineItems(tr,date).filter(x=>x.time);
+  if(date!==todayIsoLocal()||!items.length)return null;
+  const now=new Date(),mins=now.getHours()*60+now.getMinutes();
+  const next=items.find(x=>timeToMinutes(x.time)>=mins);
+  if(!next)return null;
+  return {item:next,minutes:Math.max(0,timeToMinutes(next.time)-mins)};
+}
+function dayRouteUrl(tr,date){
+  const day=(state.itineraries[tr.id]||[]).find(d=>d.date===date);
+  const points=[];
+  for(const a of day?.activities||[])if(a.location)points.push(a.location);
+  for(const b of (state.bookings[tr.id]||[]).filter(b=>b.date===date))if(b.location)points.push(b.location);
+  const uniq=[...new Set(points.map(x=>String(x).trim()).filter(Boolean))];
+  if(!uniq.length)return googleMapsSearchUrl(tr.destinationCanonical||tr.destination||'');
+  if(uniq.length===1)return googleMapsSearchUrl(uniq[0]);
+  const origin=uniq[0],destination=uniq[uniq.length-1],waypoints=uniq.slice(1,-1).slice(0,8).join('|');
+  return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}${waypoints?`&waypoints=${encodeURIComponent(waypoints)}`:''}&travelmode=driving`;
+}
+
 function tripTimelineItems(tr,date){
   const out=[];
   const day=(state.itineraries[tr.id]||[]).find(d=>d.date===date);
-  for(const a of (day?.activities||[])) out.push({kind:'activity',time:a.time||'',title:a.title||'',location:a.location||'',id:a.id});
-  for(const b of (state.bookings[tr.id]||[]).filter(b=>b.date===date)) out.push({kind:'booking',time:b.time||'',title:b.title||b.provider||'',location:b.location||'',id:b.id});
+  for(const a of (day?.activities||[])) out.push({kind:'activity',time:a.time||'',title:a.title||'',location:a.location||'',id:a.id,durationMinutes:Number(a.durationMinutes||60),travelBufferMinutes:Number(a.travelBufferMinutes||0)});
+  for(const b of (state.bookings[tr.id]||[]).filter(b=>b.date===date)) out.push({kind:'booking',time:b.time||'',title:b.title||b.provider||'',location:b.location||'',id:b.id,durationMinutes:Number(b.durationMinutes||0),travelBufferMinutes:Number(b.travelBufferMinutes||0)});
   return out.sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99'));
 }
 function tripFocusDate(tr){
@@ -3167,6 +3244,27 @@ function viewTravelModeSub(tr){
   <div class="practical-card"><div class="k">${es?'Enchufe / energía':'Power / plug'}</div><div class="v">${escapeHtml(pr.power)}</div><div class="participant-last">${tr.powerInfo?(es?'Manual':'Manual'):(es?'Automático · país detectado':'Automatic · detected country')}</div></div>
   </div></div>`;
 }
+
+function viewCalendarSub(tr){
+  const es=state.lang==='es';
+  const dates=new Map();
+  for(const d of state.itineraries[tr.id]||[])if(d.date)dates.set(d.date,(d.activities||[]).length);
+  for(const b of state.bookings[tr.id]||[])if(b.date)dates.set(b.date,(dates.get(b.date)||0)+1);
+  const base=tr.start?new Date(`${tr.start}T12:00:00`):new Date();
+  const y=base.getFullYear(),m=base.getMonth();
+  const first=new Date(y,m,1),last=new Date(y,m+1,0),offset=first.getDay();
+  const cells=[];
+  for(let i=0;i<offset;i++)cells.push('');
+  for(let d=1;d<=last.getDate();d++){const iso=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;cells.push(iso);}
+  while(cells.length%7)cells.push('');
+  return `<div class="panel"><div class="section-head"><div><h3 style="margin:0;color:var(--paper)">📅 ${es?'Calendario del viaje':'Trip calendar'}</h3><p class="sub">${new Intl.DateTimeFormat(es?'es':'en',{month:'long',year:'numeric'}).format(base)}</p></div><button class="btn btn-brass btn-sm viewer-safe" onclick="exportTripCalendar('${tr.id}')">⬇ .ics</button></div>
+  <div class="calendar-grid">${(es?['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']:['Sun','Mon','Tue','Wed','Thu','Fri','Sat']).map(x=>`<div class="participant-last" style="text-align:center">${x}</div>`).join('')}${cells.map(iso=>iso?`<div class="calendar-cell ${dates.get(iso)?'has-events':''}"><div class="n">${Number(iso.slice(-2))}</div>${dates.get(iso)?`<div class="event-label" style="margin-top:7px">${dates.get(iso)} ${es?'evento(s)':'event(s)'}</div><button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="jumpToTripDate('${iso}')">${es?'Ver':'View'}</button>`:''}</div>`:`<div></div>`).join('')}</div></div>`;
+}
+function jumpToTripDate(iso){
+  ui.tripSubTab='itinerary';render();
+  setTimeout(()=>document.querySelector(`[data-trip-date="${iso}"]`)?.scrollIntoView({behavior:'smooth',block:'start'}),50);
+}
+
 function viewRecapSub(tr){
   const es=state.lang==='es',exp=state.expenses.filter(e=>e.tripId===tr.id),spent=exp.reduce((s,e)=>s+Number(e.amount||0),0),days=state.itineraries[tr.id]||[],acts=days.reduce((s,d)=>s+(d.activities||[]).length,0),book=(state.bookings[tr.id]||[]).length,pack=(state.checklists[tr.id]||[]),done=pack.filter(x=>x.done).length;
   return `<div class="panel"><h3 style="margin:0 0 12px;color:var(--paper)">★ ${es?'Resumen del viaje':'Trip recap'}</h3><div class="metric-grid">
@@ -3178,18 +3276,23 @@ function viewRecapSub(tr){
 }
 
 function viewTodaySub(tr){
-  const es=state.lang==='es'; const date=tripFocusDate(tr); const items=tripTimelineItems(tr,date);
+  const es=state.lang==='es';const date=tripFocusDate(tr);const items=tripTimelineItems(tr,date);
   const nowMins=new Date().getHours()*60+new Date().getMinutes();
-  let next=items.find(x=>{if(date!==todayIsoLocal())return true; if(!x.time)return true; const [h,m]=x.time.split(':').map(Number); return h*60+(m||0)>=nowMins;})||items[0];
+  const next=items.find(x=>{if(date!==todayIsoLocal())return true;if(!x.time)return true;return (timeToMinutes(x.time)??9999)>=nowMins;})||items[0];
   const reminder=state.reminders[tr.id]||{enabled:false,leadMinutes:30};
+  const conflicts=scheduleConflicts(tr,date),count=nextItemCountdown(tr),tripCount=countdownToTrip(tr);
   return `<div class="today-hero">
     <div class="today-card">
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:12px;">
         <div><div class="booking-type">${es?'Tu día':'Your day'}</div><h3 style="margin:3px 0 2px;color:var(--paper);">${escapeHtml(localizedDateLabel(date))}</h3><div class="field-hint">${date===todayIsoLocal()?(es?'Hoy':'Today'):(es?'Próximo día planificado':'Next planned day')}</div></div>
         <button class="btn btn-ghost btn-sm" onclick="enableTripReminders('${tr.id}')">🔔 ${reminder.enabled?(es?'Recordatorios activos':'Reminders on'):(es?'Activar recordatorios':'Enable reminders')}</button>
       </div>
-      ${next?`<div class="panel" style="margin-bottom:10px;padding:11px;"><div class="booking-type">${es?'Próximo':'Up next'}</div><div class="booking-title">${escapeHtml(formatTime12(next.time||''))} ${escapeHtml(next.title)}</div>${next.location?`<div class="booking-meta">📍 ${escapeHtml(next.location)}</div>`:''}</div>`:''}
-      <div class="timeline">${items.length?items.map(x=>`<div class="timeline-row ${timelineNowClass(date,x.time)}"><div class="timeline-time">${escapeHtml(formatTime12(x.time||''))||'—'}</div><div><div style="font-size:12px;font-weight:750;">${x.kind==='booking'?'🎟 ':'• '}${escapeHtml(x.title)}</div>${x.location?`<div class="field-hint">📍 ${escapeHtml(x.location)}</div>`:''}</div></div>`).join(''):`<div class="chat-empty">${es?'No hay actividades ni reservas para este día.':'No activities or bookings for this day.'}</div>`}</div>
+      ${tripCount?`<div class="countdown-card" style="margin-bottom:10px"><div class="booking-type">${es?'Estado del viaje':'Trip status'}</div><div class="countdown-big">${tripCount.kind==='before'?(es?`Faltan ${tripCount.days} días`:`${tripCount.days} days to go`):tripCount.kind==='during'?(es?`Día ${tripCount.day} de ${tripCount.total}`:`Day ${tripCount.day} of ${tripCount.total}`):(es?`Terminó hace ${tripCount.days} días`:`Ended ${tripCount.days} days ago`)}</div></div>`:''}
+      ${count?`<div class="panel" style="margin-bottom:10px;padding:11px"><div class="booking-type">${es?'Cuenta regresiva':'Countdown'}</div><div class="booking-title">${count.minutes<60?(es?`${count.minutes} min para ${escapeHtml(count.item.title)}`:`${count.minutes} min until ${escapeHtml(count.item.title)}`):(es?`${Math.floor(count.minutes/60)} h ${count.minutes%60} min para ${escapeHtml(count.item.title)}`:`${Math.floor(count.minutes/60)}h ${count.minutes%60}m until ${escapeHtml(count.item.title)}`)}</div></div>`:''}
+      ${conflicts.length?`<div class="schedule-alert">⚠ ${es?`${conflicts.length} conflicto(s) de horario detectado(s). Ajusta duración o tiempo de traslado.`:`${conflicts.length} schedule conflict(s) detected. Adjust duration or travel buffer.`}</div>`:''}
+      ${next?`<div class="panel" style="margin-bottom:10px;padding:11px"><div class="booking-type">${es?'Próximo':'Up next'}</div><div class="booking-title">${escapeHtml(formatTime12(next.time||''))} ${escapeHtml(next.title)}</div>${next.location?`<div class="booking-meta">📍 ${escapeHtml(next.location)}</div>`:''}</div>`:''}
+      <div class="day-tools">${items.length?`<a class="btn btn-brass btn-sm viewer-safe" target="_blank" rel="noopener" href="${dayRouteUrl(tr,date)}">🧭 ${es?'Ruta del día':'Day route'}</a>`:''}<button class="btn btn-ghost btn-sm" onclick="setTripSubTab('calendar')">📅 ${es?'Calendario':'Calendar'}</button></div>
+      <div class="timeline">${items.length?items.map(x=>`<div class="timeline-row ${timelineNowClass(date,x.time)}"><div class="timeline-time">${escapeHtml(formatTime12(x.time||''))||'—'}</div><div><div style="font-size:12px;font-weight:750">${x.kind==='booking'?'🎟 ':'• '}${escapeHtml(x.title)}</div>${x.location?`<div class="field-hint">📍 ${escapeHtml(x.location)}</div>`:''}${x.kind==='activity'?`<div class="activity-duration">${es?'Duración':'Duration'} ${x.durationMinutes||60} min${x.travelBufferMinutes?` · +${x.travelBufferMinutes} min ${es?'traslado':'travel'}`:''}</div>`:''}</div></div>`).join(''):`<div class="chat-empty">${es?'No hay actividades ni reservas para este día.':'No activities or bookings for this day.'}</div>`}</div>
     </div>
     ${weatherCardHtml(tr)}
   </div>`;
@@ -3213,6 +3316,7 @@ function viewMapSub(tr){
   const es=state.lang==='es'; const places=tripPlaces(tr);
   const q=tr.destination||places[0]?.name||'';
   return `<div class="panel"><div class="section-head"><div><h3 style="margin:0;color:var(--paper);">${es?'Mapa del viaje':'Trip map'}</h3><p class="sub">${es?'Todos los lugares guardados en un solo centro.':'All saved places in one hub.'}</p></div>${places.length?`<a class="btn btn-brass btn-sm viewer-safe" target="_blank" rel="noopener" href="${tripRouteUrl(tr)}">🧭 ${es?'Abrir ruta':'Open route'}</a>`:''}</div>
+    <div class="day-tools">${(state.itineraries[tr.id]||[]).filter(d=>(d.activities||[]).some(a=>a.location)||(state.bookings[tr.id]||[]).some(b=>b.date===d.date&&b.location)).slice(0,7).map((d,i)=>`<a class="btn btn-ghost btn-sm viewer-safe" target="_blank" rel="noopener" href="${dayRouteUrl(tr,d.date)}">${state.lang==='es'?'Día':'Day'} ${i+1} 🧭</a>`).join('')}</div>
     ${q?`<iframe class="map-frame" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=${encodeURIComponent(q)}&output=embed" title="${es?'Mapa':'Map'}"></iframe>`:''}
     <div class="map-place-list" style="margin-top:10px;">${places.length?places.map(p=>`<div class="map-place"><div class="main"><div class="name">📍 ${escapeHtml(p.name)}</div><div class="sub">${p.kind==='destination'?(es?'Destino':'Destination'):p.kind==='booking'?(es?'Reserva':'Booking'):(es?'Actividad':'Activity')}${p.date?' · '+escapeHtml(p.date):''}</div></div><a class="btn btn-ghost btn-sm viewer-safe" target="_blank" rel="noopener" href="${googleMapsSearchUrl(p.name)}">${es?'Abrir':'Open'}</a></div>`).join(''):`<div class="chat-empty">${es?'Agrega lugares a tus actividades o reservas para verlos aquí.':'Add places to activities or bookings to see them here.'}</div>`}</div>
   </div>`;
@@ -3605,7 +3709,7 @@ function findNextActivity(tr){
 function viewBookingsSub(tr){
   const es=state.lang==='es';
   const list=state.bookings[tr.id]||[];
-  const labels={flight:es?'Vuelo':'Flight',hotel:es?'Hotel':'Hotel',transport:es?'Transporte':'Transport',activity:es?'Actividad':'Activity',other:es?'Otra':'Other'};
+  const labels={flight:es?'Vuelo':'Flight',hotel:'Hotel',transport:es?'Transporte':'Transport',train:es?'Tren':'Train',car:es?'Auto de alquiler':'Rental car',restaurant:es?'Restaurante':'Restaurant',activity:es?'Actividad':'Activity',other:es?'Otra':'Other'};
   return `
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
       <button class="btn btn-brass btn-sm" onclick="openBookingForm()">+ ${es?'Agregar reserva':'Add booking'}</button>
@@ -3614,7 +3718,7 @@ function viewBookingsSub(tr){
       <div class="booking-card">
         <div class="booking-top"><div><div class="booking-type">${labels[b.type]||labels.other}${b.date?' · '+escapeHtml(b.date):''}${b.time?' · '+escapeHtml(b.time):''}</div>
         <div class="booking-title">${escapeHtml(b.title)}</div>
-        <div class="booking-meta">${b.provider?escapeHtml(b.provider):''}${b.confirmation?`<br>${es?'Confirmación':'Confirmation'}: <strong>${escapeHtml(b.confirmation)}</strong>`:''}${b.type==='flight'&&b.flightNumber?`<br>✈ <strong>${escapeHtml(b.flightNumber)}</strong>${b.origin||b.destination?` · ${escapeHtml(b.origin||'—')} → ${escapeHtml(b.destination||'—')}`:''}`:''}${b.location?`<br>📍 ${escapeHtml(b.location)}`:''}${b.notes?`<br>${escapeHtml(b.notes)}`:''}</div></div>
+        <div class="booking-meta">${b.provider?escapeHtml(b.provider):''}${b.confirmation?`<br>${es?'Confirmación':'Confirmation'}: <strong>${escapeHtml(b.confirmation)}</strong>`:''}${b.type==='flight'&&b.flightNumber?`<br>✈ <strong>${escapeHtml(b.flightNumber)}</strong>${b.origin||b.destination?` · ${escapeHtml(b.origin||'—')} → ${escapeHtml(b.destination||'—')}`:''}`:''}${b.location?`<br>📍 ${escapeHtml(b.location)}`:''}${Number(b.durationMinutes||0)?`<br>⏱ ${Number(b.durationMinutes)} min${Number(b.travelBufferMinutes||0)?` · +${Number(b.travelBufferMinutes)} min ${es?'traslado':'travel'}`:''}`:''}${b.notes?`<br>${escapeHtml(b.notes)}`:''}</div></div>
         <button class="btn btn-danger btn-sm" onclick="deleteBooking('${tr.id}','${b.id}')">✕</button></div>
         <div style="margin-top:9px;display:flex;gap:7px;flex-wrap:wrap;">
           ${b.location?`<a class="btn btn-ghost btn-sm" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.location)}">🗺 ${es?'Abrir mapa':'Open map'}</a>`:''}
@@ -3637,7 +3741,7 @@ async function saveBookingForm(){
   const type=g('b-type');
   const booking={
     id:uid(),type,title,provider:g('b-provider').trim(),confirmation:g('b-confirm').trim(),
-    date:g('b-date'),time:getTime12PickerValue('b-time'),location:g('b-location').trim(),notes:g('b-notes').trim()
+    date:g('b-date'),time:getTime12PickerValue('b-time'),durationMinutes:Math.max(0,Math.min(1440,Number(g('b-duration')||0))),travelBufferMinutes:Math.max(0,Math.min(360,Number(g('b-buffer')||0))),location:g('b-location').trim(),notes:g('b-notes').trim()
   };
   if(type==='flight'){
     booking.flightNumber=g('b-flight-number').trim().toUpperCase();
@@ -3726,7 +3830,7 @@ function viewItinerarySub(tr){
 function dayCard(tr,d,i,total){
   const t=tt();
   const activities=Array.isArray(d?.activities)?d.activities:[];
-  return `<div class="day-card">
+  return `<div class="day-card" data-trip-date="${escapeHtml(d.date||'')}">
     <div class="dh">
       <div class="lbl">${escapeHtml(displayDayLabel(d,i))}</div>
       <div class="ctl">
@@ -3735,15 +3839,18 @@ function dayCard(tr,d,i,total){
         <button class="btn btn-danger btn-sm" onclick="deleteDay('${tr.id}','${d.id}')">✕</button>
       </div>
     </div>
+    ${scheduleConflicts(tr,d.date||'').length?`<div class="schedule-alert">⚠ ${state.lang==='es'?'Hay actividades que se superponen o no dejan suficiente tiempo.':'Activities overlap or do not leave enough time.'}</div>`:''}
     ${activities.length? activities.map(a=>`
       <div class="act-row"><span class="time">${escapeHtml(formatTime12(a.time||''))}</span><span class="title">${escapeHtml(a.title)}
-      ${a.location?`<div class="activity-meta">📍 <a target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.location)}">${escapeHtml(a.location)}</a></div>`:''}</span>
+      ${a.location?`<div class="activity-meta">📍 <a target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.location)}">${escapeHtml(a.location)}</a></div>`:''}<div class="activity-duration">${state.lang==='es'?'Duración':'Duration'} ${Number(a.durationMinutes||60)} min${Number(a.travelBufferMinutes||0)?` · +${Number(a.travelBufferMinutes)} min ${state.lang==='es'?'traslado':'travel'}`:''}</div></span>
       <button class="del" onclick="deleteActivity('${tr.id}','${d.id}','${a.id}')">✕</button></div>`).join('')
       : `<p style="color:var(--muted);font-size:12px;margin:6px 0;">${t.itinerary.empty}</p>`}
     <div class="add-act-row">
       ${time12PickerHtml(`at-${d.id}`)}
-      <input class="title-in" id="ai-${d.id}" placeholder="${t.itinerary.activity}">
+      <input class="title-in" id="ai-${d.id}" placeholder="${t.itinerary.activity}" onkeydown="if(event.key==='Enter')addActivity('${tr.id}','${d.id}')">
       <input class="place-in" id="al-${d.id}" placeholder="${state.lang==='es'?'Lugar / dirección (opcional)':'Place / address (optional)'}" onkeydown="if(event.key==='Enter')addActivity('${tr.id}','${d.id}')">
+      <input id="adur-${d.id}" type="number" min="0" max="1440" value="60" title="${state.lang==='es'?'Duración (min)':'Duration (min)'}" style="max-width:92px" placeholder="60 min">
+      <input id="abuf-${d.id}" type="number" min="0" max="360" value="15" title="${state.lang==='es'?'Traslado después (min)':'Travel after (min)'}" style="max-width:92px" placeholder="15 min">
       <button class="btn btn-brass btn-sm" onclick="addActivity('${tr.id}','${d.id}')">${t.itinerary.addActivity}</button>
     </div>
   </div>`;
@@ -3807,11 +3914,13 @@ function addActivity(tripId,dayId){
   const time = getTime12PickerValue('at-'+dayId);
   const title = document.getElementById('ai-'+dayId).value.trim();
   const locEl = document.getElementById('al-'+dayId);
-  const location = locEl?locEl.value.trim():'';
-  if(!title) return;
+  const location=locEl?locEl.value.trim():'';
+  const durationMinutes=Math.max(0,Math.min(1440,Number(document.getElementById('adur-'+dayId)?.value||60)));
+  const travelBufferMinutes=Math.max(0,Math.min(360,Number(document.getElementById('abuf-'+dayId)?.value||0)));
+  if(!title)return;
   const day = (state.itineraries[tripId]||[]).find(d=>d.id===dayId);
   if(!day) return;
-  day.activities.push({id:uid(), time, title, location});
+  day.activities.push({id:uid(),time,title,location,durationMinutes,travelBufferMinutes});
   day.activities.sort((a,b)=>(a.time||'99').localeCompare(b.time||'99'));
   saveState(); render();
 }
@@ -4206,6 +4315,24 @@ function packingCategoryOf(it){
   return PACKING_CATEGORIES.includes(it.category)?it.category:'other';
 }
 function packingCategoryLabel(cat){ return PACKING_CATEGORY_LABELS[state.lang][cat]||cat; }
+
+function smartPackingSuggestions(tr){
+  const es=state.lang==='es',p=practicalForTrip(tr),w=weatherForTrip(tr),out=[];
+  const add=(name,cat='other')=>{if(!out.some(x=>x.name===name))out.push({name,cat});};
+  if(p.power&&p.power!=='No disponible')add(es?'Adaptador de enchufe':'Plug adapter','electronics');
+  if((w?.current?.precipitation_probability||0)>=40)add(es?'Paraguas compacto':'Compact umbrella','clothing');
+  if((w?.current?.temperature_2m||25)<15)add(es?'Chaqueta / abrigo':'Jacket / coat','clothing');
+  if(state.profile.country&&tr.destinationCountry&&tr.destinationCountry!==state.profile.country)add(es?'Pasaporte / documentos de viaje':'Passport / travel documents','documents');
+  add(es?'Cargador del teléfono':'Phone charger','electronics');
+  add(es?'Medicamentos personales':'Personal medications','health');
+  return out;
+}
+function addSmartPackingSuggestions(tripId){
+  const tr=tripById(tripId);if(!tr)return;const items=state.checklists[tripId]||[];
+  for(const s of smartPackingSuggestions(tr)){if(!items.some(x=>String(x.name||'').toLowerCase()===s.name.toLowerCase()))items.push({id:uid(),name:s.name,category:s.cat,qty:1,done:false,assignedTo:''});}
+  state.checklists[tripId]=items;saveState();render();
+}
+
 function viewChecklistSub(tr){
   const t=tt(), es=state.lang==='es';
   const items = state.checklists[tr.id]||[];
@@ -4228,6 +4355,7 @@ function viewChecklistSub(tr){
       </div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+      <button class="btn btn-brass btn-sm" onclick="addSmartPackingSuggestions('${tr.id}')">✨ ${es?'Sugerencias inteligentes':'Smart suggestions'}</button>
       <button class="btn btn-ghost btn-sm" onclick="addPresetItems()">+ ${es?'Esenciales de viaje':'Travel essentials'}</button>
       ${tr.tripType && TRIP_TYPE_PACKING[tr.tripType]? `<button class="btn btn-ghost btn-sm" onclick="addTypePresetItems()">+ ${TRIP_TYPE_LABELS[state.lang][tr.tripType]}</button>`:''}
       ${items.length?`<button class="btn btn-ghost btn-sm" onclick="markAllPacked(${packed===items.length?'false':'true'})">${packed===items.length?(es?'Desmarcar todo':'Unpack all'):(es?'Marcar todo listo':'Pack all')}</button>`:''}
@@ -4289,11 +4417,12 @@ function viewNotesSub(tr){
   return `
     <p style="color:var(--muted);font-size:12.5px;margin:0 0 14px;">${t.notes.sub}</p>
     ${docs.length? `<div class="panel"><div class="row-list">${docs.map(d=>`
-      <div class="li"><div class="main"><div class="t">${escapeHtml(d.label)}</div><div class="s">${escapeHtml(d.value)}</div></div>
+      <div class="li ${d.important?'doc-important':''}"><div class="main"><div class="t">${d.important?'⭐ ':''}${escapeHtml(d.label)}</div><div class="s">${d.type?escapeHtml(d.type)+' · ':''}${escapeHtml(d.value)}</div></div>
       <button class="del" onclick="deleteDoc('${tr.id}','${d.id}')">✕</button></div>`).join('')}</div></div>`
       : `<div class="panel empty"><p>${t.notes.empty}</p></div>`}
     <div class="panel">
       <div class="field"><label>${t.notes.label}</label><input id="doc-label" placeholder="${t.notes.labelPlaceholder}"></div>
+      <div class="form-row"><div class="field"><label>${state.lang==='es'?'Tipo':'Type'}</label><select id="doc-type"><option value="document">${state.lang==='es'?'Documento':'Document'}</option><option value="confirmation">${state.lang==='es'?'Confirmación':'Confirmation'}</option><option value="insurance">${state.lang==='es'?'Seguro':'Insurance'}</option><option value="address">${state.lang==='es'?'Dirección':'Address'}</option><option value="contact">${state.lang==='es'?'Contacto':'Contact'}</option></select></div><div class="field"><label>${state.lang==='es'?'Importante':'Important'}</label><select id="doc-important"><option value="0">${state.lang==='es'?'Normal':'Normal'}</option><option value="1">⭐ ${state.lang==='es'?'Importante':'Important'}</option></select></div></div>
       <div class="field"><label>${t.notes.value}</label><input id="doc-value" placeholder="${t.notes.valuePlaceholder}" onkeydown="if(event.key==='Enter')addDoc('${tr.id}')"></div>
       <button class="btn btn-brass btn-sm btn-block" onclick="addDoc('${tr.id}')">+ ${t.notes.addEntry}</button>
       <p class="field-hint" style="margin:12px 0 4px;">${t.notes.presets}</p>
@@ -4306,7 +4435,7 @@ function addDoc(tripId){
   const value = document.getElementById('doc-value').value.trim();
   if(!label || !value) return;
   if(!state.tripDocs[tripId]) state.tripDocs[tripId]=[];
-  state.tripDocs[tripId].push({id:uid(), label, value});
+  state.tripDocs[tripId].push({id:uid(),label,value,type:document.getElementById('doc-type')?.value||'document',important:document.getElementById('doc-important')?.value==='1'});
   saveState(); render();
 }
 function quickAddDoc(label){
@@ -4324,10 +4453,26 @@ function deleteDoc(tripId,docId){
 }
 
 /* ===================== SETTINGS ===================== */
+
+async function runDiagnostics(){
+  ui.diag={loading:true};render();
+  const out={time:new Date().toISOString(),online:navigator.onLine,storage:true,health:null,features:null};
+  try{const r=await fetch('/health',{cache:'no-store'});out.health=await r.json();out.healthOk=r.ok;}catch(e){out.healthOk=false;}
+  try{const r=await fetch('/api/features',{cache:'no-store'});out.features=await r.json();out.featuresOk=r.ok;}catch(e){out.featuresOk=false;}
+  ui.diag=out;render();
+}
+function diagnosticsHtml(){
+  const d=ui.diag,es=state.lang==='es';
+  if(!d)return `<button class="btn btn-ghost btn-sm" onclick="runDiagnostics()">🩺 ${es?'Ejecutar diagnóstico':'Run diagnostics'}</button>`;
+  if(d.loading)return `<div class="field-hint">${es?'Ejecutando diagnóstico…':'Running diagnostics…'}</div>`;
+  const row=(name,ok,val='')=>`<div class="diag-row"><span>${name}</span><span class="${ok?'status-ok':'status-bad'}">${ok?'✓':'✕'} ${escapeHtml(String(val||''))}</span></div>`;
+  return `${row(es?'Conexión':'Connection',d.online,d.online?'Online':'Offline')}${row('Server',d.healthOk,d.health?.version||'')}${row('WeatherAPI',Boolean(d.features?.weather??d.features?.features?.weather),(d.features?.weather??d.features?.features?.weather)?'Ready':'Not configured')}${row('GIPHY',Boolean(d.features?.giphy??d.features?.features?.giphy),(d.features?.giphy??d.features?.features?.giphy)?'Ready':'Not configured')}${row(es?'Almacenamiento local':'Local storage',d.storage,'OK')}`;
+}
+
 function viewSettings(){
   const t=tt();
   return `
-    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v7.0.6</div></div></div>
+    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v8.0.1</div></div></div>
     <div class="panel">
       <h3 style="margin:0 0 12px;font-size:16px;color:var(--paper);">${t.settings.account}</h3>
       <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px;">
@@ -4350,6 +4495,7 @@ function viewSettings(){
       </div>
       <div class="field" style="margin-top:16px;max-width:280px;"><label>${t.settings.defaultCurrency}</label>${currencySelectHtml('pf-currency', state.profile.currency||'USD')}</div>
     </div>
+    <div class="panel"><h3 style="margin:0 0 8px;font-size:16px;color:var(--paper);">🩺 ${state.lang==='es'?'Diagnóstico':'Diagnostics'}</h3><p class="field-hint">${state.lang==='es'?'Comprueba conexión, servidor e integraciones principales.':'Check connection, server and core integrations.'}</p>${diagnosticsHtml()}<div class="participant-last" style="margin-top:10px">Waypoint v8.0.1 · ${state.trips.length} ${state.lang==='es'?'viaje(s) local(es)':'local trip(s)'}</div></div>
     <div class="panel">
       <h3 style="margin:0 0 6px;font-size:16px;color:var(--paper);">${t.settings.data}</h3>
       <p style="font-size:12px;color:var(--muted);margin:0 0 12px;">${t.settings.dataSub}</p>
@@ -4686,6 +4832,9 @@ function renderModal(){
         <option value="flight">✈ ${es?'Vuelo':'Flight'}</option>
         <option value="hotel">🏨 Hotel</option>
         <option value="transport">🚗 ${es?'Transporte':'Transport'}</option>
+        <option value="train">🚆 ${es?'Tren':'Train'}</option>
+        <option value="car">🚙 ${es?'Auto de alquiler':'Rental car'}</option>
+        <option value="restaurant">🍽 ${es?'Restaurante':'Restaurant'}</option>
         <option value="activity">🎟 ${es?'Actividad':'Activity'}</option>
         <option value="other">• ${es?'Otra':'Other'}</option>
       </select></div>
@@ -4707,6 +4856,10 @@ function renderModal(){
       <div class="form-row">
         <div class="field"><label>${es?'Fecha':'Date'}</label><input id="b-date" type="date"></div>
         <div class="field"><label>${es?'Hora':'Time'}</label>${time12PickerHtml('b-time')}</div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>${es?'Duración (min)':'Duration (min)'}</label><input id="b-duration" type="number" min="0" max="1440" value="0" placeholder="0"></div>
+        <div class="field"><label>${es?'Tiempo de traslado después (min)':'Travel buffer after (min)'}</label><input id="b-buffer" type="number" min="0" max="360" value="0" placeholder="0"></div>
       </div>
       <div class="field"><label>${es?'Lugar / dirección':'Place / address'}</label><input id="b-location" placeholder="${es?'Aeropuerto, hotel, punto de encuentro…':'Airport, hotel, meeting point…'}"></div>
       <div class="field"><label>${es?'Notas':'Notes'}</label><textarea id="b-notes" placeholder="${es?'Terminal, equipaje, check-in, instrucciones…':'Terminal, baggage, check-in, instructions…'}"></textarea></div>
@@ -4737,7 +4890,7 @@ document.addEventListener('change', (e)=>{
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('/service-worker.js?v=7.0.6',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('/service-worker.js?v=8.0.1',{updateViaCache:'none'});
       await reg.update();
       let reloading=false;
       navigator.serviceWorker.addEventListener('controllerchange',()=>{

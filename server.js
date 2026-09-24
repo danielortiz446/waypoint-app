@@ -302,11 +302,29 @@ function normalizeDestinationQuery(location){
   return COUNTRY_ALIAS_QUERIES[key]||raw;
 }
 
+
+const RATE_BUCKETS=new Map();
+function clientIp(req){return String(req.headers['x-forwarded-for']||req.socket?.remoteAddress||'unknown').split(',')[0].trim();}
+function allowRate(req,limit=180,windowMs=60000){
+  const key=clientIp(req),now=Date.now();let b=RATE_BUCKETS.get(key);
+  if(!b||now-b.start>windowMs)b={start:now,count:0};
+  b.count++;RATE_BUCKETS.set(key,b);return b.count<=limit;
+}
+function applySecurityHeaders(res){
+  res.setHeader('X-Content-Type-Options','nosniff');
+  res.setHeader('Referrer-Policy','strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy','camera=(self), microphone=(), geolocation=()');
+  res.setHeader('Cross-Origin-Opener-Policy','same-origin-allow-popups');
+  res.setHeader('Content-Security-Policy',"default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self' https:; frame-src https://www.google.com https://maps.google.com; media-src 'self' data: https:; object-src 'none'; base-uri 'self'; form-action 'self'");
+}
+
 const server=http.createServer(async(req,res)=>{
+  applySecurityHeaders(res);
   try{
     const u=new URL(req.url,'http://localhost');
+    if((u.pathname.startsWith('/api/')||u.pathname==='/health')&&!allowRate(req))return json(res,429,{error:'rate limit exceeded'});
 
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'7.0.6',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'8.0.1',time:new Date().toISOString()});
 
     if(req.method==='GET'&&u.pathname==='/api/fx/rate'){
       const from=String(u.searchParams.get('from')||'').trim().toUpperCase();
@@ -337,6 +355,7 @@ const server=http.createServer(async(req,res)=>{
       }
     }
     if(req.method==='GET'&&u.pathname==='/api/destination/search'){
+      if(!allowRate(req,60,60000))return json(res,429,{error:'destination search rate limit exceeded',results:[]});
       const apiKey=String(process.env.WEATHERAPI_KEY||'').trim();
       const q=String(u.searchParams.get('q')||'').trim().slice(0,160);
       if(!apiKey)return json(res,200,{enabled:false,provider:'WeatherAPI.com',reason:'api_key_required',results:[]});
@@ -750,4 +769,4 @@ const server=http.createServer(async(req,res)=>{
   }
 });
 
-server.listen(PORT,HOST,()=>console.log(`Waypoint 7.0.6 listening on http://${HOST}:${PORT}`));
+server.listen(PORT,HOST,()=>console.log(`Waypoint 8.0.1 listening on http://${HOST}:${PORT}`));

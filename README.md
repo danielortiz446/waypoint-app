@@ -276,3 +276,37 @@ This release fixes issues found during a pre-deployment audit rather than adding
 The destination field now resolves places explicitly instead of relying on a single free-text WeatherAPI match. Travelers can search for a destination and choose from city/region/country candidates. The selected latitude/longitude and canonical place name are stored with the trip.
 
 Weather and timezone requests use the stored coordinates, eliminating most same-name-place ambiguity. If a new/edited destination has not been resolved, Save triggers destination search; ambiguous matches must be selected before the trip is saved. Destination coordinates and canonical metadata are included in live collaboration and rich import/export.
+
+## Waypoint 8.0 Complete Travel Intelligence
+
+Implemented in the existing PWA/server architecture:
+- activity duration and travel-buffer fields
+- schedule overlap/conflict detection
+- trip countdown and next-activity countdown
+- per-day Google Maps route handoff
+- month calendar view plus .ics export
+- smarter travel-day view
+- smart packing suggestions using destination practical data and current weather
+- richer important-document entries
+- expanded booking types (train, rental car, restaurant)
+- in-app diagnostics for server, weather, GIPHY and connectivity
+- basic server-side rate limiting and security response headers
+- retained collaboration, destination resolver, offline state, automatic practical information and the iPhone More bottom sheet
+
+Not faked: exact live driving/transit durations, guaranteed push when iOS fully terminates the PWA, unlimited media storage, OCR receipt scanning and native App Store/Play Store binaries. Those require provider credentials, object storage, background push infrastructure or native packaging.
+
+## Waypoint 8.0.1 Final QA Release
+
+This is a QA-hardening release based on a second audit of Waypoint 8.0.0.
+
+Corrections include:
+- Calendar now correctly activates the More navigation state and localizes weekday labels.
+- Schedule conflicts distinguish itinerary activities from bookings and support optional booking duration/travel buffers.
+- Booking cards display schedule-duration metadata.
+- Daily map routes cap intermediate waypoints.
+- Smart packing avoids assuming the user's home country.
+- Diagnostics are more robust and display the installed Waypoint version.
+- Rate limiting targets API endpoints instead of static PWA assets, with a tighter destination-search limit.
+- Public health metadata no longer exposes collaboration room counts.
+- Security headers now include a Content-Security-Policy compatible with WeatherAPI, GIPHY/media and Google Maps embeds.
+- All previous destination resolver, collaboration, viewer/editor permissions, chat, automatic practical information, PWA safe-area behavior and iPhone More sheet remain intact.

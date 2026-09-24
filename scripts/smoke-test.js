@@ -47,7 +47,7 @@ async function sseNext(id,key){
     r=await fetch(base+'/manifest.webmanifest');
     results.push(['manifest',r.ok&&(await r.json()).name.includes('Waypoint')]);
     r=await fetch(base+'/health');
-    results.push(['health',r.ok&&(await r.json()).version==='7.0.6']);
+    results.push(['health',r.ok&&(await r.json()).version==='8.0.1']);
 
     const id='trip-test',key='secret-edit-key',viewKey='secret-view-key';
     r=await fetch(base+`/api/trips/${id}`,{method:'PUT',headers:{'content-type':'application/json','x-edit-key':key,'x-view-key':viewKey},body:JSON.stringify({clientRevision:0,data:{waypointLive:1,trip:{name:'QA Trip'},days:[],bookings:[]}})});
@@ -190,6 +190,20 @@ r=await fetch(base+'/api/giphy-config');
     results.push(['removed participant write blocked',r.status===403]);
     r=await fetch(base+`/api/trips/${revokeTrip}`,{method:'PUT',headers:{'content-type':'application/json','x-edit-key':revokeEdit},body:JSON.stringify({clientRevision:1,data:{waypointLive:3,trip:{name:'Missing participant should fail'},days:[],bookings:[]}})});
     results.push(['missing participant write blocked',r.status===403]);
+
+
+    // V8.0.1: security headers and health privacy.
+    r=await fetch(base+'/health');
+    const healthQa=await r.json();
+    results.push(['V8 health version',r.ok&&healthQa.version==='8.0.1']);
+    results.push(['health hides room count',!Object.prototype.hasOwnProperty.call(healthQa,'rooms')]);
+    results.push(['security nosniff',String(r.headers.get('x-content-type-options')||'').toLowerCase()==='nosniff']);
+    results.push(['security CSP',Boolean(r.headers.get('content-security-policy'))]);
+
+    // API rate limiting should not interfere with ordinary traffic.
+    let normalRateOk=true;
+    for(let i=0;i<5;i++){const rr=await fetch(base+'/health');if(!rr.ok)normalRateOk=false;}
+    results.push(['normal API traffic allowed',normalRateOk]);
 
 
 
