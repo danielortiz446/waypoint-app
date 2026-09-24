@@ -238,3 +238,11 @@ Exact server push while an iPhone PWA is fully terminated, real-time driving/tra
 - Weather responses now include resolved city/region/country, timezone and practical country metadata where Waypoint has a verified built-in profile.
 - Practical information uses automatic destination data unless the traveler manually enters an override.
 - Trip accounting currency remains separate from local destination currency to avoid silently changing an existing budget.
+
+## Waypoint 7.0.2 fixes
+
+- Replaced the More `<details>` dropdown with a JavaScript-controlled menu rendered outside the horizontally scrolling navigation container. This avoids the menu being clipped or failing to open in Safari/PWA layouts.
+- Practical information is now conservative: WeatherAPI provides the detected location and timezone; country profiles may provide local currency and language; emergency and power/plug information are manual-only unless explicitly entered by the traveler.
+- Local destination currency no longer falls back to the trip accounting currency.
+- Country-only destination normalization is stricter, including `Japan`, `Japón` and `Japon` → `Tokyo, Japan`.
+- The Travel view displays exactly how an ambiguous destination was interpreted.

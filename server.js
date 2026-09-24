@@ -217,38 +217,38 @@ const COUNTRY_ALIAS_QUERIES={
   'india':'New Delhi, India'
 };
 const PRACTICAL_BY_COUNTRY={
-  'Japan':{currency:'JPY',language:'Japanese / 日本語',emergency:'110 Police · 119 Fire/Ambulance',power:'Type A/B · 100V'},
-  'Colombia':{currency:'COP',language:'Spanish',emergency:'123',power:'Type A/B · 110V'},
-  'United States of America':{currency:'USD',language:'English',emergency:'911',power:'Type A/B · 120V'},
-  'United States':{currency:'USD',language:'English',emergency:'911',power:'Type A/B · 120V'},
-  'Spain':{currency:'EUR',language:'Spanish',emergency:'112',power:'Type C/F · 230V'},
-  'France':{currency:'EUR',language:'French',emergency:'112',power:'Type C/E · 230V'},
-  'Italy':{currency:'EUR',language:'Italian',emergency:'112',power:'Type C/F/L · 230V'},
-  'Mexico':{currency:'MXN',language:'Spanish',emergency:'911',power:'Type A/B · 127V'},
-  'Brazil':{currency:'BRL',language:'Portuguese',emergency:'190 Police · 192 Ambulance',power:'Type C/N · 127/220V'},
-  'Canada':{currency:'CAD',language:'English / French',emergency:'911',power:'Type A/B · 120V'},
-  'United Kingdom':{currency:'GBP',language:'English',emergency:'999 / 112',power:'Type G · 230V'},
-  'Germany':{currency:'EUR',language:'German',emergency:'112',power:'Type C/F · 230V'},
-  'Portugal':{currency:'EUR',language:'Portuguese',emergency:'112',power:'Type C/F · 230V'},
-  'Netherlands':{currency:'EUR',language:'Dutch',emergency:'112',power:'Type C/F · 230V'},
-  'Switzerland':{currency:'CHF',language:'German / French / Italian',emergency:'112',power:'Type C/J · 230V'},
-  'Argentina':{currency:'ARS',language:'Spanish',emergency:'911',power:'Type C/I · 220V'},
-  'Chile':{currency:'CLP',language:'Spanish',emergency:'133 Police · 131 Ambulance',power:'Type C/L · 220V'},
-  'Peru':{currency:'PEN',language:'Spanish',emergency:'105 Police · 116 Fire',power:'Type A/B/C · 220V'},
-  'Ecuador':{currency:'USD',language:'Spanish',emergency:'911',power:'Type A/B · 120V'},
-  'Dominican Republic':{currency:'DOP',language:'Spanish',emergency:'911',power:'Type A/B · 120V'},
-  'Costa Rica':{currency:'CRC',language:'Spanish',emergency:'911',power:'Type A/B · 120V'},
-  'Panama':{currency:'PAB / USD',language:'Spanish',emergency:'911',power:'Type A/B · 120V'},
-  'Australia':{currency:'AUD',language:'English',emergency:'000',power:'Type I · 230V'},
-  'New Zealand':{currency:'NZD',language:'English / Māori',emergency:'111',power:'Type I · 230V'},
-  'South Korea':{currency:'KRW',language:'Korean',emergency:'112 Police · 119 Fire/Ambulance',power:'Type C/F · 220V'},
-  'China':{currency:'CNY',language:'Mandarin Chinese',emergency:'110 Police · 120 Ambulance',power:'Type A/C/I · 220V'},
-  'Thailand':{currency:'THB',language:'Thai',emergency:'191 Police · 1669 Ambulance',power:'Type A/B/C/O · 230V'},
-  'India':{currency:'INR',language:'Hindi / English',emergency:'112',power:'Type C/D/M · 230V'}
+  'Japan':{currency:'JPY',language:'Japanese'},
+  'Colombia':{currency:'COP',language:'Spanish'},
+  'United States of America':{currency:'USD',language:'English'},
+  'United States':{currency:'USD',language:'English'},
+  'Spain':{currency:'EUR',language:'Spanish'},
+  'France':{currency:'EUR',language:'French'},
+  'Italy':{currency:'EUR',language:'Italian'},
+  'Mexico':{currency:'MXN',language:'Spanish'},
+  'Brazil':{currency:'BRL',language:'Portuguese'},
+  'Canada':{currency:'CAD',language:'English / French'},
+  'United Kingdom':{currency:'GBP',language:'English'},
+  'Germany':{currency:'EUR',language:'German'},
+  'Portugal':{currency:'EUR',language:'Portuguese'},
+  'Netherlands':{currency:'EUR',language:'Dutch'},
+  'Switzerland':{currency:'CHF',language:'German / French / Italian'},
+  'Argentina':{currency:'ARS',language:'Spanish'},
+  'Chile':{currency:'CLP',language:'Spanish'},
+  'Peru':{currency:'PEN',language:'Spanish'},
+  'Ecuador':{currency:'USD',language:'Spanish'},
+  'Dominican Republic':{currency:'DOP',language:'Spanish'},
+  'Costa Rica':{currency:'CRC',language:'Spanish'},
+  'Panama':{currency:'PAB / USD',language:'Spanish'},
+  'Australia':{currency:'AUD',language:'English'},
+  'New Zealand':{currency:'NZD',language:'English / Māori'},
+  'South Korea':{currency:'KRW',language:'Korean'},
+  'China':{currency:'CNY',language:'Mandarin Chinese'},
+  'Thailand':{currency:'THB',language:'Thai'},
+  'India':{currency:'INR',language:'Hindi / English'}
 };
 function normalizeDestinationQuery(location){
   const raw=String(location||'').trim();
-  const key=raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const key=raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/^(country|pais|país)\s*[:\-]?\s*/,'').replace(/[.!]$/,'').trim();
   return COUNTRY_ALIAS_QUERIES[key]||raw;
 }
 
@@ -256,7 +256,7 @@ const server=http.createServer(async(req,res)=>{
   try{
     const u=new URL(req.url,'http://localhost');
 
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'7.0.1',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'7.0.2',time:new Date().toISOString()});
 
     if(req.method==='GET'&&u.pathname==='/api/fx/rate'){
       const from=String(u.searchParams.get('from')||'').trim().toUpperCase();
@@ -344,7 +344,7 @@ const server=http.createServer(async(req,res)=>{
           latitude:loc.lat,
           longitude:loc.lon,
           localtime:loc.localtime||'',
-          practical:PRACTICAL_BY_COUNTRY[loc.country]||{},
+          practical:{...(PRACTICAL_BY_COUNTRY[loc.country]||{}),country:loc.country||'',source:'country-profile'},
           current,
           forecast:days
         });
@@ -662,4 +662,4 @@ const server=http.createServer(async(req,res)=>{
   }
 });
 
-server.listen(PORT,HOST,()=>console.log(`Waypoint 7.0.1 listening on http://${HOST}:${PORT}`));
+server.listen(PORT,HOST,()=>console.log(`Waypoint 7.0.2 listening on http://${HOST}:${PORT}`));

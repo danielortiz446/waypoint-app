@@ -47,7 +47,7 @@ async function sseNext(id,key){
     r=await fetch(base+'/manifest.webmanifest');
     results.push(['manifest',r.ok&&(await r.json()).name.includes('Waypoint')]);
     r=await fetch(base+'/health');
-    results.push(['health',r.ok&&(await r.json()).version==='7.0.1']);
+    results.push(['health',r.ok&&(await r.json()).version==='7.0.2']);
 
     const id='trip-test',key='secret-edit-key',viewKey='secret-view-key';
     r=await fetch(base+`/api/trips/${id}`,{method:'PUT',headers:{'content-type':'application/json','x-edit-key':key,'x-view-key':viewKey},body:JSON.stringify({clientRevision:0,data:{waypointLive:1,trip:{name:'QA Trip'},days:[],bookings:[]}})});
