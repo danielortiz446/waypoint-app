@@ -316,3 +316,12 @@ Corrections include:
 - Removed the accidental duplicate Calendar entry inside the iPhone/compact More menu.
 - The Today view still keeps its intentional Calendar quick-action button.
 - Verified that the More menu itself contains each destination tab exactly once.
+
+## Waypoint 8.0.3 Activity field clarity
+
+- Replaced the two unlabeled itinerary numbers with clearly labeled controls:
+  - ⏱ Duración / Duration
+  - 🚗 Traslado / Travel
+- Each value visibly includes the `min` unit.
+- Added a short explanation directly under the activity-entry row.
+- On iPhone and narrow screens, Activity and Place use full width, while Duration and Travel sit beneath them in two clear columns.

@@ -895,6 +895,80 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   .calendar-cell .event-label{font-size:8px}
 }
 
+
+/* Waypoint 8.0.3 activity scheduling field clarity */
+.activity-meta-field{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  min-width:112px;
+  flex:0 0 118px;
+}
+.activity-mini-label{
+  font-size:9px;
+  line-height:1;
+  color:var(--muted);
+  font-weight:800;
+  letter-spacing:.02em;
+  white-space:nowrap;
+}
+.activity-number{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  min-height:38px;
+  padding:0 9px;
+  border-radius:9px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.035);
+}
+.activity-number input{
+  width:58px!important;
+  min-width:0!important;
+  max-width:58px!important;
+  padding:0!important;
+  border:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.activity-number input:focus{outline:none}
+.activity-unit{
+  font-size:9px;
+  color:var(--muted);
+  font-weight:800;
+  white-space:nowrap;
+}
+@media(max-width:760px){
+  .add-act-row{
+    display:grid!important;
+    grid-template-columns:1fr 1fr;
+    gap:8px!important;
+    align-items:end;
+  }
+  .add-act-row .time12-picker,
+  .add-act-row .title-in,
+  .add-act-row .place-in{
+    grid-column:1/-1;
+    width:100%!important;
+    max-width:none!important;
+  }
+  .activity-meta-field{
+    min-width:0;
+    width:100%;
+    flex:auto;
+  }
+  .activity-number{min-height:42px}
+  .activity-number input{
+    width:100%!important;
+    max-width:none!important;
+    flex:1;
+  }
+  .add-act-row .btn{
+    grid-column:1/-1;
+    width:100%;
+  }
+}
+
 </style>
 </head>
 <body><a class="skip-link" href="#app">Skip to content</a>
@@ -3848,10 +3922,23 @@ function dayCard(tr,d,i,total){
       ${time12PickerHtml(`at-${d.id}`)}
       <input class="title-in" id="ai-${d.id}" placeholder="${t.itinerary.activity}" onkeydown="if(event.key==='Enter')addActivity('${tr.id}','${d.id}')">
       <input class="place-in" id="al-${d.id}" placeholder="${state.lang==='es'?'Lugar / dirección (opcional)':'Place / address (optional)'}" onkeydown="if(event.key==='Enter')addActivity('${tr.id}','${d.id}')">
-      <input id="adur-${d.id}" type="number" min="0" max="1440" value="60" title="${state.lang==='es'?'Duración (min)':'Duration (min)'}" style="max-width:92px" placeholder="60 min">
-      <input id="abuf-${d.id}" type="number" min="0" max="360" value="15" title="${state.lang==='es'?'Traslado después (min)':'Travel after (min)'}" style="max-width:92px" placeholder="15 min">
+      <div class="activity-meta-field">
+        <label class="activity-mini-label" for="adur-${d.id}">⏱ ${state.lang==='es'?'Duración':'Duration'}</label>
+        <div class="activity-number">
+          <input id="adur-${d.id}" type="number" min="0" max="1440" value="60" inputmode="numeric" aria-label="${state.lang==='es'?'Duración de la actividad en minutos':'Activity duration in minutes'}">
+          <span class="activity-unit">min</span>
+        </div>
+      </div>
+      <div class="activity-meta-field">
+        <label class="activity-mini-label" for="abuf-${d.id}">🚗 ${state.lang==='es'?'Traslado':'Travel'}</label>
+        <div class="activity-number">
+          <input id="abuf-${d.id}" type="number" min="0" max="360" value="15" inputmode="numeric" aria-label="${state.lang==='es'?'Tiempo de traslado después de la actividad en minutos':'Travel time after activity in minutes'}">
+          <span class="activity-unit">min</span>
+        </div>
+      </div>
       <button class="btn btn-brass btn-sm" onclick="addActivity('${tr.id}','${d.id}')">${t.itinerary.addActivity}</button>
     </div>
+    <div class="field-hint" style="margin-top:6px">⏱ ${state.lang==='es'?'Duración = cuánto dura la actividad':'Duration = how long the activity lasts'} · 🚗 ${state.lang==='es'?'Traslado = margen para llegar al próximo lugar':'Travel = buffer to reach the next place'}</div>
   </div>`;
 }
 
@@ -4471,7 +4558,7 @@ function diagnosticsHtml(){
 function viewSettings(){
   const t=tt();
   return `
-    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v8.0.2</div></div></div>
+    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v8.0.3</div></div></div>
     <div class="panel">
       <h3 style="margin:0 0 12px;font-size:16px;color:var(--paper);">${t.settings.account}</h3>
       <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px;">
@@ -4494,7 +4581,7 @@ function viewSettings(){
       </div>
       <div class="field" style="margin-top:16px;max-width:280px;"><label>${t.settings.defaultCurrency}</label>${currencySelectHtml('pf-currency', state.profile.currency||'USD')}</div>
     </div>
-    <div class="panel"><h3 style="margin:0 0 8px;font-size:16px;color:var(--paper);">🩺 ${state.lang==='es'?'Diagnóstico':'Diagnostics'}</h3><p class="field-hint">${state.lang==='es'?'Comprueba conexión, servidor e integraciones principales.':'Check connection, server and core integrations.'}</p>${diagnosticsHtml()}<div class="participant-last" style="margin-top:10px">Waypoint v8.0.2 · ${state.trips.length} ${state.lang==='es'?'viaje(s) local(es)':'local trip(s)'}</div></div>
+    <div class="panel"><h3 style="margin:0 0 8px;font-size:16px;color:var(--paper);">🩺 ${state.lang==='es'?'Diagnóstico':'Diagnostics'}</h3><p class="field-hint">${state.lang==='es'?'Comprueba conexión, servidor e integraciones principales.':'Check connection, server and core integrations.'}</p>${diagnosticsHtml()}<div class="participant-last" style="margin-top:10px">Waypoint v8.0.3 · ${state.trips.length} ${state.lang==='es'?'viaje(s) local(es)':'local trip(s)'}</div></div>
     <div class="panel">
       <h3 style="margin:0 0 6px;font-size:16px;color:var(--paper);">${t.settings.data}</h3>
       <p style="font-size:12px;color:var(--muted);margin:0 0 12px;">${t.settings.dataSub}</p>
@@ -4889,7 +4976,7 @@ document.addEventListener('change', (e)=>{
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('/service-worker.js?v=8.0.2',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('/service-worker.js?v=8.0.3',{updateViaCache:'none'});
       await reg.update();
       let reloading=false;
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
