@@ -310,3 +310,9 @@ Corrections include:
 - Public health metadata no longer exposes collaboration room counts.
 - Security headers now include a Content-Security-Policy compatible with WeatherAPI, GIPHY/media and Google Maps embeds.
 - All previous destination resolver, collaboration, viewer/editor permissions, chat, automatic practical information, PWA safe-area behavior and iPhone More sheet remain intact.
+
+## Waypoint 8.0.2 Calendar navigation fix
+
+- Removed the accidental duplicate Calendar entry inside the iPhone/compact More menu.
+- The Today view still keeps its intentional Calendar quick-action button.
+- Verified that the More menu itself contains each destination tab exactly once.

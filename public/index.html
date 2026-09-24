@@ -3026,7 +3026,6 @@ function viewTripDetail(){
           <button class="${ui.tripSubTab==='polls'?'active':''}" onclick="setTripSubTab('polls')">☷ ${state.lang==='es'?'Encuestas':'Polls'}</button>
           <button class="${ui.tripSubTab==='activity'?'active':''}" onclick="setTripSubTab('activity')">◴ ${state.lang==='es'?'Actividad':'Activity'}</button>
           <button class="${ui.tripSubTab==='calendar'?'active':''}" onclick="setTripSubTab('calendar')">📅 ${state.lang==='es'?'Calendario':'Calendar'}</button>
-            <button class="${ui.tripSubTab==='calendar'?'active':''}" onclick="setTripSubTab('calendar')">📅 ${state.lang==='es'?'Calendario':'Calendar'}</button>
           <button class="${ui.tripSubTab==='notes'?'active':''}" onclick="setTripSubTab('notes')">📄 ${t.tabs.notes}</button>
           <button class="${ui.tripSubTab==='recap'?'active':''}" onclick="setTripSubTab('recap')">★ ${state.lang==='es'?'Resumen final':'Recap'}</button>
         </div>
@@ -4472,7 +4471,7 @@ function diagnosticsHtml(){
 function viewSettings(){
   const t=tt();
   return `
-    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v8.0.1</div></div></div>
+    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v8.0.2</div></div></div>
     <div class="panel">
       <h3 style="margin:0 0 12px;font-size:16px;color:var(--paper);">${t.settings.account}</h3>
       <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px;">
@@ -4495,7 +4494,7 @@ function viewSettings(){
       </div>
       <div class="field" style="margin-top:16px;max-width:280px;"><label>${t.settings.defaultCurrency}</label>${currencySelectHtml('pf-currency', state.profile.currency||'USD')}</div>
     </div>
-    <div class="panel"><h3 style="margin:0 0 8px;font-size:16px;color:var(--paper);">🩺 ${state.lang==='es'?'Diagnóstico':'Diagnostics'}</h3><p class="field-hint">${state.lang==='es'?'Comprueba conexión, servidor e integraciones principales.':'Check connection, server and core integrations.'}</p>${diagnosticsHtml()}<div class="participant-last" style="margin-top:10px">Waypoint v8.0.1 · ${state.trips.length} ${state.lang==='es'?'viaje(s) local(es)':'local trip(s)'}</div></div>
+    <div class="panel"><h3 style="margin:0 0 8px;font-size:16px;color:var(--paper);">🩺 ${state.lang==='es'?'Diagnóstico':'Diagnostics'}</h3><p class="field-hint">${state.lang==='es'?'Comprueba conexión, servidor e integraciones principales.':'Check connection, server and core integrations.'}</p>${diagnosticsHtml()}<div class="participant-last" style="margin-top:10px">Waypoint v8.0.2 · ${state.trips.length} ${state.lang==='es'?'viaje(s) local(es)':'local trip(s)'}</div></div>
     <div class="panel">
       <h3 style="margin:0 0 6px;font-size:16px;color:var(--paper);">${t.settings.data}</h3>
       <p style="font-size:12px;color:var(--muted);margin:0 0 12px;">${t.settings.dataSub}</p>
@@ -4890,7 +4889,7 @@ document.addEventListener('change', (e)=>{
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('/service-worker.js?v=8.0.1',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('/service-worker.js?v=8.0.2',{updateViaCache:'none'});
       await reg.update();
       let reloading=false;
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
