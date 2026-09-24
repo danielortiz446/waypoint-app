@@ -399,3 +399,14 @@ Intentionally not faked:
 - On narrow mobile screens it automatically becomes an icon-only 30px button, with accessible title/aria-label retained.
 - Added a tooltip/accessibility label to the day Delete button.
 - No itinerary behavior changed; this is a responsive UI correction on top of V10.0.1.
+
+## Waypoint 10.0.3 — Mandatory Privacy & Use Consent
+
+- Added a mandatory first-use privacy/use consent gate.
+- The app remains blocked until the user checks the acceptance box and selects “Accept and continue.”
+- Acceptance is stored only on the current device under legal version `1.0`, with an acceptance timestamp.
+- If the legal version changes in a future release, Waypoint can require consent again.
+- The notice accurately distinguishes local device storage, live-collaboration/server storage, external providers, and sharing-link responsibility.
+- Added direct links to Privacy Policy and Terms of Use.
+- Added a Settings panel showing legal version and acceptance timestamp.
+- The existing V10.0.2 Copy button fix and all V10 smart/offline/security features remain intact.

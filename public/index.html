@@ -1056,6 +1056,121 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   }
 }
 
+
+/* Waypoint 10.0.3 — mandatory legal consent gate */
+.legal-gate{
+  position:fixed;
+  inset:0;
+  z-index:100000;
+  background:rgba(5,18,28,.94);
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+}
+.legal-card{
+  width:min(720px,100%);
+  max-height:min(88vh,820px);
+  display:flex;
+  flex-direction:column;
+  border-radius:20px;
+  overflow:hidden;
+  background:linear-gradient(180deg,rgba(17,55,60,.98),rgba(9,32,45,.99));
+  border:1px solid rgba(220,180,60,.28);
+  box-shadow:0 24px 80px rgba(0,0,0,.45);
+}
+.legal-head{
+  padding:20px 22px 14px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+.legal-head h2{
+  margin:0;
+  color:var(--paper);
+  font-size:21px;
+}
+.legal-head p{
+  margin:6px 0 0;
+  color:var(--muted);
+  font-size:11px;
+  line-height:1.5;
+}
+.legal-body{
+  overflow:auto;
+  padding:18px 22px;
+  color:var(--paper);
+  font-size:12px;
+  line-height:1.62;
+}
+.legal-body p{margin:0 0 12px}
+.legal-body strong{color:#fff}
+.legal-warning{
+  padding:10px 11px;
+  border-radius:10px;
+  background:rgba(230,170,50,.08);
+  border:1px solid rgba(230,170,50,.18);
+}
+.legal-check-row{
+  display:flex;
+  gap:9px;
+  align-items:flex-start;
+  padding:12px;
+  border-radius:11px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+  margin-top:14px;
+}
+.legal-check-row input{
+  width:18px;
+  height:18px;
+  margin-top:1px;
+  flex:0 0 auto;
+}
+.legal-links{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-top:12px;
+}
+.legal-links a{
+  color:#e3bd3c;
+  font-size:10px;
+  text-decoration:none;
+}
+.legal-actions{
+  padding:14px 22px max(14px,env(safe-area-inset-bottom));
+  border-top:1px solid rgba(255,255,255,.08);
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  background:rgba(5,20,30,.72);
+}
+.legal-actions .btn{min-height:42px}
+.legal-actions .btn[disabled]{
+  opacity:.38;
+  cursor:not-allowed;
+  filter:grayscale(.4);
+}
+.legal-declined{
+  display:none;
+  margin-top:10px;
+  color:#ffb09e;
+  font-size:10px;
+  line-height:1.5;
+}
+@media(max-width:600px){
+  .legal-gate{padding:0;align-items:flex-end}
+  .legal-card{
+    width:100%;
+    max-height:94dvh;
+    border-radius:18px 18px 0 0;
+  }
+  .legal-head,.legal-body,.legal-actions{padding-left:16px;padding-right:16px}
+  .legal-actions{flex-direction:column}
+  .legal-actions .btn{width:100%}
+}
+
 </style>
 </head>
 <body><a class="skip-link" href="#app">Skip to content</a>
@@ -1222,6 +1337,92 @@ function parseMoneyInput(value){
 
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+
+const WAYPOINT_LEGAL_VERSION='1.0';
+const WAYPOINT_LEGAL_KEY='waypoint-legal-consent';
+function legalAcceptance(){
+  try{
+    const raw=localStorage.getItem(WAYPOINT_LEGAL_KEY);
+    const data=raw?JSON.parse(raw):null;
+    return data&&data.version===WAYPOINT_LEGAL_VERSION?data:null;
+  }catch(e){return null;}
+}
+function hasAcceptedLegal(){return Boolean(legalAcceptance());}
+function setLegalAcceptEnabled(){
+  const cb=document.getElementById('legal-consent-check');
+  const btn=document.getElementById('legal-accept-btn');
+  if(btn)btn.disabled=!Boolean(cb?.checked);
+  const declined=document.getElementById('legal-declined');
+  if(declined)declined.style.display='none';
+}
+function acceptWaypointLegal(){
+  const cb=document.getElementById('legal-consent-check');
+  if(!cb?.checked)return;
+  const acceptance={version:WAYPOINT_LEGAL_VERSION,acceptedAt:new Date().toISOString()};
+  try{localStorage.setItem(WAYPOINT_LEGAL_KEY,JSON.stringify(acceptance));}catch(e){}
+  document.getElementById('waypoint-legal-gate')?.remove();
+}
+function declineWaypointLegal(){
+  const declined=document.getElementById('legal-declined');
+  if(declined){
+    declined.style.display='block';
+    declined.textContent=state.lang==='es'
+      ?'Debes aceptar el Aviso de Privacidad y Uso para utilizar Waypoint.'
+      :'You must accept the Privacy & Use Notice to use Waypoint.';
+  }
+}
+function legalGateHtml(){
+  const es=state.lang==='es';
+  return `<div id="waypoint-legal-gate" class="legal-gate" role="dialog" aria-modal="true" aria-labelledby="legal-title">
+    <div class="legal-card">
+      <div class="legal-head">
+        <h2 id="legal-title">🛡 ${es?'Aviso de Privacidad y Uso de Waypoint':'Waypoint Privacy & Use Notice'}</h2>
+        <p>${es?'Antes de continuar, lee y acepta este aviso.':'Before continuing, please read and accept this notice.'}</p>
+      </div>
+      <div class="legal-body">
+        <p><strong>${es?'Waypoint está diseñado para ayudarte a organizar y gestionar tus viajes. No requiere crear una cuenta ni iniciar sesión para utilizar sus funciones principales.':'Waypoint is designed to help you organize and manage your trips. Its core features do not require creating an account or signing in.'}</strong></p>
+
+        <p>${es?'La información que ingreses, como itinerarios, reservas, gastos, listas de equipaje, notas, contactos u otros datos relacionados con tu viaje, se almacena principalmente en tu dispositivo para permitir el funcionamiento de la aplicación, incluso cuando no tengas conexión a Internet.':'Information you enter, such as itineraries, reservations, expenses, packing lists, notes, contacts, or other trip-related data, is stored primarily on your device so the application can function, including while offline.'}</p>
+
+        <p>${es?'Si decides utilizar funciones opcionales como colaboración en vivo, chat, compartir viajes o almacenar archivos compartidos, cierta información necesaria para prestar esas funciones puede almacenarse temporal o persistentemente en los servidores utilizados por Waypoint y podrá ser accesible por las personas a quienes tú decidas dar acceso.':'If you choose optional features such as live collaboration, chat, trip sharing, or shared-file storage, certain information required to provide those features may be stored temporarily or persistently on servers used by Waypoint and may be accessible to people you choose to grant access to.'}</p>
+
+        <p><strong>${es?'Waypoint no vende tu información personal ni utiliza los datos de tus viajes con fines publicitarios o de elaboración de perfiles personales.':'Waypoint does not sell your personal information or use your trip data for advertising or personal profiling.'}</strong></p>
+
+        <p>${es?'Algunas funciones, como clima, búsqueda de destinos, mapas, rutas, tráfico, tipos de cambio o GIFs, pueden requerir servicios externos. Cuando utilizas estas funciones, se puede enviar únicamente la información necesaria para realizar la consulta, como un destino, ubicación escrita, coordenadas, ruta o moneda, al proveedor correspondiente.':'Some features, such as weather, destination search, maps, routing, traffic, exchange rates, or GIFs, may require external services. When you use these features, only the information needed to perform the request—such as a destination, written location, coordinates, route, or currency—may be sent to the applicable provider.'}</p>
+
+        <div class="legal-warning"><strong>${es?'No introduzcas información extremadamente sensible':'Do not enter extremely sensitive information'}</strong>${es?', como contraseñas, números completos de tarjetas de crédito, números de cuentas bancarias, credenciales de acceso, números de Seguro Social u otra información confidencial similar.':', such as passwords, full credit-card numbers, bank account numbers, login credentials, Social Security numbers, or similar confidential information.'}</div>
+
+        <p style="margin-top:12px">${es?'Los enlaces para compartir un viaje pueden proporcionar acceso a la información de ese viaje. Tú eres responsable de compartir esos enlaces únicamente con personas de confianza y de revocar su acceso cuando ya no sea necesario.':'Trip-sharing links may provide access to that trip’s information. You are responsible for sharing those links only with trusted people and revoking access when it is no longer needed.'}</p>
+
+        <p>${es?'Waypoint intenta mantener la información disponible y sincronizada, pero no garantiza que los datos, rutas, clima, horarios, tipos de cambio, información de terceros o servicios externos sean siempre exactos, completos o estén disponibles. Antes de tomar decisiones importantes durante un viaje, verifica la información directamente con la aerolínea, hotel, proveedor de transporte, autoridad correspondiente u otra fuente oficial.':'Waypoint attempts to keep information available and synchronized, but does not guarantee that data, routes, weather, schedules, exchange rates, third-party information, or external services will always be accurate, complete, or available. Before making important travel decisions, verify information directly with the airline, hotel, transportation provider, relevant authority, or another official source.'}</p>
+
+        <p>${es?'Al seleccionar “Acepto y continuar”, confirmas que has leído este aviso, comprendes cómo Waypoint utiliza y almacena la información necesaria para funcionar y aceptas utilizar la aplicación bajo estas condiciones.':'By selecting “Accept and continue,” you confirm that you have read this notice, understand how Waypoint uses and stores information needed to operate, and agree to use the application under these conditions.'}</p>
+
+        <label class="legal-check-row">
+          <input id="legal-consent-check" type="checkbox" onchange="setLegalAcceptEnabled()">
+          <span>${es?'He leído y acepto el Aviso de Privacidad y Uso de Waypoint.':'I have read and accept the Waypoint Privacy & Use Notice.'}</span>
+        </label>
+
+        <div class="legal-links">
+          <a href="/privacy.html" target="_blank" rel="noopener">${es?'Política de Privacidad':'Privacy Policy'}</a>
+          <a href="/terms.html" target="_blank" rel="noopener">${es?'Términos de Uso':'Terms of Use'}</a>
+        </div>
+        <div id="legal-declined" class="legal-declined"></div>
+      </div>
+      <div class="legal-actions">
+        <button id="legal-accept-btn" class="btn btn-brass btn-block" disabled onclick="acceptWaypointLegal()">${es?'Acepto y continuar':'Accept and continue'}</button>
+        <button class="btn btn-ghost" onclick="declineWaypointLegal()">${es?'No acepto':'I do not accept'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+function ensureLegalGate(){
+  const old=document.getElementById('waypoint-legal-gate');
+  if(hasAcceptedLegal()){old?.remove();return;}
+  if(!old)document.body.insertAdjacentHTML('beforeend',legalGateHtml());
+}
+
 
 /* ===================== storage ===================== */
 if (typeof window.storage === 'undefined') {
@@ -1556,6 +1757,8 @@ function render(){
   else if(ui.screen==='settings') main.innerHTML = viewSettings();
   renderModal();
   renderFab();
+
+  setTimeout(ensureLegalGate,0);
 }
 function setLang(l){ state.lang=l; document.documentElement.lang=l; saveState(); render(); }
 function goHome(){ ui.tripMoreOpen=false;setTripMoreBodyState(false);ui.screen='home';ui.currentTripId=null;render(); }
@@ -5022,7 +5225,7 @@ function diagnosticsHtml(){
 function viewSettings(){
   const t=tt();
   return `
-    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v10.0.2</div></div></div>
+    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v10.0.3</div></div></div>
     <div class="panel">
       <h3 style="margin:0 0 12px;font-size:16px;color:var(--paper);">${t.settings.account}</h3>
       <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px;">
@@ -5045,8 +5248,15 @@ function viewSettings(){
       </div>
       <div class="field" style="margin-top:16px;max-width:280px;"><label>${t.settings.defaultCurrency}</label>${currencySelectHtml('pf-currency', state.profile.currency||'USD')}</div>
     </div>
+    <div class="panel">
+      <h3 style="margin:0 0 8px;color:var(--paper)">🛡 ${state.lang==='es'?'Privacidad y consentimiento':'Privacy & consent'}</h3>
+      <p class="field-hint">${state.lang==='es'?'Aceptación guardada únicamente en este dispositivo.':'Acceptance is stored only on this device.'}</p>
+      <div class="diag-row"><span>${state.lang==='es'?'Versión legal':'Legal version'}</span><span class="status-ok">✓ ${WAYPOINT_LEGAL_VERSION}</span></div>
+      <div class="diag-row"><span>${state.lang==='es'?'Aceptado':'Accepted'}</span><span>${legalAcceptance()?.acceptedAt?escapeHtml(new Date(legalAcceptance().acceptedAt).toLocaleString()):(state.lang==='es'?'No':'No')}</span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><a class="btn btn-ghost btn-sm" href="/privacy.html" target="_blank" rel="noopener">${state.lang==='es'?'Política de Privacidad':'Privacy Policy'}</a><a class="btn btn-ghost btn-sm" href="/terms.html" target="_blank" rel="noopener">${state.lang==='es'?'Términos de Uso':'Terms of Use'}</a></div>
+    </div>
     <div class="panel"><h3 style="margin:0 0 8px;color:var(--paper)">☁ ${state.lang==='es'?'Offline y copias locales':'Offline & local backups'}</h3><p class="field-hint">${state.lang==='es'?'Waypoint guarda automáticamente hasta 5 copias recientes en este dispositivo.':'Waypoint automatically keeps up to 5 recent backups on this device.'}</p><div class="backup-list">${(state.offlineSnapshots||[]).map(s=>`<div class="backup-row"><span>${escapeHtml(new Date(s.at).toLocaleString())}</span><button class="btn btn-ghost btn-sm" onclick="restoreSnapshot('${s.id}')">${state.lang==='es'?'Restaurar':'Restore'}</button></div>`).join('')||`<div class="field-hint">${state.lang==='es'?'Aún no hay copias':'No backups yet'}</div>`}</div></div>
-    <div class="panel"><h3 style="margin:0 0 8px;font-size:16px;color:var(--paper);">🩺 ${state.lang==='es'?'Diagnóstico':'Diagnostics'}</h3><p class="field-hint">${state.lang==='es'?'Comprueba conexión, servidor e integraciones principales.':'Check connection, server and core integrations.'}</p>${diagnosticsHtml()}<div class="participant-last" style="margin-top:10px">Waypoint v10.0.2 · ${state.trips.length} ${state.lang==='es'?'viaje(s) local(es)':'local trip(s)'}</div><div style="margin-top:12px">${integrationStatusHtml()}</div></div>
+    <div class="panel"><h3 style="margin:0 0 8px;font-size:16px;color:var(--paper);">🩺 ${state.lang==='es'?'Diagnóstico':'Diagnostics'}</h3><p class="field-hint">${state.lang==='es'?'Comprueba conexión, servidor e integraciones principales.':'Check connection, server and core integrations.'}</p>${diagnosticsHtml()}<div class="participant-last" style="margin-top:10px">Waypoint v10.0.3 · ${state.trips.length} ${state.lang==='es'?'viaje(s) local(es)':'local trip(s)'}</div><div style="margin-top:12px">${integrationStatusHtml()}</div></div>
     <div class="panel">
       <h3 style="margin:0 0 6px;font-size:16px;color:var(--paper);">${t.settings.data}</h3>
       <p style="font-size:12px;color:var(--muted);margin:0 0 12px;">${t.settings.dataSub}</p>
@@ -5452,7 +5662,7 @@ document.addEventListener('change', (e)=>{
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('/service-worker.js?v=10.0.2',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('/service-worker.js?v=10.0.3',{updateViaCache:'none'});
       await reg.update();
       let reloading=false;
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
@@ -5465,7 +5675,7 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
 }
 
 loadState();
-setTimeout(()=>{ const s=document.getElementById('splash'); if(s) s.remove(); }, 1600);
+setTimeout(()=>{ensureLegalGate();const s=document.getElementById('splash');if(s)s.remove();},1600);
 </script>
 </body>
 </html>
