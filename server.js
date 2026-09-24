@@ -174,7 +174,7 @@ const server=http.createServer(async(req,res)=>{
   try{
     const u=new URL(req.url,'http://localhost');
 
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'6.0.3',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'6.0.4',time:new Date().toISOString()});
 
     if(req.method==='GET'&&u.pathname==='/api/fx/rate'){
       const from=String(u.searchParams.get('from')||'').trim().toUpperCase();
@@ -307,7 +307,9 @@ const server=http.createServer(async(req,res)=>{
         if(!participantId||!name) return json(res,400,{error:'participant identity required'});
         if(!Array.isArray(room.participants)) room.participants=[];
         const existing=room.participants.find(p=>p.participantId===participantId);
-        const role=String(incoming.role||'editor')==='viewer'?'viewer':'editor';
+        const requestedRole=String(incoming.role||'editor');
+        const ownerKey=String(req.headers['x-owner-key']||'');
+        const role=(ownerKey&&room.ownerKeyHash&&hash(ownerKey)===room.ownerKeyHash)?'owner':requestedRole==='viewer'?'viewer':'editor';
         if(existing){ existing.name=name; existing.role=role; existing.lastSeenAt=new Date().toISOString(); }
         else room.participants.push({participantId,name,role,joinedAt:new Date().toISOString(),lastSeenAt:new Date().toISOString()});
         room.participants=room.participants.slice(-50);
@@ -509,4 +511,4 @@ const server=http.createServer(async(req,res)=>{
   }
 });
 
-server.listen(PORT,HOST,()=>console.log(`Waypoint 6.0.3 listening on http://${HOST}:${PORT}`));
+server.listen(PORT,HOST,()=>console.log(`Waypoint 6.0.4 listening on http://${HOST}:${PORT}`));

@@ -684,6 +684,18 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   }
 }
 
+
+/* participants view v6.0.4 */
+.participants-modal{max-width:560px;}
+.participant-list{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
+.participant-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;border-radius:12px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);}
+.participant-main{display:flex;align-items:center;gap:10px;min-width:0;}
+.participant-avatar{width:36px;height:36px;border-radius:999px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;background:rgba(201,162,39,.14);color:var(--brass-light);font-weight:850;}
+.participant-name{font-size:12px;font-weight:800;color:var(--paper);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.participant-last{font:9px var(--font-mono);color:var(--muted);margin-top:3px;}
+.participant-role{flex:0 0 auto;}
+.participant-summary{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px;}
+
 </style>
 </head>
 <body>
@@ -1685,7 +1697,7 @@ async function markTripChatRead(tripId){
   try{
     const r=await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}/read`,{
       method:'POST',
-      headers:{'Content-Type':'application/json','X-Access-Key':collabAccessKey(tr)},
+      headers:{'Content-Type':'application/json','X-Access-Key':collabAccessKey(tr),...(tr.ownerKey?{'X-Owner-Key':tr.ownerKey}:{})},
       body:JSON.stringify({participantId,lastMessageId:latest.id,lastReadAt:latest.createdAt})
     });
     if(r.ok){
@@ -1900,6 +1912,46 @@ function collabParticipantsText(tr){
   if(!names.length) return '';
   return names.slice(0,4).join(' · ')+(names.length>4?` +${names.length-4}`:'');
 }
+function participantDisplayRole(tr,p){
+  if(p?.role==='owner')return 'owner';
+  if(tr?.collabOwner&&p?.participantId===tr.collabParticipantId)return 'owner';
+  return p?.role==='viewer'?'viewer':'editor';
+}
+function participantRoleLabel(role,es){
+  if(role==='owner')return es?'Propietario':'Owner';
+  if(role==='viewer')return es?'Solo lectura':'Viewer';
+  return es?'Editor':'Editor';
+}
+function participantInitials(name){
+  const parts=String(name||'?').trim().split(/\s+/).filter(Boolean);
+  return (parts.slice(0,2).map(x=>x[0]).join('')||'?').toUpperCase();
+}
+function participantLastSeenLabel(value,es){
+  const ts=Date.parse(value||''); if(!Number.isFinite(ts))return es?'Sin actividad reciente':'No recent activity';
+  const diff=Math.max(0,Date.now()-ts);
+  if(diff<90000)return es?'Activo ahora':'Active now';
+  const mins=Math.floor(diff/60000);
+  if(mins<60)return es?`Hace ${mins} min`:`${mins} min ago`;
+  const hrs=Math.floor(mins/60);
+  if(hrs<24)return es?`Hace ${hrs} h`:`${hrs}h ago`;
+  const days=Math.floor(hrs/24);
+  if(days<30)return es?`Hace ${days} d`:`${days}d ago`;
+  try{return new Intl.DateTimeFormat(es?'es':'en',{month:'short',day:'numeric',year:'numeric'}).format(new Date(ts));}catch(e){return '';}
+}
+async function openTripParticipants(tripId){
+  const tr=tripById(tripId);
+  if(!tr||!tr.liveSync){showToast(state.lang==='es'?'Este viaje no tiene colaboración activa.':'This trip is not being shared.');return;}
+  ui.participantsTripId=tripId;
+  ui.modal='tripParticipants';
+  render();
+  await refreshTripParticipants(tripId);
+}
+async function refreshTripParticipants(tripId){
+  const tr=tripById(tripId); if(!tr?.liveSync)return;
+  await loadCollabParticipants(tripId);
+  if(ui.modal==='tripParticipants'&&ui.participantsTripId===tripId)render();
+}
+
 async function stopLiveCollaboration(tripId){
   const tr=tripById(tripId); if(!tr) return;
   const es=waypointLang()==='es';
@@ -2122,7 +2174,7 @@ function ensureLiveStream(tr){
     es.addEventListener('participants',async ()=>{
       try{
         await loadCollabParticipants(tr.id);
-        if(ui.modal==='tripChat') render();
+        if(ui.modal==='tripChat'||(ui.modal==='tripParticipants'&&ui.participantsTripId===tr.id)) render();
       }catch(e){}
     });
     es.addEventListener('activity',async ()=>{
@@ -2414,6 +2466,7 @@ function viewTripDetail(){
     ${tr.liveSync?`<div class="trip-global-collab">
       <div class="left"><span class="sync-dot"></span> ${state.lang==='es'?'Colaboración activa':'Live collaboration'} · <span class="role-pill">${collabRole(tr)==='owner'?(state.lang==='es'?'Propietario':'Owner'):collabRole(tr)==='viewer'?(state.lang==='es'?'Solo lectura':'Viewer'):(state.lang==='es'?'Editor':'Editor')}</span>${tr.pendingSync?` · ${state.lang==='es'?'pendiente de sincronizar':'sync pending'}`:''}${collabParticipantsText(tr)?` · 👥 ${escapeHtml(collabParticipantsText(tr))}`:''}</div>
       <div style="display:flex;gap:7px;flex-wrap:wrap;">
+        <button class="btn btn-ghost btn-sm" onclick="openTripParticipants('${tr.id}')">👥 ${state.lang==='es'?'Participantes':'Participants'}${(tr.collabParticipants||[]).length?` · ${(tr.collabParticipants||[]).length}`:''}</button>
         <button class="btn btn-ghost btn-sm" onclick="openTripChat('${tr.id}')">💬 ${state.lang==='es'?'Chat':'Chat'}${Number(tr.chatUnread||0)>0?` <span class="chat-badge">${Math.min(99,Number(tr.chatUnread||0))}</span>`:''}</button>
         <button class="btn btn-ghost btn-sm" onclick="syncTripNow('${tr.id}')">↻ ${state.lang==='es'?'Sincronizar':'Sync'}</button>
         ${tr.collabOwner?`<button class="btn btn-brass btn-sm" onclick="shareCollaborationRole('${tr.id}','editor')">✎ ${state.lang==='es'?'Compartir editor':'Share editor'}</button><button class="btn btn-ghost btn-sm" onclick="shareCollaborationRole('${tr.id}','viewer')">👁 ${state.lang==='es'?'Solo lectura':'View only'}</button>`:`<button class="btn btn-brass btn-sm" onclick="shareCollaborationRole('${tr.id}',collabRole(tr))">📤 ${state.lang==='es'?'Compartir colaboración':'Share collaboration'}</button>`}
@@ -3630,7 +3683,7 @@ function deleteDoc(tripId,docId){
 function viewSettings(){
   const t=tt();
   return `
-    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v6.0.3</div></div></div>
+    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v6.0.4</div></div></div>
     <div class="panel">
       <h3 style="margin:0 0 12px;font-size:16px;color:var(--paper);">${t.settings.account}</h3>
       <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px;">
@@ -3765,6 +3818,47 @@ function renderModal(){
         <button class="btn btn-brass btn-block" onclick="saveTripForm()">${t.common.save}</button>
         <button class="btn btn-ghost" onclick="closeModal()">${t.common.cancel}</button>
       </div>`;
+  }
+  if(ui.modal==='tripParticipants'){
+    const tr=tripById(ui.participantsTripId);
+    if(tr){
+      const es=state.lang==='es';
+      const people=Array.isArray(tr.collabParticipants)?tr.collabParticipants:[];
+      const ownerCount=people.filter(p=>participantDisplayRole(tr,p)==='owner').length;
+      const editorCount=people.filter(p=>participantDisplayRole(tr,p)==='editor').length;
+      const viewerCount=people.filter(p=>participantDisplayRole(tr,p)==='viewer').length;
+      inner=`<div>
+        <div class="section-head" style="margin-bottom:4px;">
+          <div><h3 style="margin:0;color:var(--paper);">👥 ${es?'Participantes':'Participants'}</h3><p class="sub" style="margin-top:4px;">${escapeHtml(tr.name||'')}</p></div>
+          <div style="display:flex;gap:6px;">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="refreshTripParticipants('${tr.id}')" aria-label="${es?'Actualizar participantes':'Refresh participants'}">↻</button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="closeModal()" aria-label="${es?'Cerrar':'Close'}">✕</button>
+          </div>
+        </div>
+        <div class="participant-summary">
+          ${ownerCount?`<span class="role-pill">👑 ${ownerCount} ${es?'propietario':'owner'}</span>`:''}
+          ${editorCount?`<span class="role-pill">✎ ${editorCount} ${editorCount===1?(es?'editor':'editor'):(es?'editores':'editors')}</span>`:''}
+          ${viewerCount?`<span class="role-pill">👁 ${viewerCount} ${viewerCount===1?(es?'solo lectura':'viewer'):(es?'solo lectura':'viewers')}</span>`:''}
+        </div>
+        <div class="participant-list">
+          ${people.length?people.map(p=>{
+            const role=participantDisplayRole(tr,p);
+            const isMe=p.participantId===tr.collabParticipantId;
+            return `<div class="participant-row">
+              <div class="participant-main">
+                <div class="participant-avatar">${escapeHtml(participantInitials(p.name))}</div>
+                <div style="min-width:0;">
+                  <div class="participant-name">${escapeHtml(p.name||'')}${isMe?` <span class="tag">${es?'Tú':'You'}</span>`:''}</div>
+                  <div class="participant-last">${participantLastSeenLabel(p.lastSeenAt||p.joinedAt,es)}</div>
+                </div>
+              </div>
+              <div class="participant-role"><span class="role-pill">${role==='owner'?'👑':role==='viewer'?'👁':'✎'} ${participantRoleLabel(role,es)}</span></div>
+            </div>`;
+          }).join(''):`<div class="chat-empty">${es?'Todavía no hay participantes registrados en este viaje.':'No participants are registered for this trip yet.'}</div>`}
+        </div>
+        <p class="field-hint" style="margin-top:12px;">${es?'Esta lista pertenece únicamente a este viaje compartido. Los participantes de otros viajes no aparecen aquí.':'This list belongs only to this shared trip. Participants from other trips do not appear here.'}</p>
+      </div>`;
+    }
   }
   if(ui.modal==='tripChat'){
     const tr=tripById(ui.chatTripId);
@@ -3950,7 +4044,7 @@ function renderModal(){
         <button class="btn btn-ghost" onclick="cancelConfirm()">${t.common.cancel}</button>
       </div>`;
   }
-  bg.innerHTML = `<div class="modal ${ui.modal==='tripChat'?'chat-modal':''}">${inner}</div>`;
+  bg.innerHTML = `<div class="modal ${ui.modal==='tripChat'?'chat-modal':ui.modal==='tripParticipants'?'participants-modal':''}">${inner}</div>`;
   document.body.appendChild(bg);
 }
 function closeModal(){ ui.modal=null; ui.editingTrip=null; render(); }
@@ -3963,7 +4057,7 @@ document.addEventListener('change', (e)=>{
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('/service-worker.js?v=6.0.3',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('/service-worker.js?v=6.0.4',{updateViaCache:'none'});
       await reg.update();
       let reloading=false;
       navigator.serviceWorker.addEventListener('controllerchange',()=>{

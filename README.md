@@ -213,3 +213,7 @@ If an installed iPhone PWA still shows the old Open-Meteo message after deployin
 ## Waypoint 6.0.3 iPhone installed-PWA chat fix
 
 The chat drawer now respects iOS safe areas when Waypoint is launched from the Home Screen. On mobile, the chat is inset from the top and bottom system areas, the chat header stays visible, the close button has a larger touch target, and the composer respects the bottom home-indicator area.
+
+## Waypoint 6.0.4 participant list
+
+Every shared trip now has a Participants button in the global collaboration bar. It opens a trip-scoped participant list showing display name, owner/editor/viewer role, whether the row is the current device, and recent activity. The list refreshes from the collaboration server and updates through participant SSE events. Participant lists remain isolated per shared trip.
