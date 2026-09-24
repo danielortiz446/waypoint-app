@@ -1171,6 +1171,41 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   .legal-actions .btn{width:100%}
 }
 
+
+/* Waypoint 10.0.5 — focused Travel Mode */
+.travel-focus-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 8px;border-radius:999px;
+  background:rgba(86,185,132,.10);border:1px solid rgba(86,185,132,.22);
+  color:#91ddb2;font-size:9px;font-weight:850
+}
+.travel-quick-grid{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0
+}
+.travel-quick{
+  min-height:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:5px;text-align:center;padding:9px;border-radius:12px;
+  background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);
+  color:var(--paper);cursor:pointer;text-decoration:none;font-size:10px;font-weight:780
+}
+.travel-quick .ico{font-size:20px}
+.travel-timeline{display:flex;flex-direction:column;gap:7px}
+.travel-timeline-item{
+  display:grid;grid-template-columns:72px 1fr auto;gap:9px;align-items:center;
+  padding:10px;border-radius:11px;background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.065)
+}
+.travel-timeline-item.now{border-color:rgba(210,173,59,.28);background:rgba(210,173,59,.06)}
+.travel-timeline-item.done{opacity:.55}
+.travel-timeline-time{font:10px var(--font-mono);color:var(--muted)}
+.travel-mode-exit{border-color:rgba(255,255,255,.14)!important}
+body.travel-mode-active .planning-heavy{display:none!important}
+@media(max-width:640px){
+  .travel-quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .travel-timeline-item{grid-template-columns:64px 1fr}
+  .travel-timeline-item .travel-item-action{grid-column:2}
+}
+
 </style>
 </head>
 <body><a class="skip-link" href="#app">Skip to content</a>
@@ -1660,7 +1695,15 @@ async function revokeIndividualInvite(tripId,inviteId){
   }catch(e){showToast(state.lang==='es'?'No se pudo revocar.':'Could not revoke invite.');}
 }
 function enableTravelMode(tripId){
-  const tr=tripById(tripId);if(!tr)return;tr.travelMode=!tr.travelMode;saveState();render();
+  const tr=tripById(tripId);if(!tr)return;
+  tr.travelMode=!tr.travelMode;
+  ui.tripMoreOpen=false;setTripMoreBodyState(false);
+  ui.tripSubTab=tr.travelMode?'travel':'overview';
+  document.body.classList.toggle('travel-mode-active',Boolean(tr.travelMode));
+  saveState();render();
+  showToast(tr.travelMode
+    ?(state.lang==='es'?'Modo Viaje activado · mostrando solo lo esencial':'Travel Mode on · showing essentials')
+    :(state.lang==='es'?'Modo Viaje desactivado · planificación completa disponible':'Travel Mode off · full planning available'));
 }
 
 function collabAccessKey(tr){ return tr?.editKey||tr?.viewKey||''; }
@@ -1855,6 +1898,7 @@ function tripCard(tr){
   else { num=daysBetween(today,start); lbl=t.home.daysTo; }
   const coverStyle = tr.coverPhoto? `style="background-image:linear-gradient(180deg, rgba(20,20,15,0.2), rgba(10,10,8,0.72)), url('${tr.coverPhoto}');"` : '';
   const passportMsg = passportWarning(tr);
+  document.body.classList.toggle('travel-mode-active',Boolean(tr.travelMode));
   return `
     <div class="pass" onclick="openTrip('${tr.id}')">
       <div class="pass-main ${tr.coverPhoto?'has-cover':''}" ${coverStyle}>
@@ -3488,13 +3532,22 @@ function viewTripDetail(){
     </div>
     <div class="trip-nav-wrap">
       <div class="trip-nav-primary">
-        <button class="${ui.tripSubTab==='overview'?'active':''}" onclick="setTripSubTab('overview')"><span class="ic">⌂</span>${state.lang==='es'?'Resumen':'Overview'}</button>
-        <button class="${ui.tripSubTab==='today'?'active':''}" onclick="setTripSubTab('today')"><span class="ic">☀</span>${state.lang==='es'?'Hoy':'Today'}</button>
-        <button class="${ui.tripSubTab==='travel'?'active':''}" onclick="setTripSubTab('travel')"><span class="ic">▶</span>${state.lang==='es'?'Viaje':'Travel'}</button>
-        <button class="${ui.tripSubTab==='itinerary'?'active':''}" onclick="setTripSubTab('itinerary')"><span class="ic">▥</span>${t.tabs.itinerary}</button>
-        <button class="${ui.tripSubTab==='map'?'active':''}" onclick="setTripSubTab('map')"><span class="ic">🗺</span>${state.lang==='es'?'Mapa':'Map'}</button>
-        <button class="${ui.tripSubTab==='bookings'?'active':''}" onclick="setTripSubTab('bookings')"><span class="ic">🎟</span>${state.lang==='es'?'Reservas':'Bookings'}</button>
-        <button class="trip-more-btn ${['budget','checklist','ideas','polls','activity','calendar','notes','recap'].includes(ui.tripSubTab)?'active':''}" onclick="toggleTripMoreMenu(event)" aria-expanded="${ui.tripMoreOpen?'true':'false'}"><span class="ic">•••</span>${state.lang==='es'?'Más':'More'}</button>
+        ${tr.travelMode?`
+          <button class="${ui.tripSubTab==='travel'?'active':''}" onclick="setTripSubTab('travel')"><span class="ic">▶</span>${state.lang==='es'?'Viaje':'Travel'}</button>
+          <button class="${ui.tripSubTab==='today'?'active':''}" onclick="setTripSubTab('today')"><span class="ic">☀</span>${state.lang==='es'?'Hoy':'Today'}</button>
+          <button class="${ui.tripSubTab==='map'?'active':''}" onclick="setTripSubTab('map')"><span class="ic">🗺</span>${state.lang==='es'?'Mapa':'Map'}</button>
+          <button class="${ui.tripSubTab==='bookings'?'active':''}" onclick="setTripSubTab('bookings')"><span class="ic">🎟</span>${state.lang==='es'?'Reservas':'Bookings'}</button>
+          <button class="${ui.tripSubTab==='notes'?'active':''}" onclick="setTripSubTab('notes')"><span class="ic">📄</span>${state.lang==='es'?'Docs':'Docs'}</button>
+          <button class="trip-more-btn ${['budget','checklist','calendar','recap'].includes(ui.tripSubTab)?'active':''}" onclick="toggleTripMoreMenu(event)" aria-expanded="${ui.tripMoreOpen?'true':'false'}"><span class="ic">•••</span>${state.lang==='es'?'Más':'More'}</button>
+        `:`
+          <button class="${ui.tripSubTab==='overview'?'active':''}" onclick="setTripSubTab('overview')"><span class="ic">⌂</span>${state.lang==='es'?'Resumen':'Overview'}</button>
+          <button class="${ui.tripSubTab==='today'?'active':''}" onclick="setTripSubTab('today')"><span class="ic">☀</span>${state.lang==='es'?'Hoy':'Today'}</button>
+          <button class="${ui.tripSubTab==='travel'?'active':''}" onclick="setTripSubTab('travel')"><span class="ic">▶</span>${state.lang==='es'?'Viaje':'Travel'}</button>
+          <button class="${ui.tripSubTab==='itinerary'?'active':''}" onclick="setTripSubTab('itinerary')"><span class="ic">▥</span>${t.tabs.itinerary}</button>
+          <button class="${ui.tripSubTab==='map'?'active':''}" onclick="setTripSubTab('map')"><span class="ic">🗺</span>${state.lang==='es'?'Mapa':'Map'}</button>
+          <button class="${ui.tripSubTab==='bookings'?'active':''}" onclick="setTripSubTab('bookings')"><span class="ic">🎟</span>${state.lang==='es'?'Reservas':'Bookings'}</button>
+          <button class="trip-more-btn ${['budget','checklist','ideas','polls','activity','calendar','notes','recap'].includes(ui.tripSubTab)?'active':''}" onclick="toggleTripMoreMenu(event)" aria-expanded="${ui.tripMoreOpen?'true':'false'}"><span class="ic">•••</span>${state.lang==='es'?'Más':'More'}</button>
+        `}
       </div>
       ${ui.tripMoreOpen?`
       <div class="trip-more-backdrop" onclick="closeTripMoreMenu()" aria-hidden="true"></div>
@@ -3507,11 +3560,11 @@ function viewTripDetail(){
         <div class="sheet-grid">
           <button class="${ui.tripSubTab==='budget'?'active':''}" onclick="setTripSubTab('budget')">▤ ${t.tabs.budget}</button>
           <button class="${ui.tripSubTab==='checklist'?'active':''}" onclick="setTripSubTab('checklist')">☑ ${t.tabs.checklist}</button>
-          <button class="${ui.tripSubTab==='ideas'?'active':''}" onclick="setTripSubTab('ideas')">☆ ${state.lang==='es'?'Ideas':'Ideas'}</button>
+          ${tr.travelMode?'':`<button class="${ui.tripSubTab==='ideas'?'active':''}" onclick="setTripSubTab('ideas')">☆ ${state.lang==='es'?'Ideas':'Ideas'}</button>
           <button class="${ui.tripSubTab==='polls'?'active':''}" onclick="setTripSubTab('polls')">☷ ${state.lang==='es'?'Encuestas':'Polls'}</button>
-          <button class="${ui.tripSubTab==='activity'?'active':''}" onclick="setTripSubTab('activity')">◴ ${state.lang==='es'?'Actividad':'Activity'}</button>
+          <button class="${ui.tripSubTab==='activity'?'active':''}" onclick="setTripSubTab('activity')">◴ ${state.lang==='es'?'Actividad':'Activity'}</button>`}
           <button class="${ui.tripSubTab==='calendar'?'active':''}" onclick="setTripSubTab('calendar')">📅 ${state.lang==='es'?'Calendario':'Calendar'}</button>
-          <button class="${ui.tripSubTab==='notes'?'active':''}" onclick="setTripSubTab('notes')">📄 ${t.tabs.notes}</button>
+          ${tr.travelMode?'':`<button class="${ui.tripSubTab==='notes'?'active':''}" onclick="setTripSubTab('notes')">📄 ${t.tabs.notes}</button>`}
           <button class="${ui.tripSubTab==='recap'?'active':''}" onclick="setTripSubTab('recap')">★ ${state.lang==='es'?'Resumen final':'Recap'}</button>
         </div>
       </div>`:''}
@@ -3571,6 +3624,7 @@ function setTripSubTab(tab){
 }
 function renderTripSubTab(tr){
   ensureTripCollections(tr.id);
+  if(tr.travelMode&&['overview','itinerary','ideas','polls','activity'].includes(ui.tripSubTab))ui.tripSubTab='travel';
   if(ui.tripSubTab==='overview') return viewOverviewSub(tr);
   if(ui.tripSubTab==='today') return viewTodaySub(tr);
   if(ui.tripSubTab==='travel') return viewTravelModeSub(tr);
@@ -3651,7 +3705,7 @@ function dayRouteUrl(tr,date){
 function tripTimelineItems(tr,date){
   const out=[];
   const day=(state.itineraries[tr.id]||[]).find(d=>d.date===date);
-  for(const a of (day?.activities||[])) out.push({kind:'activity',time:a.time||'',title:a.title||'',location:a.location||'',id:a.id,durationMinutes:Number(a.durationMinutes||60),travelBufferMinutes:Number(a.travelBufferMinutes||0)});
+  for(const a of (day?.activities||[])) out.push({kind:'activity',time:a.time||'',title:a.title||'',location:a.location||'',id:a.id,status:a.status||'planned',durationMinutes:Number(a.durationMinutes||60),travelBufferMinutes:Number(a.travelBufferMinutes||0)});
   for(const b of (state.bookings[tr.id]||[]).filter(b=>b.date===date)) out.push({kind:'booking',time:b.time||'',title:b.title||b.provider||'',location:b.location||'',id:b.id,durationMinutes:Number(b.durationMinutes||0),travelBufferMinutes:Number(b.travelBufferMinutes||0)});
   return out.sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99'));
 }
@@ -3745,23 +3799,79 @@ function unitConverterHtml(){
 }
 
 function viewTravelModeSub(tr){
-  const es=state.lang==='es',date=tripFocusDate(tr),items=tripTimelineItems(tr,date),next=items[0],pr=practicalForTrip(tr);
+  const es=state.lang==='es',date=tripFocusDate(tr),items=tripTimelineItems(tr,date);
+  const nowMins=new Date().getHours()*60+new Date().getMinutes();
+  const next=items.find(x=>date!==todayIsoLocal()||!x.time||(timeToMinutes(x.time)??9999)>=nowMins)||items[0];
+  const pr=practicalForTrip(tr),conflicts=scheduleConflicts(tr,date),tripCount=countdownToTrip(tr);
+  const docs=(state.tripDocs[tr.id]||[]).filter(d=>d.important||['insurance','confirmation','address','contact'].includes(d.type)).slice(0,5);
   if(!weatherForTrip(tr))setTimeout(()=>loadTripWeather(tr.id),20);
-  return `<div class="travel-mode-banner"><div><strong>${es?'Modo viaje':'Travel mode'}</strong><div class="field-hint">${es?'Prioriza lo esencial mientras estás viajando.':'Prioritizes essentials while you are traveling.'}</div></div><button class="btn btn-ghost btn-sm" onclick="enableTravelMode('${tr.id}')">${tr.travelMode?(es?'Desactivar':'Turn off'):(es?'Activar':'Turn on')}</button></div>
-  <div class="today-hero"><div class="today-card"><div class="booking-type">${es?'Hora local del destino':'Destination local time'}</div><div class="weather-temp" style="font-size:24px">${escapeHtml(destinationNow(tr))}</div><div class="field-hint">${escapeHtml(tripTimezone(tr))}</div>${smartResolvedPlaceHtml(tr)}${next?`<div class="panel" style="margin-top:10px"><div class="booking-type">${es?'Próximo':'Up next'}</div><div class="booking-title">${escapeHtml(formatTime12(next.time||''))} ${escapeHtml(next.title)}</div>${next.location?`<a class="btn btn-ghost btn-sm viewer-safe" style="margin-top:7px" target="_blank" href="${googleMapsSearchUrl(next.location)}">🧭 ${es?'Abrir mapa':'Open map'}</a>`:''}</div>`:''}</div>${weatherCardHtml(tr)}</div>
-  <div class="panel"><div class="section-head"><div><h3 style="margin:0;color:var(--paper)">${es?'Información práctica':'Practical info'}</h3><p class="sub">${es?'Waypoint detecta automáticamente zona horaria, moneda, idioma, emergencia y enchufe según el país del destino.':'Waypoint automatically detects timezone, currency, language, emergency numbers and plug/power information from the destination country.'}</p></div><button class="btn btn-ghost btn-sm viewer-safe" onclick="openTripForm('${tr.id}')">✎ ${es?'Editar':'Edit'}</button></div><div class="practical-grid">
-  <div class="practical-card"><div class="k">${es?'Zona horaria':'Timezone'}</div><div class="v">${escapeHtml(tripTimezone(tr))}</div></div>
-  <div class="practical-card"><div class="k">${es?'Moneda local':'Local currency'}</div><div class="v">${escapeHtml(pr.currency)}</div><div class="participant-last">${tr.localCurrency?(es?'Manual':'Manual'):(es?'Automático · país detectado':'Automatic · detected country')}</div></div>
-  <div class="practical-card"><div class="k">${es?'Idioma / nota':'Language / note'}</div><div class="v">${escapeHtml(pr.language)}</div><div class="participant-last">${tr.localLanguage?(es?'Manual':'Manual'):(es?'Automático · país detectado':'Automatic · detected country')}</div></div>
-  <div class="practical-card"><div class="k">${es?'Emergencia':'Emergency'}</div><div class="v">${escapeHtml(pr.emergency)}</div><div class="participant-last">${tr.emergencyInfo?(es?'Manual':'Manual'):(es?'Automático · país detectado':'Automatic · detected country')}</div></div>
-  <div class="practical-card"><div class="k">${es?'Enchufe / energía':'Power / plug'}</div><div class="v">${escapeHtml(pr.power)}</div><div class="participant-last">${tr.powerInfo?(es?'Manual':'Manual'):(es?'Automático · país detectado':'Automatic · detected country')}</div></div>
-  </div></div>
-  ${offlineTripStatusHtml(tr)}
-  <div style="margin:10px 0"><button class="btn btn-brass btn-sm" onclick="downloadTripOffline('${tr.id}')">↓ ${es?'Preparar offline':'Prepare offline'}</button></div>
-  ${emergencyModeHtml(tr)}
-  ${unitConverterHtml()}`;
-}
+  if(!ui.featureFlags)setTimeout(()=>getFeatureFlags(),20);
+  return `
+  <div class="travel-mode-banner">
+    <div><span class="travel-focus-badge">● ${es?'MODO VIAJE ACTIVO':'TRAVEL MODE ACTIVE'}</span>
+      <div class="field-hint" style="margin-top:6px">${es?'Interfaz simplificada para usar Waypoint mientras estás viajando.':'A simplified Waypoint interface for use while you are traveling.'}</div>
+    </div>
+    <button class="btn btn-ghost btn-sm travel-mode-exit" onclick="enableTravelMode('${tr.id}')">✕ ${es?'Salir del modo':'Exit mode'}</button>
+  </div>
 
+  ${tripCount?`<div class="countdown-card" style="margin-bottom:10px"><div class="booking-type">${es?'Estado del viaje':'Trip status'}</div><div class="countdown-big">${tripCount.kind==='before'?(es?`Faltan ${tripCount.days} días`:`${tripCount.days} days to go`):tripCount.kind==='during'?(es?`Día ${tripCount.day} de ${tripCount.total}`:`Day ${tripCount.day} of ${tripCount.total}`):(es?`Terminó hace ${tripCount.days} días`:`Ended ${tripCount.days} days ago`)}</div></div>`:''}
+
+  <div class="today-hero">
+    <div class="today-card">
+      <div class="booking-type">${es?'Hora local del destino':'Destination local time'}</div>
+      <div class="weather-temp" style="font-size:25px">${escapeHtml(destinationNow(tr))}</div>
+      <div class="field-hint">${escapeHtml(tripTimezone(tr))}</div>
+      ${smartResolvedPlaceHtml(tr)}
+      ${next?`<div class="panel" style="margin-top:10px">
+        <div class="booking-type">${es?'Próximo':'Up next'}</div>
+        <div class="booking-title">${escapeHtml(formatTime12(next.time||''))} ${escapeHtml(next.title)}</div>
+        ${next.location?`<div class="booking-meta">📍 ${escapeHtml(next.location)}</div>`:''}
+        <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:8px">
+          ${next.location?`<a class="btn btn-brass btn-sm viewer-safe" target="_blank" rel="noopener" href="${googleMapsSearchUrl(next.location)}">🧭 ${es?'Navegar':'Navigate'}</a>`:''}
+          ${next.location?`<button class="btn btn-ghost btn-sm viewer-safe" onclick="loadNextEta('${tr.id}','DRIVE')">🚗 ${es?'ETA':'ETA'}</button>`:''}
+        </div>
+        ${etaCardHtml(tr,next,date)}
+      </div>`:''}
+    </div>
+    ${weatherCardHtml(tr)}
+  </div>
+
+  ${conflicts.length?`<div class="schedule-alert">⚠ ${es?`${conflicts.length} conflicto(s) de horario hoy`:`${conflicts.length} schedule conflict(s) today`}</div>`:''}
+
+  <div class="travel-quick-grid">
+    <button class="travel-quick" onclick="setTripSubTab('today')"><span class="ico">☀</span>${es?'Hoy':'Today'}</button>
+    <button class="travel-quick" onclick="setTripSubTab('map')"><span class="ico">🗺</span>${es?'Mapa y ruta':'Map & route'}</button>
+    <button class="travel-quick" onclick="setTripSubTab('bookings')"><span class="ico">🎟</span>${es?'Reservas':'Bookings'}</button>
+    <button class="travel-quick" onclick="setTripSubTab('notes')"><span class="ico">📄</span>${es?'Documentos':'Documents'}</button>
+  </div>
+
+  <div class="panel">
+    <div class="section-head"><div><h3 style="margin:0;color:var(--paper)">${es?'Agenda de hoy':'Today’s schedule'}</h3><p class="sub">${escapeHtml(localizedDateLabel(date))}</p></div><a class="btn btn-ghost btn-sm viewer-safe" target="_blank" rel="noopener" href="${dayRouteUrl(tr,date)}">🧭 ${es?'Ruta del día':'Day route'}</a></div>
+    <div class="travel-timeline">
+      ${items.length?items.map(x=>`<div class="travel-timeline-item ${timelineNowClass(date,x.time)} ${x.status==='done'?'done':''}">
+        <div class="travel-timeline-time">${escapeHtml(formatTime12(x.time||''))}</div>
+        <div><div class="booking-title" style="font-size:12px">${escapeHtml(x.title)}</div>${x.location?`<div class="field-hint">📍 ${escapeHtml(x.location)}</div>`:''}</div>
+        ${x.location?`<a class="btn btn-ghost btn-sm viewer-safe travel-item-action" target="_blank" rel="noopener" href="${googleMapsSearchUrl(x.location)}">🧭</a>`:''}
+      </div>`).join(''):`<div class="chat-empty">${es?'No hay actividades o reservas para este día.':'No activities or bookings for this day.'}</div>`}
+    </div>
+  </div>
+
+  ${docs.length?`<div class="panel"><div class="section-head"><div><h3 style="margin:0;color:var(--paper)">📄 ${es?'Documentos importantes':'Important documents'}</h3></div><button class="btn btn-ghost btn-sm" onclick="setTripSubTab('notes')">${es?'Ver todos':'View all'}</button></div><div class="row-list">${docs.map(d=>`<div class="li ${d.important?'doc-important':''}"><div class="main"><div class="t">${d.important?'⭐ ':''}${escapeHtml(d.label)}</div><div class="s">${escapeHtml(d.value||'')}</div></div></div>`).join('')}</div></div>`:''}
+
+  ${emergencyModeHtml(tr)}
+  ${offlineTripStatusHtml(tr)}
+  ${!tr.offlineReadyAt?`<div style="margin:10px 0"><button class="btn btn-ghost btn-sm" onclick="downloadTripOffline('${tr.id}')">↓ ${es?'Preparar viaje para offline':'Prepare trip offline'}</button></div>`:''}
+
+  <div class="panel">
+    <div class="section-head"><div><h3 style="margin:0;color:var(--paper)">${es?'Información práctica':'Practical info'}</h3><p class="sub">${es?'Solo lo esencial durante el viaje.':'Only the essentials while traveling.'}</p></div></div>
+    <div class="practical-grid">
+      <div class="practical-card"><div class="k">${es?'Zona horaria':'Timezone'}</div><div class="v">${escapeHtml(tripTimezone(tr))}</div></div>
+      <div class="practical-card"><div class="k">${es?'Moneda':'Currency'}</div><div class="v">${escapeHtml(pr.currency)}</div></div>
+      <div class="practical-card"><div class="k">${es?'Idioma':'Language'}</div><div class="v">${escapeHtml(pr.language)}</div></div>
+      <div class="practical-card"><div class="k">${es?'Enchufe / energía':'Power'}</div><div class="v">${escapeHtml(pr.power)}</div></div>
+    </div>
+  </div>`;
+}
 function viewCalendarSub(tr){
   const es=state.lang==='es';
   const dates=new Map();
@@ -5225,7 +5335,7 @@ function diagnosticsHtml(){
 function viewSettings(){
   const t=tt();
   return `
-    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v10.0.4</div></div></div>
+    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v10.0.5</div></div></div>
     <div class="panel">
       <h3 style="margin:0 0 12px;font-size:16px;color:var(--paper);">${t.settings.account}</h3>
       <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px;">
@@ -5256,7 +5366,7 @@ function viewSettings(){
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><a class="btn btn-ghost btn-sm" href="/privacy.html" target="_blank" rel="noopener">${state.lang==='es'?'Política de Privacidad':'Privacy Policy'}</a><a class="btn btn-ghost btn-sm" href="/terms.html" target="_blank" rel="noopener">${state.lang==='es'?'Términos de Uso':'Terms of Use'}</a></div>
     </div>
     <div class="panel"><h3 style="margin:0 0 8px;color:var(--paper)">☁ ${state.lang==='es'?'Offline y copias locales':'Offline & local backups'}</h3><p class="field-hint">${state.lang==='es'?'Waypoint guarda automáticamente hasta 5 copias recientes en este dispositivo.':'Waypoint automatically keeps up to 5 recent backups on this device.'}</p><div class="backup-list">${(state.offlineSnapshots||[]).map(s=>`<div class="backup-row"><span>${escapeHtml(new Date(s.at).toLocaleString())}</span><button class="btn btn-ghost btn-sm" onclick="restoreSnapshot('${s.id}')">${state.lang==='es'?'Restaurar':'Restore'}</button></div>`).join('')||`<div class="field-hint">${state.lang==='es'?'Aún no hay copias':'No backups yet'}</div>`}</div></div>
-    <div class="panel"><h3 style="margin:0 0 8px;font-size:16px;color:var(--paper);">🩺 ${state.lang==='es'?'Diagnóstico':'Diagnostics'}</h3><p class="field-hint">${state.lang==='es'?'Comprueba conexión, servidor e integraciones principales.':'Check connection, server and core integrations.'}</p>${diagnosticsHtml()}<div class="participant-last" style="margin-top:10px">Waypoint v10.0.4 · ${state.trips.length} ${state.lang==='es'?'viaje(s) local(es)':'local trip(s)'}</div><div style="margin-top:12px">${integrationStatusHtml()}</div></div>
+    <div class="panel"><h3 style="margin:0 0 8px;font-size:16px;color:var(--paper);">🩺 ${state.lang==='es'?'Diagnóstico':'Diagnostics'}</h3><p class="field-hint">${state.lang==='es'?'Comprueba conexión, servidor e integraciones principales.':'Check connection, server and core integrations.'}</p>${diagnosticsHtml()}<div class="participant-last" style="margin-top:10px">Waypoint v10.0.5 · ${state.trips.length} ${state.lang==='es'?'viaje(s) local(es)':'local trip(s)'}</div><div style="margin-top:12px">${integrationStatusHtml()}</div></div>
     <div class="panel">
       <h3 style="margin:0 0 6px;font-size:16px;color:var(--paper);">${t.settings.data}</h3>
       <p style="font-size:12px;color:var(--muted);margin:0 0 12px;">${t.settings.dataSub}</p>
@@ -5662,7 +5772,7 @@ document.addEventListener('change', (e)=>{
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('/service-worker.js?v=10.0.4',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('/service-worker.js?v=10.0.5',{updateViaCache:'none'});
       await reg.update();
       let reloading=false;
       navigator.serviceWorker.addEventListener('controllerchange',()=>{

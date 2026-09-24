@@ -1,5 +1,5 @@
-WAYPOINT 10.0.1 FINAL QA
-========================================================
+WAYPOINT 10.0.5 TRAVEL MODE QA
+======================================================
 
 SYNTAX
 PASS frontend
@@ -52,7 +52,7 @@ PASS revoke editor register
 PASS participant remove
 PASS removed participant write blocked
 PASS missing participant write blocked
-PASS V10.0.1 health version
+PASS V10.0.5 health version
 PASS health hides room count
 PASS security nosniff
 PASS security CSP
@@ -74,40 +74,32 @@ PASS file participant revoke
 PASS revoked participant file delete blocked
 
 FEATURE / REGRESSION AUDIT
-PASS destination null-coordinate guard
-PASS weather uses coordinate guard
-PASS live payload preserves null coords
-PASS legacy null-to-0 serializer absent
-PASS cloud upload active participant enforcement
-PASS cloud delete active participant enforcement
-PASS client upload participant header
-PASS client cloud open avoids key in URL
+PASS travel toggle enters cockpit
+PASS travel toggle body class
+PASS travel active badge
+PASS travel exit button
+PASS travel quick actions
+PASS next ETA retained
+PASS day route retained
+PASS today schedule cockpit
+PASS important docs cockpit
+PASS emergency cockpit
+PASS offline cockpit
+PASS travel compact nav
+PASS planning tabs hidden in travel
+PASS stale heavy tab redirected
+PASS status propagates timeline
+PASS bilingual legal retained
+PASS copy fix retained
 PASS offline PWA retained
-PASS offline chat retained
-PASS automatic backups retained
-PASS multicurrency retained
-PASS traffic adapter retained
-PASS smart booking import retained
-PASS receipt import retained
-PASS OCR adapter retained
-PASS push explicitly disabled
-PASS direct email explicitly disabled
-PASS iPhone More retained
-PASS single Calendar in More
-PASS activity labels clear
-PASS security CSP
-PASS rate limiting
-PASS WeatherAPI key server side
-PASS Google Routes key server side
-PASS OCR key server side
-PASS GIPHY only
-PASS Open-Meteo absent
+PASS cloud security retained
+PASS single calendar in More
 
 PWA ASSETS
 PASS manifest icons exist
 
 VERSION
-PASS package 10.0.1
-PASS health 10.0.1
-PASS service worker 10.0.1
-PASS registration 10.0.1
+PASS package 10.0.5
+PASS health 10.0.5
+PASS service worker 10.0.5
+PASS registration 10.0.5

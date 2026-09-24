@@ -417,3 +417,16 @@ Intentionally not faked:
 - EN / ES switcher on both legal pages.
 - Legal pages automatically follow Waypoint language when available, otherwise browser language.
 - First-use consent remains bilingual.
+
+## Waypoint 10.0.5 — Focused Travel Mode
+
+Travel Mode is now a real in-trip interface rather than only a toggle.
+
+When enabled:
+- Waypoint automatically switches to the Travel cockpit.
+- Primary navigation is reduced to Travel, Today, Map, Bookings, Documents, and a smaller More menu.
+- Heavy planning areas (Overview editing, full Itinerary editing, Ideas, Polls, Activity history) are hidden from normal Travel Mode navigation.
+- The Travel cockpit prioritizes destination local time, weather, next event, navigation, live ETA when configured, today's route and schedule, important documents, emergency information, offline readiness, and essential destination information.
+- A clear “Exit mode” button restores the full planning interface.
+- Existing chat/collaboration continues to work.
+- Stale hidden planning tabs are automatically redirected back to the Travel cockpit while Travel Mode is active.
