@@ -270,3 +270,9 @@ This release fixes issues found during a pre-deployment audit rather than adding
 - Editable itinerary import/export now restores advanced trip metadata, settlements and category budgets.
 - Trip deletion/undo now includes settlements and category budgets.
 - Navigation away from a trip always clears the iPhone More-sheet scroll lock.
+
+## Waypoint 7.0.6 Destination Resolver
+
+The destination field now resolves places explicitly instead of relying on a single free-text WeatherAPI match. Travelers can search for a destination and choose from city/region/country candidates. The selected latitude/longitude and canonical place name are stored with the trip.
+
+Weather and timezone requests use the stored coordinates, eliminating most same-name-place ambiguity. If a new/edited destination has not been resolved, Save triggers destination search; ambiguous matches must be selected before the trip is saved. Destination coordinates and canonical metadata are included in live collaboration and rich import/export.

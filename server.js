@@ -306,7 +306,7 @@ const server=http.createServer(async(req,res)=>{
   try{
     const u=new URL(req.url,'http://localhost');
 
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'7.0.5',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'7.0.6',time:new Date().toISOString()});
 
     if(req.method==='GET'&&u.pathname==='/api/fx/rate'){
       const from=String(u.searchParams.get('from')||'').trim().toUpperCase();
@@ -336,12 +336,47 @@ const server=http.createServer(async(req,res)=>{
         return json(res,502,{error:'exchange rate lookup failed'});
       }
     }
+    if(req.method==='GET'&&u.pathname==='/api/destination/search'){
+      const apiKey=String(process.env.WEATHERAPI_KEY||'').trim();
+      const q=String(u.searchParams.get('q')||'').trim().slice(0,160);
+      if(!apiKey)return json(res,200,{enabled:false,provider:'WeatherAPI.com',reason:'api_key_required',results:[]});
+      if(q.length<2)return json(res,400,{error:'query too short',results:[]});
+      try{
+        const normalized=normalizeDestinationQuery(q);
+        const params=new URLSearchParams({key:apiKey,q:normalized});
+        const sr=await fetch(`https://api.weatherapi.com/v1/search.json?${params.toString()}`,{
+          headers:{'accept':'application/json','user-agent':'Waypoint/7.0.6'}
+        });
+        const data=await sr.json().catch(()=>[]);
+        if(!sr.ok){
+          const msg=String(data?.error?.message||'destination search failed').slice(0,160);
+          return json(res,sr.status===400?400:502,{enabled:true,provider:'WeatherAPI.com',error:msg,results:[]});
+        }
+        const rows=(Array.isArray(data)?data:[]).slice(0,8).map((x,index)=>({
+          id:String(x.id||`${index}-${x.lat}-${x.lon}`),
+          name:String(x.name||''),
+          region:String(x.region||''),
+          country:String(x.country||''),
+          lat:Number(x.lat),
+          lon:Number(x.lon),
+          url:String(x.url||''),
+          label:[x.name,x.region,x.country].filter(Boolean).join(', ')
+        })).filter(x=>x.name&&Number.isFinite(x.lat)&&Number.isFinite(x.lon));
+        return json(res,200,{enabled:true,provider:'WeatherAPI.com',query:q,normalizedQuery:normalized,results:rows});
+      }catch(e){
+        return json(res,502,{enabled:true,provider:'WeatherAPI.com',error:'destination provider unavailable',results:[]});
+      }
+    }
+
     if(req.method==='GET'&&u.pathname==='/api/weather'){
       const apiKey=String(process.env.WEATHERAPI_KEY||'').trim();
       const location=String(u.searchParams.get('location')||'').trim().slice(0,160);
-      const resolvedQuery=normalizeDestinationQuery(location);
+      const lat=Number(u.searchParams.get('lat'));
+      const lon=Number(u.searchParams.get('lon'));
+      const hasCoords=Number.isFinite(lat)&&Number.isFinite(lon)&&lat>=-90&&lat<=90&&lon>=-180&&lon<=180;
+      const resolvedQuery=hasCoords?`${lat},${lon}`:normalizeDestinationQuery(location);
       if(!apiKey) return json(res,200,{enabled:false,provider:'WeatherAPI.com',reason:'api_key_required'});
-      if(!location) return json(res,400,{error:'location required'});
+      if(!location&&!hasCoords) return json(res,400,{error:'location required'});
       try{
         const params=new URLSearchParams({
           key:apiKey,
@@ -715,4 +750,4 @@ const server=http.createServer(async(req,res)=>{
   }
 });
 
-server.listen(PORT,HOST,()=>console.log(`Waypoint 7.0.5 listening on http://${HOST}:${PORT}`));
+server.listen(PORT,HOST,()=>console.log(`Waypoint 7.0.6 listening on http://${HOST}:${PORT}`));
