@@ -325,3 +325,38 @@ Corrections include:
 - Each value visibly includes the `min` unit.
 - Added a short explanation directly under the activity-entry row.
 - On iPhone and narrow screens, Activity and Place use full width, while Duration and Travel sit beneath them in two clear columns.
+
+## Waypoint 9.0 — Travel OS + Offline
+
+Major additions implemented without requiring new paid infrastructure:
+- Offline-first PWA shell and stale-cache fallback for weather, FX, destination search and feature status.
+- Explicit “Prepare offline” action for trips.
+- Existing local trip data remains editable offline; live-collaboration changes retain pending-sync state.
+- Chat messages can be queued offline and retried automatically when connectivity returns.
+- Five rotating local backup snapshots with restore controls.
+- Multicurrency expense entry with automatic FX when online, cached FX offline and manual-rate fallback.
+- Spending forecast, daily average and totals by payer.
+- Activity completion/skipped state, assignees, copy activity, copy day and repeat-daily creation.
+- Emergency Mode with local emergency number, lodging/destination, important documents and traveler emergency contacts.
+- Emergency contacts sync with collaboration.
+- Quick local unit converter (temperature, distance and weight).
+- Packing deadlines.
+- Small offline document attachments (PDF/image) capped at 650 KB each.
+- Home-country profile field improves international packing suggestions.
+
+Infrastructure-dependent features are intentionally not faked:
+- live traffic/transit ETAs and “leave now” alerts need a routing/traffic provider;
+- guaranteed iOS push while the PWA is fully terminated needs push infrastructure;
+- large/unlimited photo/document galleries need object storage;
+- OCR receipt scanning needs an OCR/vision service;
+- email reservation import needs a connected email provider;
+- native App Store/Play Store binaries need native packaging/signing.
+
+### Additional V9 quality controls
+- Polls can have closing dates; voting is disabled after the deadline.
+- Activities support local/synced comments/notes.
+- Trip Book print/PDF view combines itinerary, reservations, practical info, important documents and emergency contacts.
+- Emergency contacts are included in trip duplication/deletion/undo and collaboration payloads.
+- Structured auto-backups deliberately omit large binary photos/files to reduce browser-storage failures.
+- Offline attachments are limited to 650 KB each and 2 MB total per trip.
+- Google/Apple Maps themselves are external services and are not made available offline by Waypoint; saved itinerary locations remain visible offline and navigation links resume when connectivity returns.

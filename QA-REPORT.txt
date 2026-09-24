@@ -1,11 +1,14 @@
-WAYPOINT 8.0.1 FINAL QA
-================================================
+WAYPOINT 9.0.0 FINAL QA
+====================================================
 
-SYNTAX CHECKS
-PASS frontend inline JS
-PASS server.js
+SYNTAX
+PASS frontend
+PASS server
 PASS service worker
-PASS smoke-test.js
+PASS smoke test
+
+INLINE HANDLERS
+PASS no missing handlers
 
 FULL SMOKE SUITE
 PASS static index
@@ -49,62 +52,68 @@ PASS revoke editor register
 PASS participant remove
 PASS removed participant write blocked
 PASS missing participant write blocked
-PASS V8 health version
+PASS V9 health version
 PASS health hides room count
 PASS security nosniff
 PASS security CSP
 PASS normal API traffic allowed
 
-STATIC / INTEGRATION AUDIT
-PASS no missing inline handlers
-PASS destination search route
-PASS destination coordinates persisted
-PASS weather uses destination coordinates
-PASS automatic practical info
+FEATURE / REGRESSION AUDIT
+PASS offline shell cache
+PASS offline data API cache
+PASS offline prepare action
+PASS offline local status
+PASS offline chat queue
+PASS online flush pending chat
+PASS pending collaboration sync
+PASS auto backups
+PASS backup quota-safe
+PASS storage quota recovery
+PASS multicurrency expense
+PASS cached FX offline
+PASS budget forecast
+PASS activity status
+PASS activity assignment
+PASS activity comments
+PASS repeat activity daily
+PASS copy activity
+PASS copy day
 PASS schedule conflict engine
-PASS activity duration
-PASS booking duration
+PASS countdown
 PASS daily route
-PASS calendar view
-PASS smart packing
-PASS documents center
-PASS diagnostics
-PASS collaboration participants
+PASS calendar
+PASS emergency mode
+PASS emergency contacts
+PASS unit converter
+PASS packing smart suggestions
+PASS packing deadlines
+PASS poll deadline
+PASS offline small attachments
+PASS trip book PDF
+PASS destination resolver
+PASS precise destination coords
+PASS automatic practical info
 PASS individual invites
+PASS viewer protection
 PASS removed participant protection
-PASS viewer write block
 PASS chat edit/delete/pin
-PASS settlement sync
-PASS category budget sync
+PASS settlements sync
+PASS category budgets sync
+PASS emergency contacts sync
 PASS iPhone More sheet
-PASS chat iOS safe area
-PASS WeatherAPI server secret
-PASS GIPHY only
-PASS Open-Meteo absent
+PASS single Calendar in More
+PASS activity labels clear
 PASS security CSP
 PASS rate limiting
-PASS public health privacy
+PASS WeatherAPI key server-side
+PASS GIPHY only
+PASS no Open-Meteo
 
-PWA ASSET AUDIT
-PASS manifest icon files
+PWA ASSETS
+PASS manifest icons exist
 
-VERSION CONSISTENCY
-PASS no executable V8.0.0 version markers
-
-FIXES APPLIED
-- Included Calendar in the More-button active state.
-- Localized calendar weekday labels.
-- Made Diagnostics tolerant of both supported /api/features response shapes.
-- Restored Enter-key activity creation in itinerary inputs.
-- Bookings no longer receive an implicit 60-minute duration in schedule-conflict detection.
-- Conflict engine now defaults duration only for itinerary activities.
-- Added optional booking duration and travel-buffer fields.
-- Booking duration/buffer now persist.
-- Booking cards now show duration and travel buffer.
-- Capped daily Google Maps intermediate waypoints to a practical limit.
-- Smart packing avoids assuming an international trip when profile country is unknown.
-- Diagnostics now show app version and local trip count.
-- Rate limiting now targets API/health traffic instead of static PWA assets.
-- Added tighter rate limiting for destination search.
-- Removed shared-room count from public /health metadata.
-- Added a Content-Security-Policy compatible with current Waypoint features.
+VERSION
+PASS package 9.0.0
+PASS health 9.0.0
+PASS service worker 9.0.0
+PASS registration 9.0.0

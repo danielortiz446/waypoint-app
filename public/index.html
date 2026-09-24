@@ -969,6 +969,35 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   }
 }
 
+
+/* Waypoint 9.0 Travel OS + Offline */
+.offline-ready-card{padding:10px 12px;border-radius:11px;background:rgba(75,170,125,.08);border:1px solid rgba(75,170,125,.18);font-size:10px}
+.offline-ready-card.warn{background:rgba(235,180,75,.08);border-color:rgba(235,180,75,.18)}
+.travel-os-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.travel-os-card{padding:12px;border-radius:12px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
+.travel-os-card .k{font:9px var(--font-mono);text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.travel-os-card .v{font-size:15px;font-weight:850;color:var(--paper);margin-top:4px}
+.activity-state{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:999px;font-size:9px;background:rgba(255,255,255,.06);color:var(--muted)}
+.activity-state.done{background:rgba(70,185,125,.12);color:#8be0b0}.activity-state.skipped{background:rgba(255,140,90,.11);color:#ffab93}
+.activity-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
+.activity-actions button{padding:4px 7px;font-size:9px}
+.emergency-panel{border:1px solid rgba(255,100,90,.25)!important;background:rgba(255,80,65,.055)!important}
+.emergency-big{font-size:22px;font-weight:900;color:var(--paper)}
+.expense-source{font-size:9px;color:var(--muted);margin-top:2px}
+.budget-forecast{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
+.backup-list{display:flex;flex-direction:column;gap:7px;margin-top:8px}
+.backup-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 9px;border-radius:9px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
+.file-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border-radius:8px;background:rgba(255,255,255,.06);font-size:9px}
+.offline-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 7px;border-radius:999px;background:rgba(78,180,125,.1);border:1px solid rgba(78,180,125,.18);font-size:9px}
+.unit-converter{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;align-items:end}
+.deadline-overdue{color:#ff927d!important}
+.deadline-soon{color:#f0c66d!important}
+@media(max-width:700px){
+  .travel-os-grid,.budget-forecast{grid-template-columns:1fr}
+  .unit-converter{grid-template-columns:1fr 1fr}
+  .unit-converter .btn{grid-column:1/-1}
+}
+
 </style>
 </head>
 <body><a class="skip-link" href="#app">Skip to content</a>
@@ -1106,7 +1135,8 @@ const CURRENCIES = [
 
 /* ===================== state ===================== */
 let state = {lang:"en", trips:[], expenses:[], settlements:[], checklists:{}, itineraries:{}, tripDocs:{}, bookings:{}, ideas:{}, polls:{}, reminders:{}, categoryBudgets:{},
-  profile:{name:"", avatar:"✈", photo:"", currency:"USD", theme:"brass"}};
+  emergencyContacts:{}, pendingChat:[], fxCache:{}, offlineSnapshots:[],
+  profile:{name:"", avatar:"✈", photo:"", currency:"USD", country:"", theme:"brass"}};
 let ui = {screen:"home", currentTripId:null, tripSubTab:"overview", modal:null, editingTrip:null,
   tripSearch:"", tripView:"upcoming", newTripCover:"", expenseDraft:null,
   confirmMessage:"", confirmAction:null, confirmDanger:false, confirmLabel:null,
@@ -1168,6 +1198,14 @@ async function loadState(){
     if(!state.bookings) state.bookings={};
     if(!state.settlements) state.settlements=[];
     if(!state.categoryBudgets) state.categoryBudgets={};
+    if(!state.emergencyContacts) state.emergencyContacts={};
+    if(!state.pendingChat) state.pendingChat=[];
+    if(!state.fxCache) state.fxCache={};
+    if(!state.offlineSnapshots) state.offlineSnapshots=[];
+    if(!state.profile.country) state.profile.country='';
+
+    if(!state.settlements) state.settlements=[];
+    if(!state.categoryBudgets) state.categoryBudgets={};
     if(!state.ideas) state.ideas={};
     if(!state.polls) state.polls={};
     if(!state.reminders) state.reminders={};
@@ -1177,9 +1215,44 @@ async function loadState(){
   if(!syncPoll) syncPoll=setInterval(syncAllLiveTrips,15000);
   setTimeout(refreshLiveStreams,150);
 }
+
+function snapshotState(reason='auto'){
+  try{
+    const slim=JSON.parse(JSON.stringify(state));
+    slim.offlineSnapshots=[];
+    // Backups are structured-data snapshots; large binary media is omitted to protect browser quota.
+    if(slim.profile)slim.profile.photo='';
+    for(const tr of slim.trips||[])tr.coverPhoto='';
+    for(const docs of Object.values(slim.tripDocs||{}))for(const d of docs||[]){if(d.attachment)d.attachment={name:d.attachment.name,type:d.attachment.type,size:d.attachment.size,dataUrl:''};}
+    const snap={id:uid(),at:new Date().toISOString(),reason,data:slim};
+    state.offlineSnapshots=Array.isArray(state.offlineSnapshots)?state.offlineSnapshots:[];
+    const last=state.offlineSnapshots[0];
+    if(!last||Date.now()-new Date(last.at).getTime()>10*60*1000||reason!=='auto'){
+      state.offlineSnapshots.unshift(snap);
+      state.offlineSnapshots=state.offlineSnapshots.slice(0,3);
+    }
+  }catch(e){}
+}
+function restoreSnapshot(id){
+  const s=(state.offlineSnapshots||[]).find(x=>x.id===id);if(!s?.data)return;
+  askConfirm(state.lang==='es'?'¿Restaurar esta copia local? Los cambios actuales serán reemplazados.':'Restore this local backup? Current changes will be replaced.',()=>{
+    const keepSnapshots=state.offlineSnapshots||[];
+    state=Object.assign(state,JSON.parse(JSON.stringify(s.data)));
+    state.offlineSnapshots=keepSnapshots;
+    saveState();render();showToast(state.lang==='es'?'Copia restaurada':'Backup restored');
+  },true);
+}
+
 async function saveState(){
+  snapshotState('auto');
   state.trips.filter(x=>x.liveSync&&canEditTrip(x)).forEach(tr=>tr.pendingSync=true);
-  try{ await window.storage.set('waypoint-simple-data', JSON.stringify(state), false); }catch(e){ console.error('save failed', e); }
+  try{
+    await window.storage.set('waypoint-simple-data',JSON.stringify(state),false);
+  }catch(e){
+    console.error('save failed',e);
+    // Quota recovery: discard local backup copies before risking primary trip data.
+    try{state.offlineSnapshots=[];await window.storage.set('waypoint-simple-data',JSON.stringify(state),false);}catch(e2){console.error('save retry failed',e2);showToast(state.lang==='es'?'El almacenamiento del dispositivo está lleno. Exporta una copia y elimina archivos grandes.':'Device storage is full. Export a backup and remove large files.');}
+  }
   clearTimeout(syncDebounce);
   if(navigator.onLine!==false) syncDebounce=setTimeout(()=>{ state.trips.filter(x=>x.liveSync&&canEditTrip(x)&&x.pendingSync).forEach(tr=>pushTripToCloud(tr)); },700);
 }
@@ -1190,6 +1263,25 @@ function tripById(id){ return state.trips.find(t=>t.id===id); }
 function tripSpent(tripId){ return state.expenses.filter(e=>e.tripId===tripId).reduce((s,e)=>s+Number(e.amount),0); }
 function catSpent(tripId,cat){ return state.expenses.filter(e=>e.tripId===tripId&&e.category===cat).reduce((s,e)=>s+Number(e.amount),0); }
 
+
+
+async function downloadTripOffline(tripId){
+  const tr=tripById(tripId);if(!tr)return;
+  try{
+    await loadTripWeather(tripId,true);
+    if('serviceWorker' in navigator&&navigator.serviceWorker.controller){
+      navigator.serviceWorker.controller.postMessage({type:'CACHE_TRIP',urls:['/','/index.html','/manifest.webmanifest','/privacy.html','/terms.html']});
+    }
+    tr.offlineReadyAt=new Date().toISOString();
+    await saveState();render();
+    showToast(state.lang==='es'?'Viaje preparado para uso offline':'Trip prepared for offline use');
+  }catch(e){showToast(state.lang==='es'?'Se guardaron los datos locales disponibles':'Available local data was saved');}
+}
+function offlineTripStatusHtml(tr){
+  const es=state.lang==='es';
+  const ready=Boolean(tr.offlineReadyAt);
+  return `<div class="offline-ready-card ${ready?'':'warn'}">${ready?'✓':'↓'} ${ready?(es?'Disponible offline':'Available offline'):(es?'Aún no preparado para offline':'Not prepared for offline yet')} ${ready?`· ${escapeHtml(new Date(tr.offlineReadyAt).toLocaleString())}`:''}</div>`;
+}
 
 function syncStatusHtml(tr){
   const es=state.lang==='es';
@@ -1697,7 +1789,7 @@ function duplicateTrip(id){
   state.tripDocs[newId]=JSON.parse(JSON.stringify(state.tripDocs[id]||[])).map(d=>({...d,id:uid()}));
   state.ideas[newId]=JSON.parse(JSON.stringify(state.ideas[id]||[])).map(x=>({...x,id:uid()}));
   state.polls[newId]=JSON.parse(JSON.stringify(state.polls[id]||[])).map(p=>({...p,id:uid(),votes:{}}));
-  state.reminders[newId]={enabled:false,leadMinutes:30};state.categoryBudgets[newId]=JSON.parse(JSON.stringify(state.categoryBudgets[id]||{}));
+  state.reminders[newId]={enabled:false,leadMinutes:30};state.categoryBudgets[newId]=JSON.parse(JSON.stringify(state.categoryBudgets[id]||{}));state.emergencyContacts[newId]=JSON.parse(JSON.stringify(state.emergencyContacts[id]||[])).map(c=>({...c,id:uid()}));
   state.expenses.push(...state.expenses.filter(e=>e.tripId===id).map(e=>({...JSON.parse(JSON.stringify(e)),id:uid(),tripId:newId})));
   state.settlements.push(...state.settlements.filter(e=>e.tripId===id).map(e=>({...JSON.parse(JSON.stringify(e)),id:uid(),tripId:newId})));
   saveState();render();showToast(state.lang==='es'?'Viaje duplicado como plantilla':'Trip duplicated as a template');
@@ -1813,6 +1905,7 @@ function buildItineraryPayload(tr){
     expenses:state.expenses.filter(e=>e.tripId===tr.id),
     settlements:state.settlements.filter(e=>e.tripId===tr.id),
     categoryBudgets:state.categoryBudgets[tr.id]||{},
+    emergencyContacts:state.emergencyContacts[tr.id]||[],
     checklists:state.checklists[tr.id]||[],
     docs:state.tripDocs[tr.id]||[],
     ideas:state.ideas[tr.id]||[],
@@ -2316,7 +2409,8 @@ function renderChatMessagesInPlace(){
   const list=document.getElementById('chat-list'); if(!list) return;
   const es=state.lang==='es'; const me=chatParticipantId();
   const nearBottom=list.scrollHeight-list.scrollTop-list.clientHeight<90;
-  list.innerHTML=((ui.chatMessages||[]).length||(ui.chatActivity||[]).length)?chatMessagesHtml(ui.chatMessages,me,es):`<div class="chat-empty">${es?'Todavía no hay mensajes. Inicia la conversación con los demás participantes del viaje.':'No messages yet. Start the conversation with the other trip participants.'}</div>`;
+  const pending=pendingChatForTrip(ui.chatTripId);
+  list.innerHTML=(((ui.chatMessages||[]).length||(ui.chatActivity||[]).length)?chatMessagesHtml(ui.chatMessages,me,es):`<div class="chat-empty">${es?'Todavía no hay mensajes. Inicia la conversación con los demás participantes del viaje.':'No messages yet. Start the conversation with the other trip participants.'}</div>`)+(pending.length?`<div class="offline-ready-card warn" style="margin-top:8px">☁ ${pending.length} ${es?'mensaje(s) pendiente(s) de enviar':'message(s) waiting to send'}</div>`:'');
   if(nearBottom) list.scrollTop=list.scrollHeight;
 }
 async function loadTripChat(tripId,quiet=false){
@@ -2352,6 +2446,30 @@ async function openTripChat(tripId){
   await registerCollabParticipant(tr);
   await loadTripChat(tripId,true);
 }
+
+function pendingChatForTrip(tripId){return (state.pendingChat||[]).filter(x=>x.tripId===tripId);}
+function queueChatMessage(tr,payload){
+  state.pendingChat=state.pendingChat||[];
+  if(!state.pendingChat.some(x=>x.clientMessageId===payload.clientMessageId)){
+    state.pendingChat.push({tripId:tr.id,shareId:tr.shareId,syncServer:tr.syncServer,editKey:tr.editKey,...payload,queuedAt:new Date().toISOString()});
+  }
+  saveState();
+}
+async function flushPendingChat(){
+  if(navigator.onLine===false||!(state.pendingChat||[]).length)return;
+  const pending=[...(state.pendingChat||[])];
+  for(const q of pending){
+    try{
+      const r=await fetch(`${q.syncServer}/api/trips/${encodeURIComponent(q.shareId)}/chat`,{
+        method:'POST',headers:{'Content-Type':'application/json','X-Edit-Key':q.editKey},
+        body:JSON.stringify({text:q.text,name:q.name,participantId:q.participantId,clientMessageId:q.clientMessageId,replyToId:q.replyToId||null})
+      });
+      if(r.ok)state.pendingChat=state.pendingChat.filter(x=>x.clientMessageId!==q.clientMessageId);
+    }catch(e){}
+  }
+  try{await window.storage.set('waypoint-simple-data',JSON.stringify(state),false);}catch(e){}
+}
+
 async function sendTripChat(tripId){
   const tr=tripById(tripId), input=document.getElementById('chat-input'), btn=document.getElementById('chat-send-btn');
   if(!tr||!input||ui.chatSending||collabRole(tr)==='viewer') return;
@@ -2359,11 +2477,18 @@ async function sendTripChat(tripId){
   if(text.length>500){showToast(state.lang==='es'?'El mensaje puede tener máximo 500 caracteres':'Messages can be up to 500 characters');return;}
   const name=ensureChatName(tripId); if(!name)return;
   const clientMessageId='c-'+randomKey();
-  ui.chatSending=true; if(btn)btn.disabled=true; input.disabled=true;
+  const queuedPayload={text,name,participantId:tr.collabParticipantId||chatParticipantId(),clientMessageId,replyToId:ui.chatReplyTo?.id||null};
+  if(navigator.onLine===false){
+    queueChatMessage(tr,queuedPayload);
+    setChatDraft(tripId,'');input.value='';ui.chatReplyTo=null;
+    showToast(state.lang==='es'?'Mensaje guardado · se enviará al volver la conexión':'Message queued · it will send when connection returns');
+    render();return;
+  }
+  ui.chatSending=true;if(btn)btn.disabled=true;input.disabled=true;
   try{
     const r=await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}/chat`,{
       method:'POST',headers:{'Content-Type':'application/json','X-Edit-Key':tr.editKey},
-      body:JSON.stringify({text,name,participantId:tr.collabParticipantId||chatParticipantId(),clientMessageId,replyToId:ui.chatReplyTo?.id||null})
+      body:JSON.stringify(queuedPayload)
     });
     const j=await r.json().catch(()=>({})); if(!r.ok) throw new Error(j.error||`chat ${r.status}`);
     setChatDraft(tripId,''); input.value=''; ui.chatReplyTo=null;
@@ -2372,7 +2497,9 @@ async function sendTripChat(tripId){
     sendChatTyping(tripId,false,true);
   }catch(e){
     console.error('Waypoint chat send failed:',e);
-    showToast(state.lang==='es'?'No se pudo enviar. Tu mensaje quedó guardado como borrador.':'Could not send. Your message was kept as a draft.');
+    queueChatMessage(tr,queuedPayload);
+    setChatDraft(tripId,'');
+    showToast(state.lang==='es'?'No se pudo enviar ahora. Quedó en cola para sincronizar.':'Could not send now. It was queued for sync.');
   }finally{
     ui.chatSending=false; const cur=document.getElementById('chat-input'), curBtn=document.getElementById('chat-send-btn');
     if(cur){cur.disabled=false;cur.value=getChatDraft(tripId);autoGrowChatInput(cur);cur.focus();}
@@ -2685,6 +2812,7 @@ function mergeLivePayload(local,remote){
   const expenses=uniqById(remote.expenses||[],local.expenses||[]).filter(e=>!deleted.expenses.includes(e.id));
   const settlements=uniqById(remote.settlements||[],local.settlements||[]);
   const categoryBudgets=Object.assign({},remote.categoryBudgets||{},local.categoryBudgets||{});
+  const emergencyContacts=Array.isArray(local.emergencyContacts)?JSON.parse(JSON.stringify(local.emergencyContacts)):(remote.emergencyContacts||[]);
   const checklists=uniqById(remote.checklists||[],local.checklists||[]).filter(i=>!deleted.checklists.includes(i.id));
   const docs=uniqById(remote.docs||[],local.docs||[]).filter(d=>!deleted.docs.includes(d.id));
   const ideas=uniqById(remote.ideas||[],local.ideas||[]).filter(d=>!deleted.ideas.includes(d.id));
@@ -2693,7 +2821,7 @@ function mergeLivePayload(local,remote){
     waypointLive:3,
     shareId:local.shareId||remote.shareId,
     trip:Object.assign({},remote.trip||{},local.trip||{}),
-    days,bookings,expenses,settlements,categoryBudgets,checklists,docs,ideas,polls,
+    days,bookings,expenses,settlements,categoryBudgets,emergencyContacts,checklists,docs,ideas,polls,
     reminders:Object.assign({},remote.reminders||{},local.reminders||{}),
     deleted
   };
@@ -2709,6 +2837,7 @@ function applyLivePayload(tr,d){
   const remoteSettlements=(d.settlements||[]).map(e=>({...e,tripId:tr.id}));
   state.settlements=[...(state.settlements||[]).filter(e=>e.tripId!==tr.id),...remoteSettlements];
   state.categoryBudgets[tr.id]=d.categoryBudgets||state.categoryBudgets[tr.id]||{};
+  state.emergencyContacts[tr.id]=d.emergencyContacts||state.emergencyContacts[tr.id]||[];
   state.checklists[tr.id]=d.checklists||[];
   state.tripDocs[tr.id]=d.docs||[];
   state.ideas[tr.id]=d.ideas||[];
@@ -2996,6 +3125,7 @@ function doDeleteTrip(id){
   const removedExpenses=state.expenses.filter(x=>x.tripId===id);
   const removedSettlements=state.settlements.filter(x=>x.tripId===id);
   const removedCategoryBudgets=state.categoryBudgets[id];
+  const removedEmergencyContacts=state.emergencyContacts[id];
   const removedChecklist=state.checklists[id];
   const removedItin = state.itineraries[id];
   const removedDocs = state.tripDocs[id];
@@ -3004,7 +3134,7 @@ function doDeleteTrip(id){
   state.trips = state.trips.filter(x=>x.id!==id);
   state.expenses=state.expenses.filter(x=>x.tripId!==id);
   state.settlements=state.settlements.filter(x=>x.tripId!==id);
-  delete state.categoryBudgets[id];delete state.checklists[id];delete state.itineraries[id];delete state.tripDocs[id];delete state.bookings[id];delete state.ideas[id];delete state.polls[id];delete state.reminders[id];
+  delete state.categoryBudgets[id];delete state.emergencyContacts[id];delete state.checklists[id];delete state.itineraries[id];delete state.tripDocs[id];delete state.bookings[id];delete state.ideas[id];delete state.polls[id];delete state.reminders[id];
   if(ui.currentTripId===id){ ui.screen='home'; ui.currentTripId=null; }
   saveState(); render();
   showToast(t.home.deleted, ()=>{
@@ -3012,6 +3142,7 @@ function doDeleteTrip(id){
     state.expenses.push(...removedExpenses);
     state.settlements.push(...removedSettlements);
     if(removedCategoryBudgets)state.categoryBudgets[id]=removedCategoryBudgets;
+    if(removedEmergencyContacts)state.emergencyContacts[id]=removedEmergencyContacts;
     if(removedChecklist)state.checklists[id]=removedChecklist;
     if(removedItin) state.itineraries[id]=removedItin;
     if(removedDocs) state.tripDocs[id]=removedDocs;
@@ -3304,6 +3435,35 @@ function weatherCardHtml(tr){
   </div>`;
 }
 
+
+function tripEmergencyContacts(tripId){return state.emergencyContacts[tripId]||[];}
+function addEmergencyContact(tripId){
+  const name=prompt(state.lang==='es'?'Nombre del contacto':'Contact name','');if(!name)return;
+  const phone=prompt(state.lang==='es'?'Teléfono':'Phone','');if(!phone)return;
+  state.emergencyContacts[tripId]=state.emergencyContacts[tripId]||[];
+  state.emergencyContacts[tripId].push({id:uid(),name,phone});saveState();render();
+}
+function deleteEmergencyContact(tripId,id){state.emergencyContacts[tripId]=(state.emergencyContacts[tripId]||[]).filter(x=>x.id!==id);saveState();render();}
+function emergencyModeHtml(tr){
+  const es=state.lang==='es',pr=practicalForTrip(tr),contacts=tripEmergencyContacts(tr.id),docs=(state.tripDocs[tr.id]||[]).filter(d=>d.important||d.type==='insurance'||d.type==='contact'||d.type==='address');
+  return `<div class="panel emergency-panel"><div class="section-head"><div><div class="booking-type">SOS</div><div class="emergency-big">${es?'Modo emergencia':'Emergency mode'}</div></div><button class="btn btn-ghost btn-sm" onclick="addEmergencyContact('${tr.id}')">+ ${es?'Contacto':'Contact'}</button></div><div class="travel-os-grid"><div class="travel-os-card"><div class="k">${es?'Emergencia local':'Local emergency'}</div><div class="v">${escapeHtml(pr.emergency)}</div></div><div class="travel-os-card"><div class="k">${es?'Alojamiento / destino':'Lodging / destination'}</div><div class="v">${escapeHtml((state.bookings[tr.id]||[]).find(b=>b.type==='hotel')?.location||tr.resolvedLocation||tr.destination)}</div></div></div>${contacts.length?`<div class="row-list" style="margin-top:10px">${contacts.map(c=>`<div class="li"><div class="main"><div class="t">${escapeHtml(c.name)}</div><div class="s">${escapeHtml(c.phone)}</div></div><a class="btn btn-brass btn-sm" href="tel:${encodeURIComponent(c.phone)}">☎</a><button class="del" onclick="deleteEmergencyContact('${tr.id}','${c.id}')">✕</button></div>`).join('')}</div>`:''}${docs.length?`<div class="row-list" style="margin-top:10px">${docs.map(d=>`<div class="li"><div class="main"><div class="t">⭐ ${escapeHtml(d.label)}</div><div class="s">${escapeHtml(d.value)}</div></div></div>`).join('')}</div>`:''}</div>`;
+}
+function convertUnitLocal(){
+  const kind=document.getElementById('unit-kind')?.value,val=Number(document.getElementById('unit-value')?.value||0),out=document.getElementById('unit-result');if(!out)return;
+  let result='';
+  if(kind==='c-f')result=`${(val*9/5+32).toFixed(1)} °F`;
+  if(kind==='f-c')result=`${((val-32)*5/9).toFixed(1)} °C`;
+  if(kind==='km-mi')result=`${(val*0.621371).toFixed(2)} mi`;
+  if(kind==='mi-km')result=`${(val/0.621371).toFixed(2)} km`;
+  if(kind==='kg-lb')result=`${(val*2.20462).toFixed(2)} lb`;
+  if(kind==='lb-kg')result=`${(val/2.20462).toFixed(2)} kg`;
+  out.textContent=result;
+}
+function unitConverterHtml(){
+  const es=state.lang==='es';
+  return `<div class="panel"><h3 style="margin:0 0 8px;color:var(--paper)">⇄ ${es?'Conversor rápido':'Quick unit converter'}</h3><div class="unit-converter"><div class="field" style="margin:0"><label>${es?'Conversión':'Conversion'}</label><select id="unit-kind"><option value="c-f">°C → °F</option><option value="f-c">°F → °C</option><option value="km-mi">km → mi</option><option value="mi-km">mi → km</option><option value="kg-lb">kg → lb</option><option value="lb-kg">lb → kg</option></select></div><div class="field" style="margin:0"><label>${es?'Valor':'Value'}</label><input id="unit-value" type="number" value="1"></div><button class="btn btn-ghost btn-sm" onclick="convertUnitLocal()">${es?'Convertir':'Convert'}</button></div><div id="unit-result" class="booking-title" style="margin-top:10px"></div></div>`;
+}
+
 function viewTravelModeSub(tr){
   const es=state.lang==='es',date=tripFocusDate(tr),items=tripTimelineItems(tr,date),next=items[0],pr=practicalForTrip(tr);
   if(!weatherForTrip(tr))setTimeout(()=>loadTripWeather(tr.id),20);
@@ -3315,7 +3475,11 @@ function viewTravelModeSub(tr){
   <div class="practical-card"><div class="k">${es?'Idioma / nota':'Language / note'}</div><div class="v">${escapeHtml(pr.language)}</div><div class="participant-last">${tr.localLanguage?(es?'Manual':'Manual'):(es?'Automático · país detectado':'Automatic · detected country')}</div></div>
   <div class="practical-card"><div class="k">${es?'Emergencia':'Emergency'}</div><div class="v">${escapeHtml(pr.emergency)}</div><div class="participant-last">${tr.emergencyInfo?(es?'Manual':'Manual'):(es?'Automático · país detectado':'Automatic · detected country')}</div></div>
   <div class="practical-card"><div class="k">${es?'Enchufe / energía':'Power / plug'}</div><div class="v">${escapeHtml(pr.power)}</div><div class="participant-last">${tr.powerInfo?(es?'Manual':'Manual'):(es?'Automático · país detectado':'Automatic · detected country')}</div></div>
-  </div></div>`;
+  </div></div>
+  ${offlineTripStatusHtml(tr)}
+  <div style="margin:10px 0"><button class="btn btn-brass btn-sm" onclick="downloadTripOffline('${tr.id}')">↓ ${es?'Preparar offline':'Prepare offline'}</button></div>
+  ${emergencyModeHtml(tr)}
+  ${unitConverterHtml()}`;
 }
 
 function viewCalendarSub(tr){
@@ -3338,6 +3502,14 @@ function jumpToTripDate(iso){
   setTimeout(()=>document.querySelector(`[data-trip-date="${iso}"]`)?.scrollIntoView({behavior:'smooth',block:'start'}),50);
 }
 
+
+function printTripBook(tripId){
+  const tr=tripById(tripId);if(!tr)return;const es=state.lang==='es',days=state.itineraries[tripId]||[],books=state.bookings[tripId]||[],docs=state.tripDocs[tripId]||[],contacts=tripEmergencyContacts(tripId),pr=practicalForTrip(tr);
+  const esc=s=>escapeHtml(s||'');
+  const body=`<!doctype html><html><head><meta charset="utf-8"><title>${esc(tr.name)} · Waypoint</title><style>body{font-family:Arial,sans-serif;color:#17212b;max-width:900px;margin:30px auto;padding:0 22px}h1{margin-bottom:4px}h2{margin-top:28px;border-bottom:1px solid #ddd;padding-bottom:5px}.item{padding:8px 0;border-bottom:1px solid #eee}.muted{color:#667;font-size:12px}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.card{border:1px solid #ddd;border-radius:8px;padding:10px}@media print{button{display:none}}</style></head><body><h1>${esc(tr.name)}</h1><div class="muted">${esc(tr.destinationCanonical||tr.destination)} · ${esc(tr.start)} → ${esc(tr.end)}</div><h2>${es?'Información práctica':'Practical info'}</h2><div class="grid"><div class="card">${es?'Zona horaria':'Timezone'}: ${esc(tripTimezone(tr))}</div><div class="card">${es?'Moneda':'Currency'}: ${esc(pr.currency)}</div><div class="card">${es?'Idioma':'Language'}: ${esc(pr.language)}</div><div class="card">${es?'Emergencia':'Emergency'}: ${esc(pr.emergency)}</div></div><h2>${es?'Itinerario':'Itinerary'}</h2>${days.map((d,i)=>`<h3>${es?'Día':'Day'} ${i+1} · ${esc(d.date)}</h3>${(d.activities||[]).map(a=>`<div class="item"><strong>${esc(formatTime12(a.time))} ${esc(a.title)}</strong><div class="muted">${esc(a.location)}${a.note?' · '+esc(a.note):''}</div></div>`).join('')}`).join('')}<h2>${es?'Reservas':'Bookings'}</h2>${books.map(b=>`<div class="item"><strong>${esc(b.title)}</strong><div class="muted">${esc(b.date)} ${esc(formatTime12(b.time))} · ${esc(b.confirmation)} · ${esc(b.location)}</div></div>`).join('')}<h2>${es?'Documentos y contactos':'Documents & contacts'}</h2>${docs.filter(d=>d.important).map(d=>`<div class="item"><strong>${esc(d.label)}</strong><div class="muted">${esc(d.value)}</div></div>`).join('')}${contacts.map(c=>`<div class="item"><strong>${esc(c.name)}</strong><div class="muted">${esc(c.phone)}</div></div>`).join('')}<script>window.onload=()=>window.print()<\/script></body></html>`;
+  const w=window.open('','_blank');if(!w){showToast(es?'Permite ventanas emergentes para generar el Trip Book.':'Allow pop-ups to generate the Trip Book.');return;}w.document.write(body);w.document.close();
+}
+
 function viewRecapSub(tr){
   const es=state.lang==='es',exp=state.expenses.filter(e=>e.tripId===tr.id),spent=exp.reduce((s,e)=>s+Number(e.amount||0),0),days=state.itineraries[tr.id]||[],acts=days.reduce((s,d)=>s+(d.activities||[]).length,0),book=(state.bookings[tr.id]||[]).length,pack=(state.checklists[tr.id]||[]),done=pack.filter(x=>x.done).length;
   return `<div class="panel"><h3 style="margin:0 0 12px;color:var(--paper)">★ ${es?'Resumen del viaje':'Trip recap'}</h3><div class="metric-grid">
@@ -3345,7 +3517,7 @@ function viewRecapSub(tr){
   <div class="metric-card"><div class="k">${es?'Reservas':'Bookings'}</div><div class="v">${book}</div></div>
   <div class="metric-card"><div class="k">${es?'Gastos':'Spent'}</div><div class="v">${money(spent,tr.currency)}</div></div>
   <div class="metric-card"><div class="k">${es?'Equipaje listo':'Packing ready'}</div><div class="v">${done}/${pack.length}</div></div></div>
-  <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:12px;"><button class="btn btn-brass btn-sm viewer-safe" onclick="exportTripCalendar('${tr.id}')">📅 ${es?'Exportar calendario':'Export calendar'}</button><button class="btn btn-ghost btn-sm viewer-safe" onclick="printItinerary('${tr.id}')">🖨 ${es?'PDF / Imprimir':'PDF / Print'}</button></div></div>`;
+  <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:12px;"><button class="btn btn-brass btn-sm viewer-safe" onclick="exportTripCalendar('${tr.id}')">📅 ${es?'Exportar calendario':'Export calendar'}</button><button class="btn btn-ghost btn-sm viewer-safe" onclick="printItinerary('${tr.id}')">🖨 ${es?'Itinerario':'Itinerary'}</button><button class="btn btn-brass btn-sm viewer-safe" onclick="printTripBook('${tr.id}')">📘 Trip Book PDF</button></div></div>`;
 }
 
 function viewTodaySub(tr){
@@ -3422,17 +3594,18 @@ function viewPollsSub(tr){
   return `<div class="panel"><h3 style="margin:0 0 10px;color:var(--paper);">☷ ${es?'Encuestas del viaje':'Trip polls'}</h3>
     <div class="field"><label>${es?'Pregunta':'Question'}</label><input id="poll-question" placeholder="${es?'¿Dónde cenamos?':'Where should we have dinner?'}"></div>
     <div class="field"><label>${es?'Opciones separadas por coma':'Options separated by commas'}</label><input id="poll-options" placeholder="${es?'Opción 1, Opción 2, Opción 3':'Option 1, Option 2, Option 3'}"></div>
+    <div class="field"><label>${es?'Fecha límite (opcional)':'Deadline (optional)'}</label><input id="poll-deadline" type="date"></div>
     <button class="btn btn-brass btn-sm" onclick="addTripPoll('${tr.id}')">+ ${es?'Crear encuesta':'Create poll'}</button></div>
-    <div class="poll-list">${polls.length?polls.map(p=>{const total=Object.keys(p.votes||{}).length;return `<div class="poll-card"><h4 style="margin:0;color:var(--paper);">${escapeHtml(p.question)}</h4>${(p.options||[]).map((o,idx)=>{const count=Object.values(p.votes||{}).filter(v=>Number(v)===idx).length;const chosen=Number((p.votes||{})[me])===idx;return `<label class="poll-option"><input type="radio" name="poll-${p.id}" ${chosen?'checked':''} onchange="voteTripPoll('${tr.id}','${p.id}',${idx})"><span style="flex:1">${escapeHtml(o)}</span><span class="tag">${count}</span></label>`}).join('')}<div class="field-hint">${total} ${es?'votos':'votes'}</div>${canEditTrip(tr)?`<button class="btn btn-danger btn-sm" onclick="deleteTripPoll('${tr.id}','${p.id}')">${es?'Eliminar':'Delete'}</button>`:''}</div>`}).join(''):`<div class="panel empty"><p>${es?'Crea una encuesta para decidir planes en grupo.':'Create a poll to make group decisions.'}</p></div>`}</div>`;
+    <div class="poll-list">${polls.length?polls.map(p=>{const total=Object.keys(p.votes||{}).length;return `<div class="poll-card"><h4 style="margin:0;color:var(--paper);">${escapeHtml(p.question)}</h4>${(p.options||[]).map((o,idx)=>{const count=Object.values(p.votes||{}).filter(v=>Number(v)===idx).length;const chosen=Number((p.votes||{})[me])===idx;return `<label class="poll-option"><input type="radio" name="poll-${p.id}" ${chosen?'checked':''} ${p.deadline&&p.deadline<todayIsoLocal()?'disabled':''} onchange="voteTripPoll('${tr.id}','${p.id}',${idx})"><span style="flex:1">${escapeHtml(o)}</span><span class="tag">${count}</span></label>`}).join('')}<div class="field-hint">${total} ${es?'votos':'votes'}${p.deadline?` · 📅 ${es?'cierra':'closes'} ${escapeHtml(p.deadline)}${p.deadline<todayIsoLocal()?` · ${es?'cerrada':'closed'}`:''}`:''}</div>${canEditTrip(tr)?`<button class="btn btn-danger btn-sm" onclick="deleteTripPoll('${tr.id}','${p.id}')">${es?'Eliminar':'Delete'}</button>`:''}</div>`}).join(''):`<div class="panel empty"><p>${es?'Crea una encuesta para decidir planes en grupo.':'Create a poll to make group decisions.'}</p></div>`}</div>`;
 }
 function addTripPoll(tripId){
   const tr=tripById(tripId);if(!canEditTrip(tr))return; const q=document.getElementById('poll-question')?.value.trim(); const opts=String(document.getElementById('poll-options')?.value||'').split(',').map(x=>x.trim()).filter(Boolean).slice(0,8);
   if(!q||opts.length<2){showToast(state.lang==='es'?'Agrega una pregunta y al menos dos opciones.':'Add a question and at least two options.');return;}
-  ensureTripCollections(tripId);state.polls[tripId].push({id:uid(),question:q,options:opts,votes:{},createdAt:new Date().toISOString()});saveState();render();
+  ensureTripCollections(tripId);state.polls[tripId].push({id:uid(),question:q,options:opts,votes:{},deadline:document.getElementById('poll-deadline')?.value||'',createdAt:new Date().toISOString()});saveState();render();
 }
 function voteTripPoll(tripId,pollId,idx){
   const tr=tripById(tripId); if(collabRole(tr)==='viewer'){showToast(state.lang==='es'?'Los invitados de solo lectura no pueden votar.':'View-only guests cannot vote.');return;}
-  const p=(state.polls[tripId]||[]).find(x=>x.id===pollId);if(!p)return;p.votes=p.votes||{};p.votes[tr.collabParticipantId||chatParticipantId()]=Number(idx);saveState();render();
+  const p=(state.polls[tripId]||[]).find(x=>x.id===pollId);if(!p)return;if(p.deadline&&p.deadline<todayIsoLocal()){showToast(state.lang==='es'?'Esta encuesta ya cerró.':'This poll is closed.');return;}p.votes=p.votes||{};p.votes[tr.collabParticipantId||chatParticipantId()]=Number(idx);saveState();render();
 }
 function deleteTripPoll(tripId,id){const tr=tripById(tripId);if(!canEditTrip(tr))return;if(tr.liveSync){if(!tr.collabDeleted)tr.collabDeleted={days:[],activities:[],bookings:[],expenses:[],checklists:[],docs:[],ideas:[],polls:[]};if(!tr.collabDeleted.polls.includes(id))tr.collabDeleted.polls.push(id);}state.polls[tripId]=(state.polls[tripId]||[]).filter(x=>x.id!==id);saveState();render();}
 async function loadTripActivity(tripId){
@@ -3483,7 +3656,7 @@ function checkDueReminders(){
 }
 setInterval(checkDueReminders,60000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkDueReminders();});
-window.addEventListener('online',()=>{ui.offline=false;document.getElementById('offline-banner')?.remove();state.trips.filter(x=>x.liveSync&&canEditTrip(x)).forEach(x=>pushTripToCloud(x));});
+window.addEventListener('online',()=>{ui.offline=false;document.getElementById('offline-banner')?.remove();state.trips.filter(x=>x.liveSync&&canEditTrip(x)).forEach(x=>pushTripToCloud(x));flushPendingChat();});
 window.addEventListener('offline',()=>{ui.offline=true;if(!document.getElementById('offline-banner')){const d=document.createElement('div');d.id='offline-banner';d.className='offline-banner';d.textContent=state.lang==='es'?'Sin conexión · los cambios quedan guardados':'Offline · changes are saved';document.body.appendChild(d);}});
 
 function tripDurationDays(tr){
@@ -3909,13 +4082,13 @@ function dayCard(tr,d,i,total){
       <div class="ctl">
         <button class="btn btn-ghost" ${i===0?'disabled style="opacity:.3"':''} onclick="moveDay('${tr.id}','${d.id}',-1)">${t.common.up}</button>
         <button class="btn btn-ghost" ${i===total-1?'disabled style="opacity:.3"':''} onclick="moveDay('${tr.id}','${d.id}',1)">${t.common.down}</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteDay('${tr.id}','${d.id}')">✕</button>
+        <button class="btn btn-ghost btn-sm" onclick="copyDay('${tr.id}','${d.id}')">⧉ ${state.lang==='es'?'Copiar':'Copy'}</button><button class="btn btn-danger btn-sm" onclick="deleteDay('${tr.id}','${d.id}')">✕</button>
       </div>
     </div>
     ${scheduleConflicts(tr,d.date||'').length?`<div class="schedule-alert">⚠ ${state.lang==='es'?'Hay actividades que se superponen o no dejan suficiente tiempo.':'Activities overlap or do not leave enough time.'}</div>`:''}
     ${activities.length? activities.map(a=>`
       <div class="act-row"><span class="time">${escapeHtml(formatTime12(a.time||''))}</span><span class="title">${escapeHtml(a.title)}
-      ${a.location?`<div class="activity-meta">📍 <a target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.location)}">${escapeHtml(a.location)}</a></div>`:''}<div class="activity-duration">${state.lang==='es'?'Duración':'Duration'} ${Number(a.durationMinutes||60)} min${Number(a.travelBufferMinutes||0)?` · +${Number(a.travelBufferMinutes)} min ${state.lang==='es'?'traslado':'travel'}`:''}</div></span>
+      ${a.location?`<div class="activity-meta">📍 <a target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(a.location)}">${escapeHtml(a.location)}</a></div>`:''}<div class="activity-duration">${state.lang==='es'?'Duración':'Duration'} ${Number(a.durationMinutes||60)} min${Number(a.travelBufferMinutes||0)?` · +${Number(a.travelBufferMinutes)} min ${state.lang==='es'?'traslado':'travel'}`:''}${a.assignedTo?` · 👤 ${escapeHtml(a.assignedTo)}`:''}</div><div class="activity-actions"><span class="activity-state ${a.status||'planned'}">${a.status==='done'?'✓ '+(state.lang==='es'?'Hecha':'Done'):a.status==='skipped'?'↷ '+(state.lang==='es'?'Omitida':'Skipped'):(state.lang==='es'?'Planificada':'Planned')}</span><button class="btn btn-ghost btn-sm" onclick="setActivityStatus('${tr.id}','${d.id}','${a.id}','done')">✓</button><button class="btn btn-ghost btn-sm" onclick="setActivityStatus('${tr.id}','${d.id}','${a.id}','skipped')">↷</button><button class="btn btn-ghost btn-sm" onclick="editActivityNote('${tr.id}','${d.id}','${a.id}')">💬</button><button class="btn btn-ghost btn-sm" onclick="copyActivity('${tr.id}','${d.id}','${a.id}')">⧉</button></div>${a.note?`<div class="field-hint">💬 ${escapeHtml(a.note)}</div>`:''}</span>
       <button class="del" onclick="deleteActivity('${tr.id}','${d.id}','${a.id}')">✕</button></div>`).join('')
       : `<p style="color:var(--muted);font-size:12px;margin:6px 0;">${t.itinerary.empty}</p>`}
     <div class="add-act-row">
@@ -3936,6 +4109,8 @@ function dayCard(tr,d,i,total){
           <span class="activity-unit">min</span>
         </div>
       </div>
+      <div class="activity-meta-field" style="flex-basis:150px"><label class="activity-mini-label">${state.lang==='es'?'Responsable':'Assigned to'}</label><select id="aassign-${d.id}"><option value="">—</option>${tripPeople(tr).map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('')}</select></div>
+      <label class="tag" style="cursor:pointer"><input id="arepeat-${d.id}" type="checkbox" style="width:auto;margin-right:5px">${state.lang==='es'?'Repetir todos los días':'Repeat daily'}</label>
       <button class="btn btn-brass btn-sm" onclick="addActivity('${tr.id}','${d.id}')">${t.itinerary.addActivity}</button>
     </div>
     <div class="field-hint" style="margin-top:6px">⏱ ${state.lang==='es'?'Duración = cuánto dura la actividad':'Duration = how long the activity lasts'} · 🚗 ${state.lang==='es'?'Traslado = margen para llegar al próximo lugar':'Travel = buffer to reach the next place'}</div>
@@ -3996,6 +4171,32 @@ function moveDay(tripId,dayId,dir){
   [arr[i],arr[j]] = [arr[j],arr[i]];
   saveState(); render();
 }
+
+
+function editActivityNote(tripId,dayId,actId){
+  const day=(state.itineraries[tripId]||[]).find(d=>d.id===dayId),a=day?.activities?.find(x=>x.id===actId);if(!a)return;
+  const note=prompt(state.lang==='es'?'Nota o comentario de la actividad':'Activity note or comment',a.note||'');
+  if(note===null)return;a.note=String(note).trim();saveState();render();
+}
+
+function setActivityStatus(tripId,dayId,actId,status){
+  const day=(state.itineraries[tripId]||[]).find(d=>d.id===dayId);const a=day?.activities?.find(x=>x.id===actId);if(!a)return;
+  a.status=status||'planned';saveState();render();
+}
+function copyActivity(tripId,dayId,actId){
+  const day=(state.itineraries[tripId]||[]).find(d=>d.id===dayId);const a=day?.activities?.find(x=>x.id===actId);if(!a)return;
+  day.activities.push({...JSON.parse(JSON.stringify(a)),id:uid(),title:a.title+(state.lang==='es'?' (copia)':' (copy)'),status:'planned'});
+  saveState();render();
+}
+function copyDay(tripId,dayId){
+  const days=state.itineraries[tripId]||[],day=days.find(d=>d.id===dayId);if(!day)return;
+  const sourceDate=day.date?new Date(`${day.date}T12:00:00`):new Date();
+  sourceDate.setDate(sourceDate.getDate()+1);
+  const date=sourceDate.toISOString().slice(0,10);
+  const clone={...JSON.parse(JSON.stringify(day)),id:uid(),date,label:'',activities:(day.activities||[]).map(a=>({...a,id:uid(),status:'planned'}))};
+  days.push(clone);days.sort((a,b)=>(a.date||'').localeCompare(b.date||''));saveState();render();
+}
+
 function addActivity(tripId,dayId){
   const time = getTime12PickerValue('at-'+dayId);
   const title = document.getElementById('ai-'+dayId).value.trim();
@@ -4003,10 +4204,14 @@ function addActivity(tripId,dayId){
   const location=locEl?locEl.value.trim():'';
   const durationMinutes=Math.max(0,Math.min(1440,Number(document.getElementById('adur-'+dayId)?.value||60)));
   const travelBufferMinutes=Math.max(0,Math.min(360,Number(document.getElementById('abuf-'+dayId)?.value||0)));
+  const assignedTo=document.getElementById('aassign-'+dayId)?.value||'';
+  const repeatDaily=Boolean(document.getElementById('arepeat-'+dayId)?.checked);
   if(!title)return;
-  const day = (state.itineraries[tripId]||[]).find(d=>d.id===dayId);
-  if(!day) return;
-  day.activities.push({id:uid(),time,title,location,durationMinutes,travelBufferMinutes});
+  const day=(state.itineraries[tripId]||[]).find(d=>d.id===dayId);
+  if(!day)return;
+  const base={time,title,location,durationMinutes,travelBufferMinutes,assignedTo,status:'planned'};
+  day.activities.push({id:uid(),...base});
+  if(repeatDaily){for(const other of state.itineraries[tripId]||[]){if(other.id!==dayId&&!other.activities.some(a=>a.title===title&&a.time===time))other.activities.push({id:uid(),...base});}}
   day.activities.sort((a,b)=>(a.time||'99').localeCompare(b.time||'99'));
   saveState(); render();
 }
@@ -4077,6 +4282,27 @@ function expenseBalancesHtml(tr){
   return `<div class="panel"><h3 style="margin:0 0 8px;color:var(--paper);">${es?'Balances compartidos':'Shared balances'}</h3><div class="balance-grid">${entries.map(([name,val])=>`<div class="balance-card"><div style="font-size:11px;font-weight:750">${escapeHtml(name)}</div><div class="${val>=0?'balance-pos':'balance-neg'}" style="font-size:17px;font-weight:800;margin-top:3px;">${val>=0?'+':''}${money(val,tr.currency)}</div><div class="field-hint">${val>0?(es?'debe recibir':'should receive'):val<0?(es?'debe aportar':'owes'):(es?'saldado':'settled')}</div></div>`).join('')}</div>${settlements.length?`<div style="margin-top:12px;"><div class="booking-type">${es?'Cómo saldar':'Settle up'}</div>${settlements.map(s=>`<div class="field-hint" style="margin-top:5px;display:flex;justify-content:space-between;gap:8px;align-items:center;"><span>${escapeHtml(s.from)} → ${escapeHtml(s.to)} · <strong>${money(s.amount,tr.currency)}</strong></span>${canEditTrip(tr)?`<button class="btn btn-ghost btn-sm" onclick="recordSettlement('${tr.id}','${escapeHtml(s.from)}','${escapeHtml(s.to)}',${Number(s.amount)})">${es?'Registrar pago':'Record payment'}</button>`:''}</div>`).join('')}</div>`:''}</div>`;
 }
 
+
+async function getFxRateCached(from,to){
+  from=String(from||'').toUpperCase();to=String(to||'').toUpperCase();
+  if(from===to)return {rate:1,source:'identity'};
+  const key=`${from}/${to}`;const cached=state.fxCache?.[key];
+  if(navigator.onLine===false&&cached)return cached;
+  try{
+    const r=await fetch(`/api/fx/rate?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,{cache:'no-store'});
+    const j=await r.json();if(!r.ok||!Number(j.rate))throw new Error('fx');
+    const val={rate:Number(j.rate),date:j.date||'',source:j.source||'FX',at:new Date().toISOString()};
+    state.fxCache=state.fxCache||{};state.fxCache[key]=val;return val;
+  }catch(e){return cached||null;}
+}
+function expenseAnalytics(tr){
+  const list=state.expenses.filter(e=>e.tripId===tr.id),byDay={},byPerson={};
+  for(const e of list){const amt=Number(e.amount||0);byDay[e.date||'—']=(byDay[e.date||'—']||0)+amt;byPerson[e.paidBy||'—']=(byPerson[e.paidBy||'—']||0)+amt;}
+  const days=Math.max(1,tripDurationDays(tr)||1),elapsed=Math.max(1,Math.min(days,Math.floor((new Date()-new Date(`${tr.start||todayIsoLocal()}T00:00:00`))/86400000)+1));
+  const spent=tripSpent(tr.id),daily=spent/elapsed,forecast=roundMoney(daily*days);
+  return {byDay,byPerson,daily:roundMoney(daily),forecast};
+}
+
 function viewBudgetSub(tr){
   const t=tt();
   const spent = tripSpent(tr.id), budget = Number(tr.budgetGoal||0);
@@ -4099,9 +4325,10 @@ function viewBudgetSub(tr){
       <h3 style="margin:0 0 8px;font-size:16px;color:var(--paper);">${t.budget.log}</h3>
       ${expenses.length? `<div class="row-list">${expenses.map(e=>`
         <div class="li"><div class="main"><div class="t">${escapeHtml(e.desc||t.budget.cats[e.category])}</div><div class="s">${t.budget.cats[e.category]} · ${e.date||''}${e.paidBy?` · ${state.lang==='es'?'Pagó':'Paid by'} ${escapeHtml(e.paidBy)}`:''}${Array.isArray(e.splitWith)&&e.splitWith.length?` · ${state.lang==='es'?'Dividido':'Split'} ${e.splitWith.length}`:''}</div></div>
-        <div class="amt neg">-${money(e.amount,tr.currency)}</div><button class="del" onclick="deleteExpense('${e.id}')">✕</button></div>`).join('')}</div>`
+        <div><div class="amt neg">-${money(e.amount,tr.currency)}</div>${e.sourceCurrency&&e.sourceCurrency!==tr.currency?`<div class="expense-source">${money(e.sourceAmount,e.sourceCurrency)} · × ${Number(e.fxRate||0).toFixed(4)}</div>`:''}</div><button class="del" onclick="deleteExpense('${e.id}')">✕</button></div>`).join('')}</div>`
         : `<p style="color:var(--muted);font-size:13px;">${t.budget.empty}</p>`}
     </div>
+    ${(()=>{const a=expenseAnalytics(tr);return `<div class="panel"><h3 style="margin:0 0 8px;color:var(--paper)">${state.lang==='es'?'Análisis del gasto':'Spending insights'}</h3><div class="budget-forecast"><div class="stat"><div class="label">${state.lang==='es'?'Promedio diario':'Daily average'}</div><div class="value">${money(a.daily,tr.currency)}</div></div><div class="stat"><div class="label">${state.lang==='es'?'Proyección final':'Projected total'}</div><div class="value">${money(a.forecast,tr.currency)}</div></div><div class="stat"><div class="label">${state.lang==='es'?'Días con gastos':'Days with spending'}</div><div class="value">${Object.keys(a.byDay).length}</div></div></div><div class="row-list">${Object.entries(a.byPerson).map(([n,v])=>`<div class="li"><div class="main"><div class="t">👤 ${escapeHtml(n)}</div></div><div class="amt">${money(v,tr.currency)}</div></div>`).join('')}</div></div>`})()}
     ${expenseBalancesHtml(tr)}
     ${categoryBudgetHtml(tr)}
     <div class="panel">
@@ -4365,16 +4592,25 @@ function openExpenseForm(){
   ui.expenseDraft = {cat:CATS[0], desc:'', amount:'', date:new Date().toISOString().slice(0,10)};
   render();
 }
-function saveExpenseForm(){
-  const tr=tripById(ui.currentTripId); if(!tr||!canEditTrip(tr))return;
+async function saveExpenseForm(){
+  const tr=tripById(ui.currentTripId);if(!tr||!canEditTrip(tr))return;
   const g=id=>document.getElementById(id)?.value||'';
   const paidBy=g('e-paid-by')||currentParticipantName(tr);
   const splitWith=[...document.querySelectorAll('input[name="e-split"]:checked')].map(x=>x.value);
   const mode=g('e-split-mode')||'equal';let splitShares={};
   if(mode==='custom'&&splitWith.length){let remaining=100;for(let i=0;i<splitWith.length;i++){const n=splitWith[i];const def=i===splitWith.length-1?remaining:Math.round(100/splitWith.length);const v=Math.max(0,Math.min(100,Number(prompt(`${n} %`,def)||def)));splitShares[n]=v;remaining=Math.max(0,remaining-v);}}
-  state.expenses.push({id:uid(), tripId:ui.currentTripId, category:g('e-cat'), desc:g('e-desc').trim(), amount:parseMoneyInput(g('e-amount')), date:g('e-date'), paidBy, splitWith:splitWith.length?splitWith:[paidBy],splitMode:mode,splitShares});
-  ui.modal=null; ui.expenseDraft=null;
-  saveState(); render();
+  const sourceAmount=parseMoneyInput(g('e-amount'));
+  const sourceCurrency=(readCurrencyField('e-currency')||tr.currency||'USD').toUpperCase();
+  const targetCurrency=(tr.currency||'USD').toUpperCase();
+  let fxRate=sourceCurrency===targetCurrency?1:Number(g('e-rate')||0),fxSource=fxRate?'manual':'';
+  if(sourceCurrency!==targetCurrency&&!fxRate){
+    const fx=await getFxRateCached(sourceCurrency,targetCurrency);
+    if(!fx){showToast(state.lang==='es'?'Sin conexión y no hay una tasa guardada. Escribe la tasa manual.':'Offline and no cached exchange rate is available. Enter a manual rate.');return;}
+    fxRate=Number(fx.rate);fxSource=fx.source||'cached';
+  }
+  const amount=roundMoney(sourceAmount*fxRate);
+  state.expenses.push({id:uid(),tripId:ui.currentTripId,category:g('e-cat'),desc:g('e-desc').trim(),amount,date:g('e-date'),paidBy,splitWith:splitWith.length?splitWith:[paidBy],splitMode:mode,splitShares,sourceAmount,sourceCurrency,fxRate,fxSource,targetCurrency});
+  ui.modal=null;ui.expenseDraft=null;await saveState();render();
 }
 function deleteExpense(id){
   const t=tt();
@@ -4437,6 +4673,7 @@ function viewChecklistSub(tr){
         <div class="field" style="margin:0;"><label>${es?'Categoría':'Category'}</label><select id="ck-cat">${PACKING_CATEGORIES.map(c=>`<option value="${c}">${packingCategoryLabel(c)}</option>`).join('')}</select></div>
         <div class="field" style="margin:0;"><label>${es?'Cantidad':'Qty'}</label><input id="ck-qty" type="number" min="1" max="99" value="1"></div>
         <div class="field" style="margin:0;"><label>${es?'Asignado a':'Assigned to'}</label><select id="ck-assignee"><option value="">${es?'Todos / sin asignar':'Everyone / unassigned'}</option>${tripPeople(tr).map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('')}</select></div>
+        <div class="field" style="margin:0;"><label>${es?'Fecha límite':'Due date'}</label><input id="ck-due" type="date"></div>
         <button class="btn btn-brass btn-sm packing-add-btn" onclick="addChecklistItem()">+ ${t.common.add}</button>
       </div>
     </div>
@@ -4448,7 +4685,7 @@ function viewChecklistSub(tr){
     </div>
     ${groups.length?groups.map(g=>`<div class="panel packing-group">
       <div class="packing-group-head"><div class="packing-group-title">${packingCategoryLabel(g.cat)}</div><div class="packing-group-count">${g.items.filter(x=>x.done).length}/${g.items.length}</div></div>
-      ${g.items.map(it=>`<div class="packing-item"><input type="checkbox" ${it.done?'checked':''} onchange="toggleChecklistItem('${it.id}')"><span class="packing-text ${it.done?'done':''}">${escapeHtml(it.text)}${it.assignedTo?`<div class="assignee">👤 ${escapeHtml(it.assignedTo)}</div>`:''}</span>${Number(it.qty||1)>1?`<span class="qty-badge">×${Number(it.qty||1)}</span>`:''}<button class="del" onclick="deleteChecklistItem('${it.id}')">✕</button></div>`).join('')}
+      ${g.items.map(it=>`<div class="packing-item"><input type="checkbox" ${it.done?'checked':''} onchange="toggleChecklistItem('${it.id}')"><span class="packing-text ${it.done?'done':''}">${escapeHtml(it.text)}${it.assignedTo?`<div class="assignee">👤 ${escapeHtml(it.assignedTo)}</div>`:''}${it.dueDate?`<div class="participant-last ${!it.done&&it.dueDate<todayIsoLocal()?'deadline-overdue':(!it.done&&it.dueDate<=new Date(Date.now()+3*86400000).toISOString().slice(0,10)?'deadline-soon':'')}">📅 ${escapeHtml(it.dueDate)}</div>`:''}</span>${Number(it.qty||1)>1?`<span class="qty-badge">×${Number(it.qty||1)}</span>`:''}<button class="del" onclick="deleteChecklistItem('${it.id}')">✕</button></div>`).join('')}
     </div>`).join(''):`<div class="panel"><div class="empty"><span class="ic">🧳</span><h3>${es?'Tu maleta empieza aquí':'Your packing list starts here'}</h3><p>${es?'Agrega tus artículos o usa una lista sugerida para comenzar.':'Add items or use a suggested list to get started.'}</p></div></div>`}
   `;
 }
@@ -4458,8 +4695,9 @@ function addChecklistItem(){
   const cat=document.getElementById('ck-cat')?.value||'other';
   const qty=Math.max(1,Math.min(99,Number(document.getElementById('ck-qty')?.value||1)));
   const assignedTo=document.getElementById('ck-assignee')?.value||'';
-  if(!state.checklists[ui.currentTripId]) state.checklists[ui.currentTripId]=[];
-  state.checklists[ui.currentTripId].push({id:uid(),text:val,done:false,category:cat,qty,assignedTo});
+  const dueDate=document.getElementById('ck-due')?.value||'';
+  if(!state.checklists[ui.currentTripId])state.checklists[ui.currentTripId]=[];
+  state.checklists[ui.currentTripId].push({id:uid(),text:val,done:false,category:cat,qty,assignedTo,dueDate});
   saveState(); render();
 }
 function normalizePackingPreset(x){ return typeof x==='string'?{text:x,category:'other',qty:1}:{text:x.text,category:x.category||'other',qty:x.qty||1}; }
@@ -4497,32 +4735,53 @@ function deleteChecklistItem(id){
 }
 
 /* ---- notes sub ---- */
+
+function readSmallAttachment(file,maxBytes=650000){
+  return new Promise((resolve,reject)=>{
+    if(!file)return resolve(null);
+    if(file.size>maxBytes)return reject(new Error('too_large'));
+    const r=new FileReader();r.onload=()=>resolve({name:file.name,type:file.type||'application/octet-stream',size:file.size,dataUrl:String(r.result||'')});r.onerror=reject;r.readAsDataURL(file);
+  });
+}
+async function downloadDocAttachment(tripId,docId){
+  const d=(state.tripDocs[tripId]||[]).find(x=>x.id===docId);if(!d?.attachment?.dataUrl)return;
+  const a=document.createElement('a');a.href=d.attachment.dataUrl;a.download=d.attachment.name||'attachment';document.body.appendChild(a);a.click();a.remove();
+}
+
 function viewNotesSub(tr){
   const t=tt();
   const docs = state.tripDocs[tr.id]||[];
   return `
     <p style="color:var(--muted);font-size:12.5px;margin:0 0 14px;">${t.notes.sub}</p>
     ${docs.length? `<div class="panel"><div class="row-list">${docs.map(d=>`
-      <div class="li ${d.important?'doc-important':''}"><div class="main"><div class="t">${d.important?'⭐ ':''}${escapeHtml(d.label)}</div><div class="s">${d.type?escapeHtml(d.type)+' · ':''}${escapeHtml(d.value)}</div></div>
+      <div class="li ${d.important?'doc-important':''}"><div class="main"><div class="t">${d.important?'⭐ ':''}${escapeHtml(d.label)}</div><div class="s">${d.type?escapeHtml(d.type)+' · ':''}${escapeHtml(d.value)}</div>${d.attachment?`<button class="file-pill" onclick="downloadDocAttachment('${tr.id}','${d.id}')">📎 ${escapeHtml(d.attachment.name)} · ${Math.round(Number(d.attachment.size||0)/1024)} KB</button>`:''}</div>
       <button class="del" onclick="deleteDoc('${tr.id}','${d.id}')">✕</button></div>`).join('')}</div></div>`
       : `<div class="panel empty"><p>${t.notes.empty}</p></div>`}
     <div class="panel">
       <div class="field"><label>${t.notes.label}</label><input id="doc-label" placeholder="${t.notes.labelPlaceholder}"></div>
       <div class="form-row"><div class="field"><label>${state.lang==='es'?'Tipo':'Type'}</label><select id="doc-type"><option value="document">${state.lang==='es'?'Documento':'Document'}</option><option value="confirmation">${state.lang==='es'?'Confirmación':'Confirmation'}</option><option value="insurance">${state.lang==='es'?'Seguro':'Insurance'}</option><option value="address">${state.lang==='es'?'Dirección':'Address'}</option><option value="contact">${state.lang==='es'?'Contacto':'Contact'}</option></select></div><div class="field"><label>${state.lang==='es'?'Importante':'Important'}</label><select id="doc-important"><option value="0">${state.lang==='es'?'Normal':'Normal'}</option><option value="1">⭐ ${state.lang==='es'?'Importante':'Important'}</option></select></div></div>
-      <div class="field"><label>${t.notes.value}</label><input id="doc-value" placeholder="${t.notes.valuePlaceholder}" onkeydown="if(event.key==='Enter')addDoc('${tr.id}')"></div>
+      <div class="field"><label>${t.notes.value}</label><input id="doc-value" placeholder="${t.notes.valuePlaceholder}"></div>
+      <div class="field"><label>📎 ${state.lang==='es'?'Adjunto pequeño (PDF/imagen, máx. 650 KB)':'Small attachment (PDF/image, max 650 KB)'}</label><input id="doc-file" type="file" accept="application/pdf,image/*"></div>
       <button class="btn btn-brass btn-sm btn-block" onclick="addDoc('${tr.id}')">+ ${t.notes.addEntry}</button>
       <p class="field-hint" style="margin:12px 0 4px;">${t.notes.presets}</p>
       <div class="chips-wrap">${DOC_PRESETS[state.lang].map(p=>`<button class="chip" style="cursor:pointer;" onclick="quickAddDoc('${p.replace(/'/g,"\\'")}')"><span>+ ${p}</span></button>`).join('')}</div>
     </div>
   `;
 }
-function addDoc(tripId){
-  const label = document.getElementById('doc-label').value.trim();
-  const value = document.getElementById('doc-value').value.trim();
-  if(!label || !value) return;
-  if(!state.tripDocs[tripId]) state.tripDocs[tripId]=[];
-  state.tripDocs[tripId].push({id:uid(),label,value,type:document.getElementById('doc-type')?.value||'document',important:document.getElementById('doc-important')?.value==='1'});
-  saveState(); render();
+async function addDoc(tripId){
+  const label=document.getElementById('doc-label').value.trim();
+  const value=document.getElementById('doc-value').value.trim();
+  const file=document.getElementById('doc-file')?.files?.[0]||null;
+  if(!label||(!value&&!file))return;
+  let attachment=null;
+  try{
+    attachment=await readSmallAttachment(file);
+    const currentBytes=(state.tripDocs[tripId]||[]).reduce((s,d)=>s+Number(d.attachment?.size||0),0);
+    if(attachment&&currentBytes+Number(attachment.size||0)>2000000)throw new Error('trip_attachment_quota');
+  }catch(e){showToast(state.lang==='es'?'El archivo es demasiado grande o el viaje ya alcanzó 2 MB de adjuntos offline.':'The file is too large or this trip has reached the 2 MB offline attachment limit.');return;}
+  if(!state.tripDocs[tripId])state.tripDocs[tripId]=[];
+  state.tripDocs[tripId].push({id:uid(),label,value,type:document.getElementById('doc-type')?.value||'document',important:document.getElementById('doc-important')?.value==='1',attachment});
+  await saveState();render();
 }
 function quickAddDoc(label){
   const el = document.getElementById('doc-label');
@@ -4558,7 +4817,7 @@ function diagnosticsHtml(){
 function viewSettings(){
   const t=tt();
   return `
-    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v8.0.3</div></div></div>
+    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v9.0.0</div></div></div>
     <div class="panel">
       <h3 style="margin:0 0 12px;font-size:16px;color:var(--paper);">${t.settings.account}</h3>
       <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px;">
@@ -4571,7 +4830,7 @@ function viewSettings(){
       </div>
       <p class="field-hint">${t.settings.orAvatar}</p>
       <div class="avatar-grid">${AVATARS.map(a=>`<div class="avatar-opt ${(!state.profile.photo && state.profile.avatar===a)?'sel':''}" onclick="setAvatar('${a}')">${a}</div>`).join('')}</div>
-      <div class="field" style="margin-top:12px;max-width:280px;"><label>${t.settings.name}</label><input id="pf-name" placeholder="${t.settings.namePlaceholder}" value="${escapeHtml(state.profile.name||'')}" onchange="saveProfileName(this.value)"></div>
+      <div class="form-row" style="margin-top:12px"><div class="field"><label>${t.settings.name}</label><input id="pf-name" placeholder="${t.settings.namePlaceholder}" value="${escapeHtml(state.profile.name||'')}" onchange="saveProfileName(this.value)"></div><div class="field"><label>${state.lang==='es'?'País de residencia':'Home country'}</label><input value="${escapeHtml(state.profile.country||'')}" placeholder="${state.lang==='es'?'Ej. United States':'e.g. United States'}" onchange="state.profile.country=this.value.trim();saveState()"></div></div>
     </div>
     <div class="panel">
       <p style="font-family:var(--font-mono);font-size:10.5px;color:var(--muted);margin:0 0 6px;text-transform:uppercase;letter-spacing:0.08em;">${t.settings.theme}</p>
@@ -4581,7 +4840,8 @@ function viewSettings(){
       </div>
       <div class="field" style="margin-top:16px;max-width:280px;"><label>${t.settings.defaultCurrency}</label>${currencySelectHtml('pf-currency', state.profile.currency||'USD')}</div>
     </div>
-    <div class="panel"><h3 style="margin:0 0 8px;font-size:16px;color:var(--paper);">🩺 ${state.lang==='es'?'Diagnóstico':'Diagnostics'}</h3><p class="field-hint">${state.lang==='es'?'Comprueba conexión, servidor e integraciones principales.':'Check connection, server and core integrations.'}</p>${diagnosticsHtml()}<div class="participant-last" style="margin-top:10px">Waypoint v8.0.3 · ${state.trips.length} ${state.lang==='es'?'viaje(s) local(es)':'local trip(s)'}</div></div>
+    <div class="panel"><h3 style="margin:0 0 8px;color:var(--paper)">☁ ${state.lang==='es'?'Offline y copias locales':'Offline & local backups'}</h3><p class="field-hint">${state.lang==='es'?'Waypoint guarda automáticamente hasta 5 copias recientes en este dispositivo.':'Waypoint automatically keeps up to 5 recent backups on this device.'}</p><div class="backup-list">${(state.offlineSnapshots||[]).map(s=>`<div class="backup-row"><span>${escapeHtml(new Date(s.at).toLocaleString())}</span><button class="btn btn-ghost btn-sm" onclick="restoreSnapshot('${s.id}')">${state.lang==='es'?'Restaurar':'Restore'}</button></div>`).join('')||`<div class="field-hint">${state.lang==='es'?'Aún no hay copias':'No backups yet'}</div>`}</div></div>
+    <div class="panel"><h3 style="margin:0 0 8px;font-size:16px;color:var(--paper);">🩺 ${state.lang==='es'?'Diagnóstico':'Diagnostics'}</h3><p class="field-hint">${state.lang==='es'?'Comprueba conexión, servidor e integraciones principales.':'Check connection, server and core integrations.'}</p>${diagnosticsHtml()}<div class="participant-last" style="margin-top:10px">Waypoint v9.0.0 · ${state.trips.length} ${state.lang==='es'?'viaje(s) local(es)':'local trip(s)'}</div></div>
     <div class="panel">
       <h3 style="margin:0 0 6px;font-size:16px;color:var(--paper);">${t.settings.data}</h3>
       <p style="font-size:12px;color:var(--muted);margin:0 0 12px;">${t.settings.dataSub}</p>
@@ -4635,7 +4895,7 @@ function importData(evt){
       const data = JSON.parse(reader.result);
       if(!data || !Array.isArray(data.trips)) throw new Error('bad format');
       askConfirm(t.settings.importConfirm, ()=>{
-        state = Object.assign({lang:state.lang, trips:[], expenses:[], settlements:[], checklists:{}, itineraries:{}, tripDocs:{}, bookings:{}, ideas:{}, polls:{}, reminders:{}, categoryBudgets:{}}, data);
+        state=Object.assign({lang:state.lang,trips:[],expenses:[],settlements:[],checklists:{},itineraries:{},tripDocs:{},bookings:{},ideas:{},polls:{},reminders:{},categoryBudgets:{},emergencyContacts:{},pendingChat:[],fxCache:{},offlineSnapshots:[]},data);
         saveState(); render();
         showToast(t.settings.imported);
       }, true, t.common.continueLabel);
@@ -4648,7 +4908,7 @@ function resetAllData(){
   const t=tt();
   askConfirm(t.settings.resetConfirm, ()=>{
     const lang = state.lang;
-    state = {lang, trips:[], expenses:[], checklists:{}, itineraries:{}, tripDocs:{}, bookings:{}, ideas:{}, polls:{}, reminders:{}, profile:{name:"", avatar:"✈", photo:"", currency:"USD", theme:"brass"}};
+    state={lang,trips:[],expenses:[],settlements:[],checklists:{},itineraries:{},tripDocs:{},bookings:{},ideas:{},polls:{},reminders:{},categoryBudgets:{},emergencyContacts:{},pendingChat:[],fxCache:{},offlineSnapshots:[],profile:{name:"",avatar:"✈",photo:"",currency:"USD",country:"",theme:"brass"}};
     ui = {screen:"home", currentTripId:null, tripSubTab:"overview", modal:null, editingTrip:null,
       tripSearch:"", tripView:"upcoming", newTripCover:"", expenseDraft:null,
       confirmMessage:"", confirmAction:null, confirmDanger:false, confirmLabel:null,
@@ -4902,8 +5162,9 @@ function renderModal(){
       <div class="field"><label>${t.budget.desc}</label><input id="e-desc" value="${escapeHtml(d.desc)}"></div>
       <div class="form-row">
         <div class="field"><label>${t.budget.amount}</label><input id="e-amount" type="number" min="0" value="${escapeHtml(d.amount)}" step="0.01" inputmode="decimal" onblur="if(this.value!==''){this.value=roundMoney(this.value).toFixed(2);}"></div>
-        <div class="field"><label>${t.budget.date}</label><input id="e-date" type="date" value="${d.date}"></div>
+        <div class="field"><label>${state.lang==='es'?'Moneda del gasto':'Expense currency'}</label>${currencySelectHtml('e-currency',tripById(ui.currentTripId)?.localCurrency||tripById(ui.currentTripId)?.currency||'USD')}</div>
       </div>
+      <div class="form-row"><div class="field"><label>${t.budget.date}</label><input id="e-date" type="date" value="${d.date}"></div><div class="field"><label>${state.lang==='es'?'Tasa manual (opcional)':'Manual rate (optional)'}</label><input id="e-rate" type="number" min="0" step="0.000001" placeholder="${state.lang==='es'?'Automática si hay internet':'Automatic when online'}"><p class="field-hint">${state.lang==='es'?'1 unidad de moneda del gasto = ? moneda del viaje':'1 expense currency unit = ? trip currency'}</p></div></div>
       ${(()=>{const tr=tripById(ui.currentTripId),people=tripPeople(tr);return `<div class="field"><label>${state.lang==='es'?'Pagó':'Paid by'}</label><select id="e-paid-by">${people.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('')}</select></div><div class="field"><label>${state.lang==='es'?'Método de división':'Split method'}</label><select id="e-split-mode"><option value="equal">${state.lang==='es'?'Partes iguales':'Equal'}</option><option value="custom">${state.lang==='es'?'Porcentajes personalizados':'Custom percentages'}</option></select></div><div class="field"><label>${state.lang==='es'?'Dividir entre':'Split between'}</label><div style="display:flex;gap:7px;flex-wrap:wrap;">${people.map(n=>`<label class="tag" style="cursor:pointer;"><input style="width:auto;margin-right:4px" type="checkbox" name="e-split" value="${escapeHtml(n)}" checked>${escapeHtml(n)}</label>`).join('')}</div></div>`})()}
       <div class="form-actions">
         <button class="btn btn-brass btn-block" onclick="saveExpenseForm()">${t.common.save}</button>
@@ -4976,7 +5237,7 @@ document.addEventListener('change', (e)=>{
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('/service-worker.js?v=8.0.3',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('/service-worker.js?v=9.0.0',{updateViaCache:'none'});
       await reg.update();
       let reloading=false;
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
