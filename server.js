@@ -186,11 +186,77 @@ function removeEventClient(id,res){
   set.delete(res); if(!set.size) eventClients.delete(id);
 }
 
+
+const COUNTRY_ALIAS_QUERIES={
+  'japan':'Tokyo, Japan','japon':'Tokyo, Japan','jp':'Tokyo, Japan',
+  'colombia':'Bogota, Colombia','co':'Bogota, Colombia',
+  'united states':'Washington, DC, United States','usa':'Washington, DC, United States','estados unidos':'Washington, DC, United States',
+  'spain':'Madrid, Spain','espana':'Madrid, Spain','españa':'Madrid, Spain',
+  'france':'Paris, France','francia':'Paris, France',
+  'italy':'Rome, Italy','italia':'Rome, Italy',
+  'mexico':'Mexico City, Mexico','méxico':'Mexico City, Mexico',
+  'brazil':'Brasilia, Brazil','brasil':'Brasilia, Brazil',
+  'canada':'Ottawa, Canada','canadá':'Ottawa, Canada',
+  'united kingdom':'London, United Kingdom','uk':'London, United Kingdom','reino unido':'London, United Kingdom',
+  'germany':'Berlin, Germany','alemania':'Berlin, Germany',
+  'portugal':'Lisbon, Portugal',
+  'netherlands':'Amsterdam, Netherlands','paises bajos':'Amsterdam, Netherlands','países bajos':'Amsterdam, Netherlands',
+  'switzerland':'Bern, Switzerland','suiza':'Bern, Switzerland',
+  'argentina':'Buenos Aires, Argentina',
+  'chile':'Santiago, Chile',
+  'peru':'Lima, Peru','perú':'Lima, Peru',
+  'ecuador':'Quito, Ecuador',
+  'dominican republic':'Santo Domingo, Dominican Republic','republica dominicana':'Santo Domingo, Dominican Republic','república dominicana':'Santo Domingo, Dominican Republic',
+  'costa rica':'San Jose, Costa Rica',
+  'panama':'Panama City, Panama','panamá':'Panama City, Panama',
+  'australia':'Canberra, Australia',
+  'new zealand':'Wellington, New Zealand','nueva zelanda':'Wellington, New Zealand',
+  'south korea':'Seoul, South Korea','corea del sur':'Seoul, South Korea',
+  'china':'Beijing, China',
+  'thailand':'Bangkok, Thailand','tailandia':'Bangkok, Thailand',
+  'india':'New Delhi, India'
+};
+const PRACTICAL_BY_COUNTRY={
+  'Japan':{currency:'JPY',language:'Japanese / 日本語',emergency:'110 Police · 119 Fire/Ambulance',power:'Type A/B · 100V'},
+  'Colombia':{currency:'COP',language:'Spanish',emergency:'123',power:'Type A/B · 110V'},
+  'United States of America':{currency:'USD',language:'English',emergency:'911',power:'Type A/B · 120V'},
+  'United States':{currency:'USD',language:'English',emergency:'911',power:'Type A/B · 120V'},
+  'Spain':{currency:'EUR',language:'Spanish',emergency:'112',power:'Type C/F · 230V'},
+  'France':{currency:'EUR',language:'French',emergency:'112',power:'Type C/E · 230V'},
+  'Italy':{currency:'EUR',language:'Italian',emergency:'112',power:'Type C/F/L · 230V'},
+  'Mexico':{currency:'MXN',language:'Spanish',emergency:'911',power:'Type A/B · 127V'},
+  'Brazil':{currency:'BRL',language:'Portuguese',emergency:'190 Police · 192 Ambulance',power:'Type C/N · 127/220V'},
+  'Canada':{currency:'CAD',language:'English / French',emergency:'911',power:'Type A/B · 120V'},
+  'United Kingdom':{currency:'GBP',language:'English',emergency:'999 / 112',power:'Type G · 230V'},
+  'Germany':{currency:'EUR',language:'German',emergency:'112',power:'Type C/F · 230V'},
+  'Portugal':{currency:'EUR',language:'Portuguese',emergency:'112',power:'Type C/F · 230V'},
+  'Netherlands':{currency:'EUR',language:'Dutch',emergency:'112',power:'Type C/F · 230V'},
+  'Switzerland':{currency:'CHF',language:'German / French / Italian',emergency:'112',power:'Type C/J · 230V'},
+  'Argentina':{currency:'ARS',language:'Spanish',emergency:'911',power:'Type C/I · 220V'},
+  'Chile':{currency:'CLP',language:'Spanish',emergency:'133 Police · 131 Ambulance',power:'Type C/L · 220V'},
+  'Peru':{currency:'PEN',language:'Spanish',emergency:'105 Police · 116 Fire',power:'Type A/B/C · 220V'},
+  'Ecuador':{currency:'USD',language:'Spanish',emergency:'911',power:'Type A/B · 120V'},
+  'Dominican Republic':{currency:'DOP',language:'Spanish',emergency:'911',power:'Type A/B · 120V'},
+  'Costa Rica':{currency:'CRC',language:'Spanish',emergency:'911',power:'Type A/B · 120V'},
+  'Panama':{currency:'PAB / USD',language:'Spanish',emergency:'911',power:'Type A/B · 120V'},
+  'Australia':{currency:'AUD',language:'English',emergency:'000',power:'Type I · 230V'},
+  'New Zealand':{currency:'NZD',language:'English / Māori',emergency:'111',power:'Type I · 230V'},
+  'South Korea':{currency:'KRW',language:'Korean',emergency:'112 Police · 119 Fire/Ambulance',power:'Type C/F · 220V'},
+  'China':{currency:'CNY',language:'Mandarin Chinese',emergency:'110 Police · 120 Ambulance',power:'Type A/C/I · 220V'},
+  'Thailand':{currency:'THB',language:'Thai',emergency:'191 Police · 1669 Ambulance',power:'Type A/B/C/O · 230V'},
+  'India':{currency:'INR',language:'Hindi / English',emergency:'112',power:'Type C/D/M · 230V'}
+};
+function normalizeDestinationQuery(location){
+  const raw=String(location||'').trim();
+  const key=raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  return COUNTRY_ALIAS_QUERIES[key]||raw;
+}
+
 const server=http.createServer(async(req,res)=>{
   try{
     const u=new URL(req.url,'http://localhost');
 
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'7.0.0',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'7.0.1',time:new Date().toISOString()});
 
     if(req.method==='GET'&&u.pathname==='/api/fx/rate'){
       const from=String(u.searchParams.get('from')||'').trim().toUpperCase();
@@ -223,12 +289,13 @@ const server=http.createServer(async(req,res)=>{
     if(req.method==='GET'&&u.pathname==='/api/weather'){
       const apiKey=String(process.env.WEATHERAPI_KEY||'').trim();
       const location=String(u.searchParams.get('location')||'').trim().slice(0,160);
+      const resolvedQuery=normalizeDestinationQuery(location);
       if(!apiKey) return json(res,200,{enabled:false,provider:'WeatherAPI.com',reason:'api_key_required'});
       if(!location) return json(res,400,{error:'location required'});
       try{
         const params=new URLSearchParams({
           key:apiKey,
-          q:location,
+          q:resolvedQuery,
           days:'3',
           aqi:'no',
           alerts:'no'
@@ -268,9 +335,16 @@ const server=http.createServer(async(req,res)=>{
           provider:'WeatherAPI.com',
           attribution:'WeatherAPI.com',
           location:[loc.name,loc.region,loc.country].filter(Boolean).join(', '),
+          requestedLocation:location,
+          resolvedQuery,
+          name:loc.name||'',
+          region:loc.region||'',
+          country:loc.country||'',
+          timezone:loc.tz_id||'',
           latitude:loc.lat,
           longitude:loc.lon,
           localtime:loc.localtime||'',
+          practical:PRACTICAL_BY_COUNTRY[loc.country]||{},
           current,
           forecast:days
         });
@@ -588,4 +662,4 @@ const server=http.createServer(async(req,res)=>{
   }
 });
 
-server.listen(PORT,HOST,()=>console.log(`Waypoint 7.0.0 listening on http://${HOST}:${PORT}`));
+server.listen(PORT,HOST,()=>console.log(`Waypoint 7.0.1 listening on http://${HOST}:${PORT}`));

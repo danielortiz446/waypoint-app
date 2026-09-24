@@ -227,3 +227,14 @@ Legacy editor/viewer links still work for compatibility. For revocable per-perso
 
 ### Features intentionally not faked
 Exact server push while an iPhone PWA is fully terminated, real-time driving/transit duration between places, native App Store/Play Store distribution, and an unlimited shared photo gallery require additional infrastructure or provider credentials. Waypoint does not pretend these capabilities are available when they are not.
+
+## Waypoint 7.0.1 UI Cleanup + Smart Destination Data
+
+- The trip navigation now keeps Overview, Today, Travel, Itinerary, Map and Bookings visible, with secondary tools under More.
+- The collaboration bar is reduced to role/sync status, participant count, chat, Share and a More menu.
+- Destructive Stop Sharing is moved into the More menu.
+- WeatherAPI timezone (`tz_id`) now drives destination local time when the trip still has a device/default timezone.
+- Exact country-only destinations such as Japan/Japón are normalized to an unambiguous capital-country query before WeatherAPI lookup.
+- Weather responses now include resolved city/region/country, timezone and practical country metadata where Waypoint has a verified built-in profile.
+- Practical information uses automatic destination data unless the traveler manually enters an override.
+- Trip accounting currency remains separate from local destination currency to avoid silently changing an existing budget.
