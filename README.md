@@ -410,3 +410,10 @@ Intentionally not faked:
 - Added direct links to Privacy Policy and Terms of Use.
 - Added a Settings panel showing legal version and acceptance timestamp.
 - The existing V10.0.2 Copy button fix and all V10 smart/offline/security features remain intact.
+
+## Waypoint 10.0.4 — Bilingual Legal Pages
+- Complete Privacy Policy in English and Spanish.
+- Complete Terms of Use in English and Spanish.
+- EN / ES switcher on both legal pages.
+- Legal pages automatically follow Waypoint language when available, otherwise browser language.
+- First-use consent remains bilingual.

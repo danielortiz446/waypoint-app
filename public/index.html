@@ -5225,7 +5225,7 @@ function diagnosticsHtml(){
 function viewSettings(){
   const t=tt();
   return `
-    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v10.0.3</div></div></div>
+    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v10.0.4</div></div></div>
     <div class="panel">
       <h3 style="margin:0 0 12px;font-size:16px;color:var(--paper);">${t.settings.account}</h3>
       <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px;">
@@ -5256,7 +5256,7 @@ function viewSettings(){
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><a class="btn btn-ghost btn-sm" href="/privacy.html" target="_blank" rel="noopener">${state.lang==='es'?'Política de Privacidad':'Privacy Policy'}</a><a class="btn btn-ghost btn-sm" href="/terms.html" target="_blank" rel="noopener">${state.lang==='es'?'Términos de Uso':'Terms of Use'}</a></div>
     </div>
     <div class="panel"><h3 style="margin:0 0 8px;color:var(--paper)">☁ ${state.lang==='es'?'Offline y copias locales':'Offline & local backups'}</h3><p class="field-hint">${state.lang==='es'?'Waypoint guarda automáticamente hasta 5 copias recientes en este dispositivo.':'Waypoint automatically keeps up to 5 recent backups on this device.'}</p><div class="backup-list">${(state.offlineSnapshots||[]).map(s=>`<div class="backup-row"><span>${escapeHtml(new Date(s.at).toLocaleString())}</span><button class="btn btn-ghost btn-sm" onclick="restoreSnapshot('${s.id}')">${state.lang==='es'?'Restaurar':'Restore'}</button></div>`).join('')||`<div class="field-hint">${state.lang==='es'?'Aún no hay copias':'No backups yet'}</div>`}</div></div>
-    <div class="panel"><h3 style="margin:0 0 8px;font-size:16px;color:var(--paper);">🩺 ${state.lang==='es'?'Diagnóstico':'Diagnostics'}</h3><p class="field-hint">${state.lang==='es'?'Comprueba conexión, servidor e integraciones principales.':'Check connection, server and core integrations.'}</p>${diagnosticsHtml()}<div class="participant-last" style="margin-top:10px">Waypoint v10.0.3 · ${state.trips.length} ${state.lang==='es'?'viaje(s) local(es)':'local trip(s)'}</div><div style="margin-top:12px">${integrationStatusHtml()}</div></div>
+    <div class="panel"><h3 style="margin:0 0 8px;font-size:16px;color:var(--paper);">🩺 ${state.lang==='es'?'Diagnóstico':'Diagnostics'}</h3><p class="field-hint">${state.lang==='es'?'Comprueba conexión, servidor e integraciones principales.':'Check connection, server and core integrations.'}</p>${diagnosticsHtml()}<div class="participant-last" style="margin-top:10px">Waypoint v10.0.4 · ${state.trips.length} ${state.lang==='es'?'viaje(s) local(es)':'local trip(s)'}</div><div style="margin-top:12px">${integrationStatusHtml()}</div></div>
     <div class="panel">
       <h3 style="margin:0 0 6px;font-size:16px;color:var(--paper);">${t.settings.data}</h3>
       <p style="font-size:12px;color:var(--muted);margin:0 0 12px;">${t.settings.dataSub}</p>
@@ -5662,7 +5662,7 @@ document.addEventListener('change', (e)=>{
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('/service-worker.js?v=10.0.3',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('/service-worker.js?v=10.0.4',{updateViaCache:'none'});
       await reg.update();
       let reloading=false;
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
