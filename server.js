@@ -134,6 +134,8 @@ function deriveActivityEvents(prev,next,actorName,actorId){
   compare(flattenActivities(prev.days),flattenActivities(next.days),{add:'activity_added',update:'activity_updated',remove:'activity_removed'},'title',['title','time','location','dayId']);
   compare(prev.bookings,next.bookings,{add:'booking_added',update:'booking_updated',remove:'booking_removed'},'title',['title','date','time','provider','confirmation','location','notes','flightNumber','origin','destination']);
   compare(prev.expenses,next.expenses,{add:'expense_added',update:null,remove:'expense_removed'},'desc',null,x=>({amount:Number.isFinite(Number(x.amount))?String(Number(x.amount).toFixed(2)):''}));
+  compare(prev.settlements,next.settlements,{add:'settlement_added',update:null,remove:'settlement_removed'},'from',null,x=>({amount:Number.isFinite(Number(x.amount))?String(Number(x.amount).toFixed(2)):''}));
+  if(JSON.stringify(prev.categoryBudgets||{})!==JSON.stringify(next.categoryBudgets||{})) add('category_budget_updated');
   compare(prev.checklists,next.checklists,{add:'packing_added',update:'packing_updated',remove:'packing_removed'},'text',['text','done','category','qty','assignedTo']);
   compare(prev.docs,next.docs,{add:'note_added',update:'note_added',remove:'note_removed'},'label',['label','value']);
   compare(prev.ideas,next.ideas,{add:'idea_added',update:'idea_updated',remove:'idea_removed'},'title',['title','location','category']);
@@ -214,37 +216,85 @@ const COUNTRY_ALIAS_QUERIES={
   'south korea':'Seoul, South Korea','corea del sur':'Seoul, South Korea',
   'china':'Beijing, China',
   'thailand':'Bangkok, Thailand','tailandia':'Bangkok, Thailand',
-  'india':'New Delhi, India'
+  'india':'New Delhi, India',
+
+  'singapore':'Singapore, Singapore','singapur':'Singapore, Singapore',
+  'united arab emirates':'Abu Dhabi, United Arab Emirates','uae':'Abu Dhabi, United Arab Emirates','emiratos arabes unidos':'Abu Dhabi, United Arab Emirates',
+  'turkey':'Ankara, Turkey','turkiye':'Ankara, Turkey','türkiye':'Ankara, Turkey','turquia':'Ankara, Turkey',
+  'greece':'Athens, Greece','grecia':'Athens, Greece',
+  'ireland':'Dublin, Ireland','irlanda':'Dublin, Ireland',
+  'belgium':'Brussels, Belgium','belgica':'Brussels, Belgium',
+  'austria':'Vienna, Austria',
+  'sweden':'Stockholm, Sweden','suecia':'Stockholm, Sweden',
+  'norway':'Oslo, Norway','noruega':'Oslo, Norway',
+  'denmark':'Copenhagen, Denmark','dinamarca':'Copenhagen, Denmark',
+  'finland':'Helsinki, Finland','finlandia':'Helsinki, Finland',
+  'iceland':'Reykjavik, Iceland','islandia':'Reykjavik, Iceland',
+  'czech republic':'Prague, Czech Republic','czechia':'Prague, Czech Republic','republica checa':'Prague, Czech Republic',
+  'poland':'Warsaw, Poland','polonia':'Warsaw, Poland',
+  'hungary':'Budapest, Hungary','hungria':'Budapest, Hungary',
+  'croatia':'Zagreb, Croatia','croacia':'Zagreb, Croatia',
+  'jamaica':'Kingston, Jamaica',
+  'bahamas':'Nassau, Bahamas',
+  'aruba':'Oranjestad, Aruba',
+  'curacao':'Willemstad, Curaçao','curaçao':'Willemstad, Curaçao',
+  'south africa':'Pretoria, South Africa','sudafrica':'Pretoria, South Africa',
+  'morocco':'Rabat, Morocco','marruecos':'Rabat, Morocco',
+  'egypt':'Cairo, Egypt','egipto':'Cairo, Egypt',
 };
 const PRACTICAL_BY_COUNTRY={
-  'Japan':{currency:'JPY',language:'Japanese'},
-  'Colombia':{currency:'COP',language:'Spanish'},
-  'United States of America':{currency:'USD',language:'English'},
-  'United States':{currency:'USD',language:'English'},
-  'Spain':{currency:'EUR',language:'Spanish'},
-  'France':{currency:'EUR',language:'French'},
-  'Italy':{currency:'EUR',language:'Italian'},
-  'Mexico':{currency:'MXN',language:'Spanish'},
-  'Brazil':{currency:'BRL',language:'Portuguese'},
-  'Canada':{currency:'CAD',language:'English / French'},
-  'United Kingdom':{currency:'GBP',language:'English'},
-  'Germany':{currency:'EUR',language:'German'},
-  'Portugal':{currency:'EUR',language:'Portuguese'},
-  'Netherlands':{currency:'EUR',language:'Dutch'},
-  'Switzerland':{currency:'CHF',language:'German / French / Italian'},
-  'Argentina':{currency:'ARS',language:'Spanish'},
-  'Chile':{currency:'CLP',language:'Spanish'},
-  'Peru':{currency:'PEN',language:'Spanish'},
-  'Ecuador':{currency:'USD',language:'Spanish'},
-  'Dominican Republic':{currency:'DOP',language:'Spanish'},
-  'Costa Rica':{currency:'CRC',language:'Spanish'},
-  'Panama':{currency:'PAB / USD',language:'Spanish'},
-  'Australia':{currency:'AUD',language:'English'},
-  'New Zealand':{currency:'NZD',language:'English / Māori'},
-  'South Korea':{currency:'KRW',language:'Korean'},
-  'China':{currency:'CNY',language:'Mandarin Chinese'},
-  'Thailand':{currency:'THB',language:'Thai'},
-  'India':{currency:'INR',language:'Hindi / English'}
+  'Japan':{currency:'JPY',language:'Japanese',emergency:'110 Police · 119 Fire/Ambulance',power:'Type A/B · 100V'},
+  'Colombia':{currency:'COP',language:'Spanish',emergency:'123',power:'Type A/B · 110V'},
+  'United States of America':{currency:'USD',language:'English',emergency:'911',power:'Type A/B · 120V'},
+  'United States':{currency:'USD',language:'English',emergency:'911',power:'Type A/B · 120V'},
+  'Spain':{currency:'EUR',language:'Spanish',emergency:'112',power:'Type C/F · 230V'},
+  'France':{currency:'EUR',language:'French',emergency:'112',power:'Type C/E · 230V'},
+  'Italy':{currency:'EUR',language:'Italian',emergency:'112',power:'Type C/F/L · 230V'},
+  'Mexico':{currency:'MXN',language:'Spanish',emergency:'911',power:'Type A/B · 127V'},
+  'Brazil':{currency:'BRL',language:'Portuguese',emergency:'190 Police · 192 Ambulance · 193 Fire',power:'Type C/N · 127/220V'},
+  'Canada':{currency:'CAD',language:'English / French',emergency:'911',power:'Type A/B · 120V'},
+  'United Kingdom':{currency:'GBP',language:'English',emergency:'999 / 112',power:'Type G · 230V'},
+  'Germany':{currency:'EUR',language:'German',emergency:'112',power:'Type C/F · 230V'},
+  'Portugal':{currency:'EUR',language:'Portuguese',emergency:'112',power:'Type C/F · 230V'},
+  'Netherlands':{currency:'EUR',language:'Dutch',emergency:'112',power:'Type C/F · 230V'},
+  'Switzerland':{currency:'CHF',language:'German / French / Italian',emergency:'112',power:'Type C/J · 230V'},
+  'Argentina':{currency:'ARS',language:'Spanish',emergency:'911',power:'Type C/I · 220V'},
+  'Chile':{currency:'CLP',language:'Spanish',emergency:'133 Police · 131 Ambulance · 132 Fire',power:'Type C/L · 220V'},
+  'Peru':{currency:'PEN',language:'Spanish',emergency:'105 Police · 116 Fire · 106 Ambulance (Lima)',power:'Type A/B/C · 220V'},
+  'Ecuador':{currency:'USD',language:'Spanish',emergency:'911',power:'Type A/B · 120V'},
+  'Dominican Republic':{currency:'DOP',language:'Spanish',emergency:'911',power:'Type A/B · 120V'},
+  'Costa Rica':{currency:'CRC',language:'Spanish',emergency:'911',power:'Type A/B · 120V'},
+  'Panama':{currency:'PAB / USD',language:'Spanish',emergency:'911',power:'Type A/B · 120V'},
+  'Australia':{currency:'AUD',language:'English',emergency:'000',power:'Type I · 230V'},
+  'New Zealand':{currency:'NZD',language:'English / Māori',emergency:'111',power:'Type I · 230V'},
+  'South Korea':{currency:'KRW',language:'Korean',emergency:'112 Police · 119 Fire/Ambulance',power:'Type C/F · 220V'},
+  'China':{currency:'CNY',language:'Mandarin Chinese',emergency:'110 Police · 120 Ambulance · 119 Fire',power:'Type A/C/I · 220V'},
+  'Thailand':{currency:'THB',language:'Thai',emergency:'191 Police · 1669 Medical · 199 Fire',power:'Type A/B/C/O · 230V'},
+  'India':{currency:'INR',language:'Hindi / English',emergency:'112',power:'Type C/D/M · 230V'},
+  'Singapore':{currency:'SGD',language:'English / Malay / Mandarin / Tamil',emergency:'999 Police · 995 Fire/Ambulance',power:'Type G · 230V'},
+  'United Arab Emirates':{currency:'AED',language:'Arabic / English',emergency:'999 Police · 998 Ambulance · 997 Fire',power:'Type G · 230V'},
+  'Turkey':{currency:'TRY',language:'Turkish',emergency:'112',power:'Type C/F · 230V'},
+  'Greece':{currency:'EUR',language:'Greek',emergency:'112',power:'Type C/F · 230V'},
+  'Ireland':{currency:'EUR',language:'English / Irish',emergency:'112 / 999',power:'Type G · 230V'},
+  'Belgium':{currency:'EUR',language:'Dutch / French / German',emergency:'112',power:'Type C/E · 230V'},
+  'Austria':{currency:'EUR',language:'German',emergency:'112',power:'Type C/F · 230V'},
+  'Sweden':{currency:'SEK',language:'Swedish',emergency:'112',power:'Type C/F · 230V'},
+  'Norway':{currency:'NOK',language:'Norwegian',emergency:'112 Police · 113 Medical · 110 Fire',power:'Type C/F · 230V'},
+  'Denmark':{currency:'DKK',language:'Danish',emergency:'112',power:'Type C/E/F/K · 230V'},
+  'Finland':{currency:'EUR',language:'Finnish / Swedish',emergency:'112',power:'Type C/F · 230V'},
+  'Iceland':{currency:'ISK',language:'Icelandic',emergency:'112',power:'Type C/F · 230V'},
+  'Czech Republic':{currency:'CZK',language:'Czech',emergency:'112',power:'Type C/E · 230V'},
+  'Poland':{currency:'PLN',language:'Polish',emergency:'112',power:'Type C/E · 230V'},
+  'Hungary':{currency:'HUF',language:'Hungarian',emergency:'112',power:'Type C/F · 230V'},
+  'Croatia':{currency:'EUR',language:'Croatian',emergency:'112',power:'Type C/F · 230V'},
+  'Puerto Rico':{currency:'USD',language:'Spanish / English',emergency:'911',power:'Type A/B · 120V'},
+  'Jamaica':{currency:'JMD',language:'English',emergency:'119 Police/Ambulance · 110 Fire',power:'Type A/B · 110V'},
+  'Bahamas':{currency:'BSD',language:'English',emergency:'911 / 919',power:'Type A/B · 120V'},
+  'Aruba':{currency:'AWG',language:'Dutch / Papiamento',emergency:'911',power:'Type A/B/F · 127V'},
+  'Curaçao':{currency:'ANG',language:'Dutch / Papiamento / English',emergency:'911',power:'Type A/B · 127V'},
+  'South Africa':{currency:'ZAR',language:'Multiple official languages',emergency:'112 mobile · 10111 Police · 10177 Ambulance',power:'Type C/M/N · 230V'},
+  'Morocco':{currency:'MAD',language:'Arabic / Amazigh',emergency:'19 Police · 15 Ambulance/Fire',power:'Type C/E · 220V'},
+  'Egypt':{currency:'EGP',language:'Arabic',emergency:'122 Police · 123 Ambulance · 180 Fire',power:'Type C/F · 220V'}
 };
 function normalizeDestinationQuery(location){
   const raw=String(location||'').trim();
@@ -256,7 +306,7 @@ const server=http.createServer(async(req,res)=>{
   try{
     const u=new URL(req.url,'http://localhost');
 
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'7.0.2',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'7.0.5',time:new Date().toISOString()});
 
     if(req.method==='GET'&&u.pathname==='/api/fx/rate'){
       const from=String(u.searchParams.get('from')||'').trim().toUpperCase();
@@ -600,7 +650,10 @@ const server=http.createServer(async(req,res)=>{
         if(existing&&!hasEditAccess(existing,editKey)) return json(res,403,{error:'invalid edit key'});
         const participantIdForEdit=String(req.headers['x-participant-id']||'').trim().slice(0,100);
         const editParticipant=(existing?.participants||[]).find(p=>p.participantId===participantIdForEdit&&!p.revokedAt);
-        if(existing&&editParticipant&&editParticipant.role==='viewer') return json(res,403,{error:'participant is view only'});
+        if(existing&&(existing.participants||[]).length){
+          if(!participantIdForEdit||!editParticipant) return json(res,403,{error:'active participant required'});
+          if(editParticipant.role==='viewer') return json(res,403,{error:'participant is view only'});
+        }
         const clientRevision=Number(incoming.clientRevision||0);
         if(existing&&incoming.force!==true&&clientRevision!==Number(existing.revision||0)){
           return json(res,409,{error:'revision_conflict',revision:existing.revision,updatedAt:existing.updatedAt,data:existing.data});
@@ -609,7 +662,7 @@ const server=http.createServer(async(req,res)=>{
         const ownerKey=String(req.headers['x-owner-key']||'');
         const viewKey=String(req.headers['x-view-key']||'');
         const participantId=String(req.headers['x-participant-id']||'').trim().slice(0,100);
-        const participant=(existing?.participants||[]).find(p=>p.participantId===participantId);
+        const participant=(existing?.participants||[]).find(p=>p.participantId===participantId&&!p.revokedAt);
         const newEvents=existing?deriveActivityEvents(existing.data||{},incoming.data||{},participant?.name||'Participant',participantId):[];
         const activity=[...(Array.isArray(existing?.activity)?existing.activity:[]),...newEvents].slice(-150);
         rooms[id]={
@@ -662,4 +715,4 @@ const server=http.createServer(async(req,res)=>{
   }
 });
 
-server.listen(PORT,HOST,()=>console.log(`Waypoint 7.0.2 listening on http://${HOST}:${PORT}`));
+server.listen(PORT,HOST,()=>console.log(`Waypoint 7.0.5 listening on http://${HOST}:${PORT}`));

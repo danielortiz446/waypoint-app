@@ -47,7 +47,7 @@ async function sseNext(id,key){
     r=await fetch(base+'/manifest.webmanifest');
     results.push(['manifest',r.ok&&(await r.json()).name.includes('Waypoint')]);
     r=await fetch(base+'/health');
-    results.push(['health',r.ok&&(await r.json()).version==='7.0.2']);
+    results.push(['health',r.ok&&(await r.json()).version==='7.0.5']);
 
     const id='trip-test',key='secret-edit-key',viewKey='secret-view-key';
     r=await fetch(base+`/api/trips/${id}`,{method:'PUT',headers:{'content-type':'application/json','x-edit-key':key,'x-view-key':viewKey},body:JSON.stringify({clientRevision:0,data:{waypointLive:1,trip:{name:'QA Trip'},days:[],bookings:[]}})});
@@ -174,6 +174,22 @@ r=await fetch(base+'/api/giphy-config');
 
     r=await fetch(base+`/api/trips/${ownerTrip}?key=${encodeURIComponent(inviteToken)}`);
     results.push(['revoked invite blocked',r.status===403]);
+
+
+    // V7.0.5: removed participants cannot keep editing with a generic editor key.
+    const revokeTrip='trip-revoke-test',revokeEdit='revoke-edit-key',revokeOwner='revoke-owner-key';
+    r=await fetch(base+`/api/trips/${revokeTrip}`,{method:'PUT',headers:{'content-type':'application/json','x-edit-key':revokeEdit,'x-owner-key':revokeOwner},body:JSON.stringify({clientRevision:0,data:{waypointLive:3,trip:{name:'Revoke QA'},days:[],bookings:[]}})});
+    results.push(['revoke room create',r.ok]);
+    r=await fetch(base+`/api/trips/${revokeTrip}/participants`,{method:'POST',headers:{'content-type':'application/json','x-access-key':revokeEdit,'x-owner-key':revokeOwner},body:JSON.stringify({name:'Owner QA',participantId:'revoke-owner-client',role:'owner'})});
+    results.push(['revoke owner register',r.ok]);
+    r=await fetch(base+`/api/trips/${revokeTrip}/participants`,{method:'POST',headers:{'content-type':'application/json','x-access-key':revokeEdit},body:JSON.stringify({name:'Editor QA',participantId:'revoke-editor-client',role:'editor'})});
+    results.push(['revoke editor register',r.ok]);
+    r=await fetch(base+`/api/trips/${revokeTrip}/participants/revoke-editor-client`,{method:'DELETE',headers:{'x-owner-key':revokeOwner}});
+    results.push(['participant remove',r.ok]);
+    r=await fetch(base+`/api/trips/${revokeTrip}`,{method:'PUT',headers:{'content-type':'application/json','x-edit-key':revokeEdit,'x-participant-id':'revoke-editor-client'},body:JSON.stringify({clientRevision:1,data:{waypointLive:3,trip:{name:'Should fail'},days:[],bookings:[]}})});
+    results.push(['removed participant write blocked',r.status===403]);
+    r=await fetch(base+`/api/trips/${revokeTrip}`,{method:'PUT',headers:{'content-type':'application/json','x-edit-key':revokeEdit},body:JSON.stringify({clientRevision:1,data:{waypointLive:3,trip:{name:'Missing participant should fail'},days:[],bookings:[]}})});
+    results.push(['missing participant write blocked',r.status===403]);
 
 
 

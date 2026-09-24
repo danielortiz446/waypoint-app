@@ -119,3 +119,13 @@ WAYPOINT 6.0 COMPLETE TRAVEL SUITE
 - Added PWA local reminders with service-worker notification display.
 - Added smarter Home trip pulse.
 - Fixed trip duplication to strip collaboration credentials and deep-copy related trip data.
+
+WAYPOINT 7.0.5 PRE-DEPLOYMENT AUDIT
+- Fixed existing-trip save target after modal close.
+- Fixed advanced trip fields not being persisted by saveTripForm.
+- Fixed stale practical data after destination changes.
+- Fixed participant role changes not updating local permissions.
+- Hardened server writes against removed/unregistered participant IDs.
+- Added collaboration sync for settlements and category budgets.
+- Fixed itinerary import/export coverage for advanced data.
+- Fixed trip delete/undo coverage for settlements/category budgets.

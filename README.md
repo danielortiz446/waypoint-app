@@ -246,3 +246,27 @@ Exact server push while an iPhone PWA is fully terminated, real-time driving/tra
 - Local destination currency no longer falls back to the trip accounting currency.
 - Country-only destination normalization is stricter, including `Japan`, `Japón` and `Japon` → `Tokyo, Japan`.
 - The Travel view displays exactly how an ambiguous destination was interpreted.
+
+## Waypoint 7.0.3 Automatic Practical Information
+
+Practical travel information is now automatic. WeatherAPI resolves the destination and timezone, and Waypoint's built-in country profiles provide local currency, language, emergency numbers and plug/voltage information for supported destinations. Detected values are persisted into the trip so they remain available offline.
+
+Manual fields remain available only as overrides. If the destination changes, Waypoint clears the previous detected profile and resolves the new destination automatically. Unsupported countries show `No disponible / Not available` instead of inventing values.
+
+## Waypoint 7.0.4 iPhone More menu
+
+On iPhone and other narrow screens, the More menu is now a native-style bottom sheet. It opens from the bottom with a dimmed/blurred backdrop, rounded top corners, a visual grabber, a close button, larger two-column touch targets, safe-area padding for the Home indicator, Escape/backdrop close behavior, and body scroll locking. Desktop keeps a compact anchored dropdown.
+
+## Waypoint 7.0.5 QA-hardened release
+
+This release fixes issues found during a pre-deployment audit rather than adding cosmetic features:
+
+- Editing an existing trip now preserves the actual edited trip ID before closing the modal.
+- Destination changes clear destination-specific cached/manual practical data and trigger a fresh automatic lookup.
+- All advanced trip fields are actually saved from the edit form.
+- Participant role changes received from the server immediately update local edit/view-only behavior.
+- Existing collaboration rooms require an active registered participant for writes, blocking removed participants from continuing to edit with a generic editor key.
+- Settlements and category budgets now sync through live collaboration.
+- Editable itinerary import/export now restores advanced trip metadata, settlements and category budgets.
+- Trip deletion/undo now includes settlements and category budgets.
+- Navigation away from a trip always clears the iPhone More-sheet scroll lock.

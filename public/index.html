@@ -762,6 +762,91 @@ body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inse
   .trip-more-menu-portal{position:fixed;left:12px;right:12px;top:auto;bottom:calc(14px + env(safe-area-inset-bottom,0px));min-width:0;max-height:70dvh;overflow:auto;z-index:120}
 }
 
+
+/* Waypoint 7.0.4 iOS More bottom sheet */
+.trip-more-backdrop{
+  position:fixed;inset:0;z-index:109;
+  background:rgba(2,10,18,.56);
+  backdrop-filter:blur(3px);
+  -webkit-backdrop-filter:blur(3px);
+}
+.trip-more-sheet{
+  position:fixed;z-index:110;
+  left:50%;transform:translateX(-50%);
+  width:min(92vw,360px);
+  top:auto;bottom:auto;
+  padding:8px;
+  border-radius:14px;
+  background:#10283b;
+  border:1px solid rgba(255,255,255,.13);
+  box-shadow:0 18px 45px rgba(0,0,0,.42);
+}
+.trip-more-sheet-head{display:none}
+.trip-more-sheet button{
+  display:block;width:100%;
+  border:0;background:transparent;color:var(--ink-text);
+  text-align:left;padding:10px 11px;border-radius:9px;
+  cursor:pointer;font-size:11px;
+}
+.trip-more-sheet button:hover,.trip-more-sheet button.active{
+  background:rgba(201,162,39,.11);color:var(--brass-light)
+}
+@media(min-width:760px){
+  .trip-more-backdrop{display:none}
+  .trip-more-sheet{
+    position:absolute;left:auto;right:0;transform:none;
+    top:calc(100% + 7px);bottom:auto;
+    width:230px;
+  }
+}
+@media(max-width:759px){
+  body.trip-more-open{overflow:hidden}
+  .trip-more-sheet{
+    left:0;right:0;bottom:0;top:auto;transform:none;
+    width:auto;max-height:78dvh;overflow:auto;
+    padding:8px 12px calc(14px + env(safe-area-inset-bottom,0px));
+    border-radius:22px 22px 0 0;
+    border-left:0;border-right:0;border-bottom:0;
+    box-shadow:0 -18px 50px rgba(0,0,0,.42);
+    animation:waypointSheetUp .22s ease-out;
+  }
+  .trip-more-sheet-head{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:10px;padding:2px 2px 9px;
+  }
+  .trip-more-sheet-title{
+    font-size:14px;font-weight:850;color:var(--paper);
+  }
+  .trip-more-grabber{
+    width:42px;height:5px;border-radius:999px;
+    background:rgba(255,255,255,.22);
+    margin:2px auto 10px;
+  }
+  .trip-more-sheet .sheet-grid{
+    display:grid;grid-template-columns:1fr 1fr;gap:8px;
+  }
+  .trip-more-sheet button{
+    min-height:58px;
+    padding:12px;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.06);
+    font-size:12px;font-weight:750;
+  }
+  .trip-more-sheet button.active{
+    background:rgba(201,162,39,.16);
+    border-color:rgba(201,162,39,.28);
+  }
+  .trip-more-sheet .sheet-close{
+    width:38px;min-height:38px;padding:0;
+    display:flex;align-items:center;justify-content:center;
+    font-size:18px;border-radius:11px;
+  }
+}
+@keyframes waypointSheetUp{
+  from{transform:translateY(22px);opacity:0}
+  to{transform:translateY(0);opacity:1}
+}
+
 </style>
 </head>
 <body><a class="skip-link" href="#app">Skip to content</a>
@@ -1000,29 +1085,30 @@ function resolvedTripTimezone(tr){
   const w=weatherForTrip(tr);
   const browserTz=Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';
   const manual=String(tr.timezone||'').trim();
-  if(w?.timezone){
-    if(!manual||manual===browserTz||manual==='UTC')return w.timezone;
-    return manual;
-  }
-  return manual||browserTz;
+  const automatic=String(w?.timezone||tr.autoTimezone||'').trim();
+  if(manual)return manual;
+  if(automatic)return automatic;
+  return browserTz;
 }
 function practicalForTrip(tr){
-  const w=weatherForTrip(tr),p=w?.practical||{},es=state.lang==='es';
-  const manual=es?'Agregar manualmente':'Add manually';
+  const w=weatherForTrip(tr),p=w?.practical||tr.autoPractical||{};
   return {
-    currency:tr.localCurrency||p.currency||'—',
-    language:tr.localLanguage||p.language||'—',
-    emergency:tr.emergencyInfo||manual,
-    power:tr.powerInfo||manual,
-    country:p.country||w?.country||''
+    currency:tr.localCurrency||p.currency||'No disponible',
+    language:tr.localLanguage||p.language||'No disponible',
+    emergency:tr.emergencyInfo||p.emergency||'No disponible',
+    power:tr.powerInfo||p.power||'No disponible',
+    country:p.country||w?.country||tr.detectedCountry||''
   };
 }
 function smartResolvedPlaceHtml(tr){
-  const w=weatherForTrip(tr);if(!w?.enabled||w.error||!w.location)return '';
+  const w=weatherForTrip(tr);
+  const resolved=w?.location||tr.resolvedLocation||'';
+  if(!resolved)return '';
   const es=state.lang==='es';
-  const original=String(w.requestedLocation||tr.destination||'').trim();
-  const changed=w.resolvedQuery&&w.resolvedQuery!==original;
-  return `<div class="smart-place"><span>📍 ${es?'Ubicación detectada':'Detected location'}: <strong>${escapeHtml(w.location)}</strong>${changed?`<br><span class="field-hint">${es?'Interpretamos':'Interpreted'} “${escapeHtml(original)}” → “${escapeHtml(w.resolvedQuery)}”</span>`:''}</span><button class="btn btn-ghost btn-sm viewer-safe" onclick="openTripForm('${tr.id}')">${es?'Corregir':'Edit'}</button></div>`;
+  const original=String(w?.requestedLocation||tr.destination||'').trim();
+  const resolvedQuery=w?.resolvedQuery||'';
+  const changed=resolvedQuery&&resolvedQuery!==original;
+  return `<div class="smart-place"><span>📍 ${es?'Ubicación detectada':'Detected location'}: <strong>${escapeHtml(resolved)}</strong>${changed?`<br><span class="field-hint">${es?'Interpretamos':'Interpreted'} “${escapeHtml(original)}” → “${escapeHtml(resolvedQuery)}”</span>`:''}</span><button class="btn btn-ghost btn-sm viewer-safe" onclick="openTripForm('${tr.id}')">${es?'Corregir destino':'Edit destination'}</button></div>`;
 }
 
 function tripTimezone(tr){return String(resolvedTripTimezone(tr));}
@@ -1183,9 +1269,9 @@ function render(){
   renderFab();
 }
 function setLang(l){ state.lang=l; document.documentElement.lang=l; saveState(); render(); }
-function goHome(){ ui.screen='home'; ui.currentTripId=null; render(); }
-function goSettings(){ ui.screen='settings'; render(); }
-function openTrip(id){ ui.currentTripId=id; ui.screen='trip'; ui.tripSubTab='overview'; render(); }
+function goHome(){ ui.tripMoreOpen=false;setTripMoreBodyState(false);ui.screen='home';ui.currentTripId=null;render(); }
+function goSettings(){ ui.tripMoreOpen=false;setTripMoreBodyState(false);ui.screen='settings';render(); }
+function openTrip(id){ ui.tripMoreOpen=false;setTripMoreBodyState(false);ui.currentTripId=id;ui.screen='trip';ui.tripSubTab='overview';render(); }
 
 /* ===================== FAB ===================== */
 function renderFab(){
@@ -1313,22 +1399,65 @@ function removeTripCover(tripId){
   render();
 }
 function saveTripForm(){
-  if(ui.editingTrip){const existing=tripById(ui.editingTrip);if(existing&&collabRole(existing)==='viewer'){showToast(state.lang==='es'?'Este viaje es solo lectura.':'This trip is view-only.');return;}}
-  const g = id=>document.getElementById(id).value;
-  const data = {
-    name: g('f-name').trim() || (state.lang==='es'?'Viaje sin nombre':'Untitled trip'),
-    destination: g('f-dest').trim(),
-    tripType: g('f-type'),
-    start: g('f-start'), end: g('f-end'),
-    budgetGoal: parseFloat(g('f-budget'))||0,
-    currency: readCurrencyField('f-currency') || 'USD',
-    passportExpiry: g('f-passport'),
-    notes: g('f-notes').trim()
+  const editingId=ui.editingTrip||null;
+  const existingBefore=editingId?tripById(editingId):null;
+  const previousDestination=String(existingBefore?.destination||'');
+  if(existingBefore&&collabRole(existingBefore)==='viewer'){
+    showToast(state.lang==='es'?'Este viaje es solo lectura.':'This trip is view-only.');
+    return;
+  }
+  const g=id=>document.getElementById(id)?.value||'';
+  const data={
+    name:g('f-name').trim()||(state.lang==='es'?'Viaje sin nombre':'Untitled trip'),
+    destination:g('f-dest').trim(),
+    tripType:g('f-type'),
+    start:g('f-start'),
+    end:g('f-end'),
+    budgetGoal:parseFloat(g('f-budget'))||0,
+    currency:readCurrencyField('f-currency')||'USD',
+    passportExpiry:g('f-passport'),
+    timezone:g('f-timezone').trim(),
+    localCurrency:g('f-local-currency').trim().toUpperCase(),
+    localLanguage:g('f-language').trim(),
+    emergencyInfo:g('f-emergency').trim(),
+    powerInfo:g('f-power').trim(),
+    notes:g('f-notes').trim()
   };
-  if(ui.editingTrip){ Object.assign(tripById(ui.editingTrip), data); }
-  else { data.id = uid(); data.coverPhoto = ui.newTripCover||''; state.trips.push(data); ui.newTripCover=''; }
-  ui.modal=null; ui.editingTrip=null;
-  saveState(); render();
+
+  let savedTrip;
+  if(editingId){
+    savedTrip=tripById(editingId);
+    Object.assign(savedTrip,data);
+  }else{
+    savedTrip={...data,id:uid(),coverPhoto:ui.newTripCover||''};
+    state.trips.push(savedTrip);
+    ui.newTripCover='';
+  }
+
+  const destinationChanged=Boolean(editingId&&savedTrip&&savedTrip.destination!==previousDestination);
+  if(destinationChanged){
+    // Destination-specific data must never survive a destination change.
+    savedTrip.timezone='';
+    savedTrip.localCurrency='';
+    savedTrip.localLanguage='';
+    savedTrip.emergencyInfo='';
+    savedTrip.powerInfo='';
+    delete savedTrip.autoTimezone;
+    delete savedTrip.autoPractical;
+    delete savedTrip.resolvedLocation;
+    delete savedTrip.detectedCountry;
+    delete savedTrip.practicalUpdatedAt;
+    if(ui.weatherCache)delete ui.weatherCache[savedTrip.id];
+  }
+
+  ui.modal=null;
+  ui.editingTrip=null;
+  saveState();
+  render();
+
+  if(savedTrip?.destination&&(destinationChanged||!savedTrip.autoPractical)){
+    setTimeout(()=>loadTripWeather(savedTrip.id),80);
+  }
 }
 function duplicateTrip(id){
   ui.modal=null;
@@ -1454,7 +1583,7 @@ function buildItineraryPayload(tr){
     waypointShare: 3,
     shareId: ensureShareId(tr),
     updatedAt:new Date().toISOString(),
-    trip:{name:tr.name,destination:tr.destination,tripType:tr.tripType||'',start:tr.start,end:tr.end,budgetGoal:tr.budgetGoal||0,currency:tr.currency||'USD',passportExpiry:tr.passportExpiry||'',timezone:tr.timezone||'',localLanguage:tr.localLanguage||'',emergencyInfo:tr.emergencyInfo||'',powerInfo:tr.powerInfo||'',notes:tr.notes||''},
+    trip:{name:tr.name,destination:tr.destination,tripType:tr.tripType||'',start:tr.start,end:tr.end,budgetGoal:tr.budgetGoal||0,currency:tr.currency||'USD',passportExpiry:tr.passportExpiry||'',timezone:tr.timezone||'',localCurrency:tr.localCurrency||'',localLanguage:tr.localLanguage||'',emergencyInfo:tr.emergencyInfo||'',powerInfo:tr.powerInfo||'',autoTimezone:tr.autoTimezone||'',autoPractical:tr.autoPractical||{},resolvedLocation:tr.resolvedLocation||'',detectedCountry:tr.detectedCountry||'',practicalUpdatedAt:tr.practicalUpdatedAt||'',notes:tr.notes||''},
     name:tr.name,destination:tr.destination,tripType:tr.tripType||'',start:tr.start,end:tr.end,
     days:state.itineraries[tr.id]||[],
     bookings:state.bookings[tr.id]||[],
@@ -1782,6 +1911,9 @@ function activityText(a,es){
     booking_removed: es?`${actor} eliminó una reserva`:`${actor} removed a booking`,
     expense_added: es?`${actor} agregó un gasto${label?` · ${label}`:''}${amount?` · ${amount}`:''}`:`${actor} added an expense${label?` · ${label}`:''}${amount?` · ${amount}`:''}`,
     expense_removed: es?`${actor} eliminó un gasto`:`${actor} removed an expense`,
+    settlement_added: es?`${actor} registró un pago de ${label||''}`:`${actor} recorded a settlement ${label||''}`,
+    settlement_removed: es?`${actor} eliminó un pago registrado`:`${actor} removed a settlement`,
+    category_budget_updated: es?`${actor} actualizó los límites por categoría`:`${actor} updated category budgets`,
     packing_added: es?`${actor} agregó ${label||'un artículo'} al equipaje`:`${actor} added ${label||'an item'} to packing`,
     packing_updated: es?`${actor} actualizó ${label||'un artículo'} del equipaje`:`${actor} updated ${label||'a packing item'}`,
     packing_removed: es?`${actor} eliminó un artículo del equipaje`:`${actor} removed a packing item`,
@@ -2089,14 +2221,18 @@ async function changeCollabParticipantName(tripId){
 
 async function loadCollabParticipants(tripId){
   const tr=tripById(tripId);
-  if(!tr||!tr.liveSync) return [];
+  if(!tr||!tr.liveSync)return [];
   try{
     const r=await fetch(`${tr.syncServer}/api/trips/${encodeURIComponent(tr.shareId)}/participants?key=${encodeURIComponent(collabAccessKey(tr))}`,{cache:'no-store'});
-    if(!r.ok) return [];
+    if(!r.ok)return [];
     const j=await r.json();
     tr.collabParticipants=Array.isArray(j.participants)?j.participants:[];
+    const me=tr.collabParticipants.find(p=>p.participantId===tr.collabParticipantId);
+    if(me&&!tr.collabOwner){
+      tr.collabRole=me.role==='viewer'?'viewer':'editor';
+    }
     return tr.collabParticipants;
-  }catch(e){ return []; }
+  }catch(e){return [];}
 }
 function collabParticipantsText(tr){
   const names=(tr?.collabParticipants||[]).map(p=>p.name).filter(Boolean);
@@ -2276,11 +2412,13 @@ function livePayload(tr){
     trip:{
       name:tr.name,destination:tr.destination,tripType:tr.tripType||'',start:tr.start,end:tr.end,
       budgetGoal:roundMoney(tr.budgetGoal||0),currency:tr.currency||'USD',
-      passportExpiry:tr.passportExpiry||'',timezone:tr.timezone||'',localLanguage:tr.localLanguage||'',emergencyInfo:tr.emergencyInfo||'',powerInfo:tr.powerInfo||'',notes:tr.notes||''
+      passportExpiry:tr.passportExpiry||'',timezone:tr.timezone||'',localCurrency:tr.localCurrency||'',localLanguage:tr.localLanguage||'',emergencyInfo:tr.emergencyInfo||'',powerInfo:tr.powerInfo||'',autoTimezone:tr.autoTimezone||'',autoPractical:tr.autoPractical||{},resolvedLocation:tr.resolvedLocation||'',detectedCountry:tr.detectedCountry||'',practicalUpdatedAt:tr.practicalUpdatedAt||'',notes:tr.notes||''
     },
     days:state.itineraries[tr.id]||[],
     bookings:state.bookings[tr.id]||[],
     expenses:(state.expenses||[]).filter(e=>e.tripId===tr.id),
+    settlements:(state.settlements||[]).filter(e=>e.tripId===tr.id),
+    categoryBudgets:state.categoryBudgets[tr.id]||{},
     checklists:state.checklists[tr.id]||[],
     docs:state.tripDocs[tr.id]||[],
     ideas:state.ideas[tr.id]||[],
@@ -2322,6 +2460,8 @@ function mergeLivePayload(local,remote){
   const days=[...byDay.values()].filter(d=>!deleted.days.includes(d.id));
   const bookings=uniqById(remote.bookings||[],local.bookings||[]).filter(b=>!deleted.bookings.includes(b.id));
   const expenses=uniqById(remote.expenses||[],local.expenses||[]).filter(e=>!deleted.expenses.includes(e.id));
+  const settlements=uniqById(remote.settlements||[],local.settlements||[]);
+  const categoryBudgets=Object.assign({},remote.categoryBudgets||{},local.categoryBudgets||{});
   const checklists=uniqById(remote.checklists||[],local.checklists||[]).filter(i=>!deleted.checklists.includes(i.id));
   const docs=uniqById(remote.docs||[],local.docs||[]).filter(d=>!deleted.docs.includes(d.id));
   const ideas=uniqById(remote.ideas||[],local.ideas||[]).filter(d=>!deleted.ideas.includes(d.id));
@@ -2330,7 +2470,7 @@ function mergeLivePayload(local,remote){
     waypointLive:3,
     shareId:local.shareId||remote.shareId,
     trip:Object.assign({},remote.trip||{},local.trip||{}),
-    days,bookings,expenses,checklists,docs,ideas,polls,
+    days,bookings,expenses,settlements,categoryBudgets,checklists,docs,ideas,polls,
     reminders:Object.assign({},remote.reminders||{},local.reminders||{}),
     deleted
   };
@@ -2343,6 +2483,9 @@ function applyLivePayload(tr,d){
   state.bookings[tr.id]=d.bookings||[];
   const remoteExpenses=(d.expenses||[]).map(e=>({...e,tripId:tr.id}));
   state.expenses=[...(state.expenses||[]).filter(e=>e.tripId!==tr.id),...remoteExpenses];
+  const remoteSettlements=(d.settlements||[]).map(e=>({...e,tripId:tr.id}));
+  state.settlements=[...(state.settlements||[]).filter(e=>e.tripId!==tr.id),...remoteSettlements];
+  state.categoryBudgets[tr.id]=d.categoryBudgets||state.categoryBudgets[tr.id]||{};
   state.checklists[tr.id]=d.checklists||[];
   state.tripDocs[tr.id]=d.docs||[];
   state.ideas[tr.id]=d.ideas||[];
@@ -2558,9 +2701,26 @@ function importItineraryFile(evt){
           existing.name = data.name; existing.destination = data.destination; existing.tripType = data.tripType||existing.tripType;
           existing.start = data.start; existing.end = data.end;
           const tripData=data.trip||{};
-          Object.assign(existing,{budgetGoal:Number(tripData.budgetGoal||existing.budgetGoal||0),currency:tripData.currency||existing.currency,passportExpiry:tripData.passportExpiry||existing.passportExpiry,notes:tripData.notes||existing.notes});
-          state.itineraries[existing.id]=data.days||[]; state.bookings[existing.id]=data.bookings||state.bookings[existing.id]||[];
+          Object.assign(existing,{
+            budgetGoal:Number(tripData.budgetGoal??existing.budgetGoal??0),
+            currency:tripData.currency||existing.currency,
+            passportExpiry:tripData.passportExpiry??existing.passportExpiry,
+            timezone:tripData.timezone??existing.timezone,
+            localCurrency:tripData.localCurrency??existing.localCurrency,
+            localLanguage:tripData.localLanguage??existing.localLanguage,
+            emergencyInfo:tripData.emergencyInfo??existing.emergencyInfo,
+            powerInfo:tripData.powerInfo??existing.powerInfo,
+            autoTimezone:tripData.autoTimezone??existing.autoTimezone,
+            autoPractical:tripData.autoPractical??existing.autoPractical,
+            resolvedLocation:tripData.resolvedLocation??existing.resolvedLocation,
+            detectedCountry:tripData.detectedCountry??existing.detectedCountry,
+            practicalUpdatedAt:tripData.practicalUpdatedAt??existing.practicalUpdatedAt,
+            notes:tripData.notes??existing.notes
+          });
+          state.itineraries[existing.id]=data.days||[];state.bookings[existing.id]=data.bookings||state.bookings[existing.id]||[];
           state.expenses=[...state.expenses.filter(e=>e.tripId!==existing.id),...(data.expenses||[]).map(e=>({...e,tripId:existing.id}))];
+          state.settlements=[...state.settlements.filter(e=>e.tripId!==existing.id),...(data.settlements||[]).map(e=>({...e,tripId:existing.id}))];
+          state.categoryBudgets[existing.id]=data.categoryBudgets||state.categoryBudgets[existing.id]||{};
           state.checklists[existing.id]=data.checklists||state.checklists[existing.id]||[];
           state.tripDocs[existing.id]=data.docs||state.tripDocs[existing.id]||[];
           state.ideas[existing.id]=data.ideas||state.ideas[existing.id]||[];
@@ -2571,11 +2731,19 @@ function importItineraryFile(evt){
         }, false, t.common.continueLabel);
       } else {
         const newId = uid();
-        state.trips.push({id:newId, name:data.name||'Shared trip', destination:data.destination||'', tripType:data.tripType||'',
-          start:data.start||'', end:data.end||'', budgetGoal:0, currency:state.profile.currency||'USD',
-          passportExpiry:'', notes:'', coverPhoto:'', shareId:data.shareId});
+        const tripData=data.trip||{};
+        state.trips.push({
+          id:newId,name:tripData.name||data.name||'Shared trip',destination:tripData.destination||data.destination||'',tripType:tripData.tripType||data.tripType||'',
+          start:tripData.start||data.start||'',end:tripData.end||data.end||'',budgetGoal:Number(tripData.budgetGoal||0),currency:tripData.currency||state.profile.currency||'USD',
+          passportExpiry:tripData.passportExpiry||'',timezone:tripData.timezone||'',localCurrency:tripData.localCurrency||'',localLanguage:tripData.localLanguage||'',
+          emergencyInfo:tripData.emergencyInfo||'',powerInfo:tripData.powerInfo||'',autoTimezone:tripData.autoTimezone||'',autoPractical:tripData.autoPractical||{},
+          resolvedLocation:tripData.resolvedLocation||'',detectedCountry:tripData.detectedCountry||'',practicalUpdatedAt:tripData.practicalUpdatedAt||'',
+          notes:tripData.notes||'',coverPhoto:'',shareId:data.shareId
+        });
         state.itineraries[newId]=data.days||[];state.bookings[newId]=data.bookings||[];
         state.expenses.push(...(data.expenses||[]).map(e=>({...e,id:e.id||uid(),tripId:newId})));
+        state.settlements.push(...(data.settlements||[]).map(e=>({...e,id:e.id||uid(),tripId:newId})));
+        state.categoryBudgets[newId]=data.categoryBudgets||{};
         state.checklists[newId]=data.checklists||[];state.tripDocs[newId]=data.docs||[];state.ideas[newId]=data.ideas||[];state.polls[newId]=data.polls||[];state.reminders[newId]={enabled:false,leadMinutes:30};
         saveState(); render();
         showToast(t.itinerary.importAdded);
@@ -2596,21 +2764,26 @@ function doDeleteTrip(id){
   const idx = state.trips.findIndex(x=>x.id===id);
   if(idx===-1) return;
   const removedTrip = state.trips[idx];
-  const removedExpenses = state.expenses.filter(x=>x.tripId===id);
-  const removedChecklist = state.checklists[id];
+  const removedExpenses=state.expenses.filter(x=>x.tripId===id);
+  const removedSettlements=state.settlements.filter(x=>x.tripId===id);
+  const removedCategoryBudgets=state.categoryBudgets[id];
+  const removedChecklist=state.checklists[id];
   const removedItin = state.itineraries[id];
   const removedDocs = state.tripDocs[id];
   const removedBookings=state.bookings[id];
   const removedIdeas=state.ideas[id], removedPolls=state.polls[id], removedReminders=state.reminders[id];
   state.trips = state.trips.filter(x=>x.id!==id);
-  state.expenses = state.expenses.filter(x=>x.tripId!==id);
-  delete state.checklists[id]; delete state.itineraries[id]; delete state.tripDocs[id]; delete state.bookings[id]; delete state.ideas[id]; delete state.polls[id]; delete state.reminders[id];
+  state.expenses=state.expenses.filter(x=>x.tripId!==id);
+  state.settlements=state.settlements.filter(x=>x.tripId!==id);
+  delete state.categoryBudgets[id];delete state.checklists[id];delete state.itineraries[id];delete state.tripDocs[id];delete state.bookings[id];delete state.ideas[id];delete state.polls[id];delete state.reminders[id];
   if(ui.currentTripId===id){ ui.screen='home'; ui.currentTripId=null; }
   saveState(); render();
   showToast(t.home.deleted, ()=>{
     state.trips.splice(idx,0,removedTrip);
     state.expenses.push(...removedExpenses);
-    if(removedChecklist) state.checklists[id]=removedChecklist;
+    state.settlements.push(...removedSettlements);
+    if(removedCategoryBudgets)state.categoryBudgets[id]=removedCategoryBudgets;
+    if(removedChecklist)state.checklists[id]=removedChecklist;
     if(removedItin) state.itineraries[id]=removedItin;
     if(removedDocs) state.tripDocs[id]=removedDocs;
     if(removedBookings)state.bookings[id]=removedBookings;
@@ -2683,14 +2856,23 @@ function viewTripDetail(){
         <button class="${ui.tripSubTab==='bookings'?'active':''}" onclick="setTripSubTab('bookings')"><span class="ic">🎟</span>${state.lang==='es'?'Reservas':'Bookings'}</button>
         <button class="trip-more-btn ${['budget','checklist','ideas','polls','activity','notes','recap'].includes(ui.tripSubTab)?'active':''}" onclick="toggleTripMoreMenu(event)" aria-expanded="${ui.tripMoreOpen?'true':'false'}"><span class="ic">•••</span>${state.lang==='es'?'Más':'More'}</button>
       </div>
-      ${ui.tripMoreOpen?`<div class="trip-more-menu-portal" id="trip-more-menu">
-        <button class="${ui.tripSubTab==='budget'?'active':''}" onclick="setTripSubTab('budget')">▤ ${t.tabs.budget}</button>
-        <button class="${ui.tripSubTab==='checklist'?'active':''}" onclick="setTripSubTab('checklist')">☑ ${t.tabs.checklist}</button>
-        <button class="${ui.tripSubTab==='ideas'?'active':''}" onclick="setTripSubTab('ideas')">☆ ${state.lang==='es'?'Ideas':'Ideas'}</button>
-        <button class="${ui.tripSubTab==='polls'?'active':''}" onclick="setTripSubTab('polls')">☷ ${state.lang==='es'?'Encuestas':'Polls'}</button>
-        <button class="${ui.tripSubTab==='activity'?'active':''}" onclick="setTripSubTab('activity')">◴ ${state.lang==='es'?'Actividad':'Activity'}</button>
-        <button class="${ui.tripSubTab==='notes'?'active':''}" onclick="setTripSubTab('notes')">📄 ${t.tabs.notes}</button>
-        <button class="${ui.tripSubTab==='recap'?'active':''}" onclick="setTripSubTab('recap')">★ ${state.lang==='es'?'Resumen final':'Recap'}</button>
+      ${ui.tripMoreOpen?`
+      <div class="trip-more-backdrop" onclick="closeTripMoreMenu()" aria-hidden="true"></div>
+      <div class="trip-more-sheet" id="trip-more-menu" role="dialog" aria-modal="${window.innerWidth<760?'true':'false'}" aria-label="${state.lang==='es'?'Más opciones del viaje':'More trip options'}">
+        <div class="trip-more-grabber"></div>
+        <div class="trip-more-sheet-head">
+          <div class="trip-more-sheet-title">${state.lang==='es'?'Más opciones':'More options'}</div>
+          <button class="sheet-close" onclick="closeTripMoreMenu()" aria-label="${state.lang==='es'?'Cerrar':'Close'}">×</button>
+        </div>
+        <div class="sheet-grid">
+          <button class="${ui.tripSubTab==='budget'?'active':''}" onclick="setTripSubTab('budget')">▤ ${t.tabs.budget}</button>
+          <button class="${ui.tripSubTab==='checklist'?'active':''}" onclick="setTripSubTab('checklist')">☑ ${t.tabs.checklist}</button>
+          <button class="${ui.tripSubTab==='ideas'?'active':''}" onclick="setTripSubTab('ideas')">☆ ${state.lang==='es'?'Ideas':'Ideas'}</button>
+          <button class="${ui.tripSubTab==='polls'?'active':''}" onclick="setTripSubTab('polls')">☷ ${state.lang==='es'?'Encuestas':'Polls'}</button>
+          <button class="${ui.tripSubTab==='activity'?'active':''}" onclick="setTripSubTab('activity')">◴ ${state.lang==='es'?'Actividad':'Activity'}</button>
+          <button class="${ui.tripSubTab==='notes'?'active':''}" onclick="setTripSubTab('notes')">📄 ${t.tabs.notes}</button>
+          <button class="${ui.tripSubTab==='recap'?'active':''}" onclick="setTripSubTab('recap')">★ ${state.lang==='es'?'Resumen final':'Recap'}</button>
+        </div>
       </div>`:''}
     </div>
     ${tr.liveSync?`<div class="trip-global-collab compact-collab">
@@ -2726,8 +2908,26 @@ function viewTripDetail(){
     ${tr.liveSync?`<button class="trip-chat-launcher" onclick="openTripChat('${tr.id}')" aria-label="${state.lang==='es'?'Abrir chat del viaje':'Open trip chat'}"><span class="chat-icon">💬</span><span class="label">${state.lang==='es'?'Chat del viaje':'Trip chat'}</span>${Number(tr.chatUnread||0)>0?`<span class="chat-badge">${Math.min(99,Number(tr.chatUnread||0))}</span>`:''}</button>`:''}
   `;
 }
-function toggleTripMoreMenu(e){if(e){e.preventDefault();e.stopPropagation();}ui.tripMoreOpen=!ui.tripMoreOpen;render();}
-function setTripSubTab(tab){ ui.tripMoreOpen=false; ui.tripSubTab=tab; render(); }
+function setTripMoreBodyState(open){
+  document.body.classList.toggle('trip-more-open',Boolean(open&&window.innerWidth<760));
+}
+function closeTripMoreMenu(){
+  ui.tripMoreOpen=false;
+  setTripMoreBodyState(false);
+  render();
+}
+function toggleTripMoreMenu(e){
+  if(e){e.preventDefault();e.stopPropagation();}
+  ui.tripMoreOpen=!ui.tripMoreOpen;
+  setTripMoreBodyState(ui.tripMoreOpen);
+  render();
+}
+function setTripSubTab(tab){
+  ui.tripMoreOpen=false;
+  setTripMoreBodyState(false);
+  ui.tripSubTab=tab;
+  render();
+}
 function renderTripSubTab(tr){
   ensureTripCollections(tr.id);
   if(ui.tripSubTab==='overview') return viewOverviewSub(tr);
@@ -2783,6 +2983,14 @@ async function loadTripWeather(tripId){
     const j=await r.json();
     ui.weatherCache=ui.weatherCache||{};
     ui.weatherCache[tripId]={...j,_ts:Date.now()};
+    if(j.enabled&&!j.error){
+      tr.autoTimezone=j.timezone||tr.autoTimezone||'';
+      tr.resolvedLocation=j.location||tr.resolvedLocation||'';
+      tr.detectedCountry=j.country||tr.detectedCountry||'';
+      tr.autoPractical=j.practical||tr.autoPractical||{};
+      tr.practicalUpdatedAt=new Date().toISOString();
+      try{await window.storage.set('waypoint-simple-data',JSON.stringify(state),false);}catch(e){}
+    }
     if(ui.currentTripId===tripId&&['today','overview','travel'].includes(ui.tripSubTab))render();
   }catch(e){
     ui.weatherCache=ui.weatherCache||{}; ui.weatherCache[tripId]={enabled:false,error:true,_ts:Date.now()};
@@ -2809,12 +3017,12 @@ function viewTravelModeSub(tr){
   if(!weatherForTrip(tr))setTimeout(()=>loadTripWeather(tr.id),20);
   return `<div class="travel-mode-banner"><div><strong>${es?'Modo viaje':'Travel mode'}</strong><div class="field-hint">${es?'Prioriza lo esencial mientras estás viajando.':'Prioritizes essentials while you are traveling.'}</div></div><button class="btn btn-ghost btn-sm" onclick="enableTravelMode('${tr.id}')">${tr.travelMode?(es?'Desactivar':'Turn off'):(es?'Activar':'Turn on')}</button></div>
   <div class="today-hero"><div class="today-card"><div class="booking-type">${es?'Hora local del destino':'Destination local time'}</div><div class="weather-temp" style="font-size:24px">${escapeHtml(destinationNow(tr))}</div><div class="field-hint">${escapeHtml(tripTimezone(tr))}</div>${smartResolvedPlaceHtml(tr)}${next?`<div class="panel" style="margin-top:10px"><div class="booking-type">${es?'Próximo':'Up next'}</div><div class="booking-title">${escapeHtml(formatTime12(next.time||''))} ${escapeHtml(next.title)}</div>${next.location?`<a class="btn btn-ghost btn-sm viewer-safe" style="margin-top:7px" target="_blank" href="${googleMapsSearchUrl(next.location)}">🧭 ${es?'Abrir mapa':'Open map'}</a>`:''}</div>`:''}</div>${weatherCardHtml(tr)}</div>
-  <div class="panel"><div class="section-head"><div><h3 style="margin:0;color:var(--paper)">${es?'Información práctica':'Practical info'}</h3><p class="sub">${es?'Zona horaria, moneda e idioma pueden completarse desde el destino. Emergencia y enchufe solo se muestran si los agregas manualmente.':'Timezone, currency and language can be completed from the destination. Emergency and power details are shown only when you enter them manually.'}</p></div><button class="btn btn-ghost btn-sm viewer-safe" onclick="openTripForm('${tr.id}')">✎ ${es?'Editar':'Edit'}</button></div><div class="practical-grid">
+  <div class="panel"><div class="section-head"><div><h3 style="margin:0;color:var(--paper)">${es?'Información práctica':'Practical info'}</h3><p class="sub">${es?'Waypoint detecta automáticamente zona horaria, moneda, idioma, emergencia y enchufe según el país del destino.':'Waypoint automatically detects timezone, currency, language, emergency numbers and plug/power information from the destination country.'}</p></div><button class="btn btn-ghost btn-sm viewer-safe" onclick="openTripForm('${tr.id}')">✎ ${es?'Editar':'Edit'}</button></div><div class="practical-grid">
   <div class="practical-card"><div class="k">${es?'Zona horaria':'Timezone'}</div><div class="v">${escapeHtml(tripTimezone(tr))}</div></div>
-  <div class="practical-card"><div class="k">${es?'Moneda local':'Local currency'}</div><div class="v">${escapeHtml(pr.currency)}</div><div class="participant-last">${tr.localCurrency?(es?'Manual':'Manual'):(pr.currency!=='—'?(es?'Según país detectado':'From detected country'):'')}</div></div>
-  <div class="practical-card"><div class="k">${es?'Idioma / nota':'Language / note'}</div><div class="v">${escapeHtml(pr.language)}</div><div class="participant-last">${tr.localLanguage?(es?'Manual':'Manual'):(pr.language!=='—'?(es?'Según país detectado':'From detected country'):'')}</div></div>
-  <div class="practical-card"><div class="k">${es?'Emergencia':'Emergency'}</div><div class="v">${escapeHtml(pr.emergency)}</div></div>
-  <div class="practical-card"><div class="k">${es?'Enchufe / energía':'Power / plug'}</div><div class="v">${escapeHtml(pr.power)}</div></div>
+  <div class="practical-card"><div class="k">${es?'Moneda local':'Local currency'}</div><div class="v">${escapeHtml(pr.currency)}</div><div class="participant-last">${tr.localCurrency?(es?'Manual':'Manual'):(es?'Automático · país detectado':'Automatic · detected country')}</div></div>
+  <div class="practical-card"><div class="k">${es?'Idioma / nota':'Language / note'}</div><div class="v">${escapeHtml(pr.language)}</div><div class="participant-last">${tr.localLanguage?(es?'Manual':'Manual'):(es?'Automático · país detectado':'Automatic · detected country')}</div></div>
+  <div class="practical-card"><div class="k">${es?'Emergencia':'Emergency'}</div><div class="v">${escapeHtml(pr.emergency)}</div><div class="participant-last">${tr.emergencyInfo?(es?'Manual':'Manual'):(es?'Automático · país detectado':'Automatic · detected country')}</div></div>
+  <div class="practical-card"><div class="k">${es?'Enchufe / energía':'Power / plug'}</div><div class="v">${escapeHtml(pr.power)}</div><div class="participant-last">${tr.powerInfo?(es?'Manual':'Manual'):(es?'Automático · país detectado':'Automatic · detected country')}</div></div>
   </div></div>`;
 }
 function viewRecapSub(tr){
@@ -3977,7 +4185,7 @@ function deleteDoc(tripId,docId){
 function viewSettings(){
   const t=tt();
   return `
-    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v7.0.2</div></div></div>
+    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v7.0.5</div></div></div>
     <div class="panel">
       <h3 style="margin:0 0 12px;font-size:16px;color:var(--paper);">${t.settings.account}</h3>
       <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px;">
@@ -4027,7 +4235,11 @@ function removePhoto(){ state.profile.photo=''; saveState(); render(); }
 document.addEventListener('click',(e)=>{
   if(!ui.tripMoreOpen)return;
   if(e.target.closest?.('.trip-more-btn')||e.target.closest?.('#trip-more-menu'))return;
-  ui.tripMoreOpen=false;render();
+  if(e.target.closest?.('.trip-more-backdrop'))return;
+  closeTripMoreMenu();
+});
+document.addEventListener('keydown',(e)=>{
+  if(e.key==='Escape'&&ui.tripMoreOpen)closeTripMoreMenu();
 });
 
 document.addEventListener('change', (e)=>{ if(e.target && e.target.id==='pf-currency'){ state.profile.currency = readCurrencyField('pf-currency'); saveState(); } });
@@ -4369,7 +4581,7 @@ document.addEventListener('change', (e)=>{
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('/service-worker.js?v=7.0.2',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('/service-worker.js?v=7.0.5',{updateViaCache:'none'});
       await reg.update();
       let reloading=false;
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
