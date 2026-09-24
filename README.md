@@ -174,7 +174,7 @@ Waypoint 6.0 expands the trip workspace beyond planning:
 
 - Today / Up Next timeline for activities and bookings.
 - Trip Map hub with destination map, saved-place list and multi-stop Google Maps route handoff.
-- Optional integrated weather using Open-Meteo's commercial customer API (`OPEN_METEO_API_KEY`).
+- Optional integrated weather using WeatherAPI.com (`WEATHERAPI_KEY`).
 - Shared expenses with payer, participants, balances and settle-up suggestions.
 - Packing assignment by participant.
 - Collaboration roles: owner, editor and server-enforced view-only access.
@@ -196,4 +196,16 @@ Chat photos are intentionally compressed and limited. The server accepts up to 3
 
 ### Weather licensing
 
-Because Waypoint is intended to support a public/commercial deployment, the built-in weather proxy stays disabled unless `OPEN_METEO_API_KEY` is configured. Use an Open-Meteo commercial customer API subscription for a monetized deployment. The UI includes Open-Meteo attribution.
+Because Waypoint is intended to support a public/commercial deployment, the built-in weather proxy stays disabled unless `WEATHERAPI_KEY` is configured. Use an WeatherAPI.com API for a monetized deployment. The UI includes WeatherAPI.com attribution.
+
+## Waypoint 6.0.1 weather provider
+
+The integrated weather provider is now WeatherAPI.com. Configure `WEATHERAPI_KEY` in Railway. Waypoint calls the provider only from the Node server, so the API key is not embedded in the public HTML or exposed through `/api/features`.
+
+The weather card displays current temperature, feels-like temperature, condition, chance of rain and humidity. The server also retrieves a three-day forecast for future UI use.
+
+## Waypoint 6.0.2 cache refresh
+
+This release keeps WeatherAPI.com as the weather provider and adds a stronger installed-PWA update path. The service worker is registered with `updateViaCache: "none"`, uses a versioned service-worker URL, immediately checks for updates, reloads when the new worker takes control, and requests navigation documents with `cache: "no-store"` before falling back to the offline cache.
+
+If an installed iPhone PWA still shows the old Open-Meteo message after deploying 6.0.2, the public server is still serving an older build or the device has not loaded the new deployment yet.

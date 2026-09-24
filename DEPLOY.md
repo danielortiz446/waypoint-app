@@ -82,8 +82,16 @@ The GIPHY API key is delivered to the browser at runtime because GIPHY search is
 
 ## Optional integrated weather
 
-For a monetized/public Waypoint deployment, configure a commercial Open-Meteo customer API key:
+For a monetized/public Waypoint deployment, configure a commercial WeatherAPI.com customer API key:
 
-`OPEN_METEO_API_KEY=...`
+`WEATHERAPI_KEY=...`
 
-Without this value the Weather card stays disabled instead of using Open-Meteo's non-commercial free endpoint.
+Without this value the Weather card stays disabled instead of using WeatherAPI.com's non-commercial free endpoint.
+
+### WeatherAPI.com
+
+Add this Railway variable:
+
+`WEATHERAPI_KEY=your_real_key_here`
+
+Do not put the key in `public/index.html`, GitHub, or the collaboration link. Railway redeploys automatically after the variable is saved.

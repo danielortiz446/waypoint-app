@@ -174,7 +174,7 @@ const server=http.createServer(async(req,res)=>{
   try{
     const u=new URL(req.url,'http://localhost');
 
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'6.0.0',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'6.0.2',time:new Date().toISOString()});
 
     if(req.method==='GET'&&u.pathname==='/api/fx/rate'){
       const from=String(u.searchParams.get('from')||'').trim().toUpperCase();
@@ -204,40 +204,62 @@ const server=http.createServer(async(req,res)=>{
         return json(res,502,{error:'exchange rate lookup failed'});
       }
     }
-
-
-
-
-
     if(req.method==='GET'&&u.pathname==='/api/weather'){
-      const apiKey=String(process.env.OPEN_METEO_API_KEY||'').trim();
+      const apiKey=String(process.env.WEATHERAPI_KEY||'').trim();
       const location=String(u.searchParams.get('location')||'').trim().slice(0,160);
-      if(!apiKey) return json(res,200,{enabled:false,provider:'Open-Meteo',reason:'commercial_api_key_required'});
+      if(!apiKey) return json(res,200,{enabled:false,provider:'WeatherAPI.com',reason:'api_key_required'});
       if(!location) return json(res,400,{error:'location required'});
       try{
-        const geoUrl=`https://customer-geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=en&format=json&apikey=${encodeURIComponent(apiKey)}`;
-        const gr=await fetch(geoUrl,{headers:{'accept':'application/json','user-agent':'Waypoint/6.0'}});
-        if(!gr.ok)throw new Error('geocoding '+gr.status);
-        const gj=await gr.json(), place=Array.isArray(gj.results)?gj.results[0]:null;
-        if(!place)return json(res,404,{error:'location not found'});
         const params=new URLSearchParams({
-          latitude:String(place.latitude),longitude:String(place.longitude),
-          current:'temperature_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m',
-          hourly:'precipitation_probability',
-          forecast_days:'2',timezone:'auto',apikey:apiKey
+          key:apiKey,
+          q:location,
+          days:'3',
+          aqi:'no',
+          alerts:'no'
         });
-        const wr=await fetch(`https://customer-api.open-meteo.com/v1/forecast?${params.toString()}`,{headers:{'accept':'application/json','user-agent':'Waypoint/6.0'}});
-        if(!wr.ok)throw new Error('weather '+wr.status);
-        const w=await wr.json();
-        const current={...(w.current||{})};
-        if(Array.isArray(w.hourly?.time)&&Array.isArray(w.hourly?.precipitation_probability)){
-          const now=Date.now();let best=0,bestDiff=Infinity;
-          w.hourly.time.forEach((t,i)=>{const diff=Math.abs(Date.parse(t)-now);if(diff<bestDiff){bestDiff=diff;best=i;}});
-          current.precipitation_probability=w.hourly.precipitation_probability[best]??null;
+        const wr=await fetch(`https://api.weatherapi.com/v1/forecast.json?${params.toString()}`,{
+          headers:{'accept':'application/json','user-agent':'Waypoint/6.0.1'}
+        });
+        const data=await wr.json().catch(()=>({}));
+        if(!wr.ok){
+          const msg=String(data?.error?.message||'weather lookup failed').slice(0,160);
+          return json(res,wr.status===400?400:502,{enabled:true,provider:'WeatherAPI.com',error:msg});
         }
-        return json(res,200,{enabled:true,provider:'Open-Meteo',location:[place.name,place.admin1,place.country].filter(Boolean).join(', '),latitude:place.latitude,longitude:place.longitude,current});
+        const cur=data.current||{}, loc=data.location||{}, forecast=Array.isArray(data?.forecast?.forecastday)?data.forecast.forecastday:[];
+        const current={
+          temperature_2m:Number(cur.temp_c),
+          apparent_temperature:Number(cur.feelslike_c),
+          precipitation:Number(cur.precip_mm||0),
+          precipitation_probability:Number(forecast?.[0]?.day?.daily_chance_of_rain||0),
+          weather_code:null,
+          condition_text:String(cur?.condition?.text||''),
+          condition_icon:String(cur?.condition?.icon||''),
+          wind_speed_10m:Number(cur.wind_kph||0),
+          humidity:Number(cur.humidity||0),
+          is_day:Number(cur.is_day||0)
+        };
+        const days=forecast.map(d=>({
+          date:d.date,
+          max_c:Number(d?.day?.maxtemp_c),
+          min_c:Number(d?.day?.mintemp_c),
+          avg_c:Number(d?.day?.avgtemp_c),
+          chance_of_rain:Number(d?.day?.daily_chance_of_rain||0),
+          condition:String(d?.day?.condition?.text||''),
+          icon:String(d?.day?.condition?.icon||'')
+        }));
+        return json(res,200,{
+          enabled:true,
+          provider:'WeatherAPI.com',
+          attribution:'WeatherAPI.com',
+          location:[loc.name,loc.region,loc.country].filter(Boolean).join(', '),
+          latitude:loc.lat,
+          longitude:loc.lon,
+          localtime:loc.localtime||'',
+          current,
+          forecast:days
+        });
       }catch(e){
-        return json(res,502,{enabled:true,provider:'Open-Meteo',error:'weather lookup failed'});
+        return json(res,502,{enabled:true,provider:'WeatherAPI.com',error:'weather lookup failed'});
       }
     }
 
@@ -247,7 +269,7 @@ const server=http.createServer(async(req,res)=>{
     }
 
     if(req.method==='GET'&&u.pathname==='/api/features'){
-      return json(res,200,{giphy:Boolean(process.env.GIPHY_API_KEY),weather:Boolean(process.env.OPEN_METEO_API_KEY)});
+      return json(res,200,{giphy:Boolean(process.env.GIPHY_API_KEY),weather:Boolean(process.env.WEATHERAPI_KEY)});
     }
 
     const eventMatch=u.pathname.match(/^\/api\/trips\/([^/]+)\/events$/);
@@ -487,4 +509,4 @@ const server=http.createServer(async(req,res)=>{
   }
 });
 
-server.listen(PORT,HOST,()=>console.log(`Waypoint 6.0.0 listening on http://${HOST}:${PORT}`));
+server.listen(PORT,HOST,()=>console.log(`Waypoint 6.0.2 listening on http://${HOST}:${PORT}`));

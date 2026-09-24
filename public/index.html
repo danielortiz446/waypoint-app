@@ -2422,9 +2422,17 @@ async function loadTripWeather(tripId){
 function weatherCardHtml(tr){
   const es=state.lang==='es'; const w=ui.weatherCache?.[tr.id];
   if(!w){setTimeout(()=>loadTripWeather(tr.id),20);return `<div class="today-card weather-card"><div class="weather-meta">${es?'Cargando clima…':'Loading weather…'}</div></div>`;}
-  if(!w.enabled)return `<div class="today-card weather-card"><div style="font-size:24px">🌤️</div><div class="weather-meta">${es?'Clima integrado listo para activarse cuando configures OPEN_METEO_API_KEY para uso comercial.':'Integrated weather is ready when OPEN_METEO_API_KEY is configured for commercial use.'}</div></div>`;
+  if(!w.enabled)return `<div class="today-card weather-card"><div style="font-size:24px">🌤️</div><div class="weather-meta">${es?'Clima no configurado. Agrega WEATHERAPI_KEY en Railway.':'Weather is not configured. Add WEATHERAPI_KEY in Railway.'}</div></div>`;
+  if(w.error)return `<div class="today-card weather-card"><div style="font-size:24px">⚠️</div><div class="weather-meta">${es?'No se pudo consultar el clima ahora mismo.':'Weather could not be loaded right now.'}</div></div>`;
   const cur=w.current||{};
-  return `<div class="today-card weather-card"><div style="font-size:24px">${weatherCodeIcon(cur.weather_code)}</div><div class="weather-temp">${Math.round(Number(cur.temperature_2m||0))}°</div><div class="weather-meta">${escapeHtml(w.location||tr.destination)} · ${es?'Sensación':'Feels'} ${Math.round(Number(cur.apparent_temperature||cur.temperature_2m||0))}° · ${es?'Lluvia':'Rain'} ${Math.round(Number(cur.precipitation_probability||0))}%</div><div class="weather-meta" style="margin-top:5px;">Weather data: Open-Meteo</div></div>`;
+  const icon=cur.condition_icon?`<img src="https:${escapeHtml(cur.condition_icon)}" alt="${escapeHtml(cur.condition_text||'Weather')}" style="width:46px;height:46px;">`:`<div style="font-size:28px">🌤️</div>`;
+  return `<div class="today-card weather-card">
+    ${icon}
+    <div class="weather-temp">${Math.round(Number(cur.temperature_2m||0))}°C</div>
+    <div class="weather-meta">${escapeHtml(w.location||tr.destination)} · ${escapeHtml(cur.condition_text||'')}</div>
+    <div class="weather-meta">${es?'Sensación':'Feels'} ${Math.round(Number(cur.apparent_temperature||cur.temperature_2m||0))}°C · ${es?'Lluvia':'Rain'} ${Math.round(Number(cur.precipitation_probability||0))}% · ${es?'Humedad':'Humidity'} ${Math.round(Number(cur.humidity||0))}%</div>
+    <div class="weather-meta" style="margin-top:5px;">Powered by WeatherAPI.com</div>
+  </div>`;
 }
 function viewTodaySub(tr){
   const es=state.lang==='es'; const date=tripFocusDate(tr); const items=tripTimelineItems(tr,date);
@@ -3550,7 +3558,7 @@ function deleteDoc(tripId,docId){
 function viewSettings(){
   const t=tt();
   return `
-    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p></div></div>
+    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v6.0.2</div></div></div>
     <div class="panel">
       <h3 style="margin:0 0 12px;font-size:16px;color:var(--paper);">${t.settings.account}</h3>
       <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px;">
@@ -3881,7 +3889,18 @@ document.addEventListener('change', (e)=>{
 
 
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
-  window.addEventListener('load',()=>navigator.serviceWorker.register('/service-worker.js').catch(()=>{}));
+  window.addEventListener('load',async()=>{
+    try{
+      const reg=await navigator.serviceWorker.register('/service-worker.js?v=6.0.2',{updateViaCache:'none'});
+      await reg.update();
+      let reloading=false;
+      navigator.serviceWorker.addEventListener('controllerchange',()=>{
+        if(reloading)return;
+        reloading=true;
+        location.reload();
+      });
+    }catch(e){}
+  });
 }
 
 loadState();
