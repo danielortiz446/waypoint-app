@@ -209,3 +209,7 @@ The weather card displays current temperature, feels-like temperature, condition
 This release keeps WeatherAPI.com as the weather provider and adds a stronger installed-PWA update path. The service worker is registered with `updateViaCache: "none"`, uses a versioned service-worker URL, immediately checks for updates, reloads when the new worker takes control, and requests navigation documents with `cache: "no-store"` before falling back to the offline cache.
 
 If an installed iPhone PWA still shows the old Open-Meteo message after deploying 6.0.2, the public server is still serving an older build or the device has not loaded the new deployment yet.
+
+## Waypoint 6.0.3 iPhone installed-PWA chat fix
+
+The chat drawer now respects iOS safe areas when Waypoint is launched from the Home Screen. On mobile, the chat is inset from the top and bottom system areas, the chat header stays visible, the close button has a larger touch target, and the composer respects the bottom home-indicator area.
