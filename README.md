@@ -440,7 +440,7 @@ When enabled:
 - The active cockpit renders only when `trip.travelMode === true`.
 - Exiting Travel Mode returns to Overview and restores the full planning interface.
 
-## Waypoint 10.0.8 — Participant display cleanup + itinerary simplification
+## Waypoint 10.0.7 — Participant display cleanup + itinerary simplification
 
 - Internal participant IDs are no longer shown as visible people in the app.
 - Participant lists, counters, chat header, typing indicator, read receipts, and activity actor labels now sanitize internal-ID-looking names.
@@ -450,6 +450,57 @@ When enabled:
 - Removed Assigned to / Responsable from itinerary activity creation and activity display.
 - Existing legacy `assignedTo` data is preserved internally for compatibility but is no longer shown in the itinerary.
 
-## Waypoint 10.0.8 — Offline + Travel Mode parity
+## Waypoint 10.0.8 — Monetization foundation
 
-This release hardens offline preparation and keeps Travel Mode functionally identical across web, iPhone and Android. The mobile UI may reflow into fewer columns or bottom sheets, but it does not remove Travel Mode functions. Offline preparation now confirms service-worker caching before marking a trip ready, shows preparation and sync timestamps, identifies stale offline copies after upgrades, and provides a persistent refresh action. Live maps/ETA, collaboration sync/chat, and cloud-only files still require connectivity.
+- Added Free / Premium entitlement model to local app state.
+- Added a bilingual pricing/plans screen.
+- Planned Premium pricing displayed as $3.99/month or $29.99/year.
+- Added a planned one-time Trip Pass section without committing to a final price.
+- Added current-plan badge in the main header and Settings.
+- Purchase controls explicitly remain unavailable until verified billing providers are integrated.
+- No fake purchases, fake Premium status, fake ads, or fake affiliate revenue were introduced.
+- Free-tier limits are not enforced yet because users must not be locked out before a working purchase path exists.
+- Existing V10.0.7 participant cleanup, itinerary simplification, Travel Mode, offline, legal, collaboration, and security behavior are retained.
+
+## Waypoint 10.1.0 — Admin Control Center
+
+### New optional Waypoint ID
+- Users may create a pseudonymous Waypoint ID from Settings.
+- The public code can be shared with support/admin to receive complimentary Premium or redeem promotions.
+- A local secret credential authenticates that device to the server; it is never displayed to the user or admin.
+- No account/login is required for normal Waypoint use.
+
+### Private `/admin` Control Center
+- Server-side admin login using `WAYPOINT_ADMIN_EMAIL` and `WAYPOINT_ADMIN_PASSWORD`.
+- Optional authenticator-code protection with `WAYPOINT_ADMIN_TOTP_SECRET` (Base32 TOTP secret).
+- 8-hour HttpOnly, SameSite=Strict admin session cookie.
+- Dashboard: registered IDs, Premium/Free counts, shared-trip count, promo count, file storage, and service status.
+- User search by Waypoint ID/name/plan/source.
+- Grant Premium for 7 days, 30 days, 1 year, or permanently.
+- Revoke Premium.
+- Internal support notes.
+- Promo-code creation, max-use limits, expiration, permanent or timed Premium, enable/disable.
+- Feature flags for desired ads, affiliate offers, Premium purchases, and beta functionality.
+- System diagnostics and admin audit log.
+- Admin panel intentionally does not expose itinerary/chat/document/expense contents.
+
+### Required production variables
+- `WAYPOINT_ADMIN_EMAIL`
+- `WAYPOINT_ADMIN_PASSWORD`
+- `WAYPOINT_ADMIN_DATA_FILE=/data/waypoint-admin-data.json`
+- Optional but strongly recommended: `WAYPOINT_ADMIN_TOTP_SECRET=<Base32 secret>`
+
+The existing `WAYPOINT_DATA_FILE=/data/waypoint-sync-data.json` and `WAYPOINT_FILE_DIR=/data/waypoint-files` remain unchanged.
+
+### Monetization integrity
+- Admin grants and promo-code entitlements are real server-side entitlement records.
+- Paid Premium is still disabled until Apple/Google/web billing is connected and verified.
+- Ads and affiliate flags are "desired state" only; they do not fake a provider integration.
+
+## V10.1.1 — shared-link name gate and monetization verification
+- Mandatory bilingual, accessible join gate. No trip data is added to local storage and no shared-trip screen opens until a valid name is registered and acknowledged by the server.
+- Blank, one-letter, numeric-only and internal ID-shaped names are rejected. A registration failure leaves the gate open for retry.
+- Existing guest trips without a verified join marker require reopening the invitation link before viewing.
+- Premium state is refreshed server-side each app session and on app reactivation, with a per-session verified entitlement flag; local JSON alone no longer activates the Premium badge.
+- Permanent promotional codes now respect a zero-day duration, expiry dates are validated, and internal user notes are excluded from public client responses.
+- Real billing, ad networks and affiliate conversion reporting remain unintegrated; Free features are not paywalled yet.

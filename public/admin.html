@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Waypoint Admin</title>
+<style>
+:root{
+  --bg:#071a26;--panel:#0d2935;--panel2:#103740;--paper:#f4efe4;--muted:#aab8ba;
+  --gold:#d2ad3b;--line:rgba(255,255,255,.10);--danger:#ff8d78;--ok:#7ad9a3;
+}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#071a26,#0b2531);color:var(--paper);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+.hidden{display:none!important}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 60px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.brand{font-weight:950;letter-spacing:.05em}
+.brand small{display:block;color:var(--muted);font-size:10px;letter-spacing:.12em;margin-top:3px}
+.actions{display:flex;gap:7px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--paper);border-radius:10px;padding:9px 12px;font-weight:800}
+.btn.primary{background:var(--gold);color:#10202a;border-color:var(--gold)}
+.btn.danger{border-color:rgba(255,141,120,.3);color:var(--danger)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.card{background:rgba(13,41,53,.92);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}
+h1,h2,h3{margin-top:0}
+.sub{color:var(--muted);font-size:12px;line-height:1.55}
+.login{max-width:470px;margin:8vh auto 0}
+.field{margin:10px 0}
+.field label{display:block;font-size:10px;color:var(--muted);font-weight:850;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em}
+.field input,.field select,.field textarea{
+  width:100%;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.12);color:var(--paper);
+  padding:10px;border-radius:9px;outline:none
+}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.metric{padding:14px;border-radius:13px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
+.metric .k{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.metric .v{font-size:24px;font-weight:900;margin-top:3px}
+.tabs{display:flex;gap:6px;overflow:auto;margin-bottom:12px;padding-bottom:3px}
+.tabs button{white-space:nowrap}
+.tabs button.active{background:rgba(210,173,59,.15);border-color:rgba(210,173,59,.28);color:#f0cf64}
+.row{display:flex;gap:9px;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+.row:last-child{border-bottom:0}
+.row-main{min-width:0}
+.name{font-weight:850}
+.meta{font-size:10px;color:var(--muted);margin-top:3px;word-break:break-word}
+.pill{display:inline-flex;align-items:center;padding:3px 7px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid var(--line);font-size:9px;font-weight:800}
+.pill.premium{color:#efd06d;border-color:rgba(210,173,59,.28);background:rgba(210,173,59,.1)}
+.pill.ok{color:var(--ok)}
+.pill.off{color:var(--muted)}
+.toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.toolbar input{flex:1;min-width:180px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.12);color:var(--paper);padding:9px;border-radius:9px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.flag{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.flag:last-child{border-bottom:0}
+.toggle{width:46px;height:26px;border-radius:999px;background:rgba(255,255,255,.12);position:relative;border:0}
+.toggle.on{background:rgba(210,173,59,.55)}
+.toggle::after{content:"";position:absolute;width:20px;height:20px;left:3px;top:3px;border-radius:50%;background:white;transition:.18s}
+.toggle.on::after{left:23px}
+.modal-bg{position:fixed;inset:0;background:rgba(1,8,14,.7);display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}
+.modal{width:min(520px,100%);max-height:90vh;overflow:auto;background:#0d2935;border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 30px 90px rgba(0,0,0,.5)}
+.notice{padding:10px 11px;border-radius:10px;background:rgba(210,173,59,.08);border:1px solid rgba(210,173,59,.18);font-size:11px;color:#dfe4df}
+code{color:#f0cf64}
+pre{white-space:pre-wrap;word-break:break-word;background:rgba(0,0,0,.18);padding:10px;border-radius:10px;font-size:10px}
+@media(max-width:820px){.grid{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}}
+@media(max-width:500px){.grid{grid-template-columns:1fr}.row{align-items:flex-start;flex-direction:column}.row>.actions{width:100%}.row>.actions .btn{flex:1}.wrap{padding:14px 10px 50px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">WAYPOINT <small>ADMIN CONTROL CENTER · 10.1.1</small></div>
+    <div class="actions">
+      <button class="btn" onclick="location.href='/'">← App</button>
+      <button id="logoutBtn" class="btn danger hidden" onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <div id="loginView" class="card login">
+    <h2>Admin sign in</h2>
+    <p class="sub">Administrative access is verified by the Waypoint server. Credentials are never stored in this page.</p>
+    <div id="notConfigured" class="notice hidden">Admin access has not been configured on the server. Add the required Railway environment variables first.</div>
+    <div class="field"><label>Email</label><input id="email" type="email" autocomplete="username"></div>
+    <div class="field"><label>Password</label><input id="password" type="password" autocomplete="current-password"></div>
+    <div id="totpField" class="field hidden"><label>Authenticator code</label><input id="totp" inputmode="numeric" autocomplete="one-time-code" maxlength="6"></div>
+    <button id="loginBtn" class="btn primary" style="width:100%" onclick="login()">Sign in</button>
+    <div id="loginError" class="sub" style="color:var(--danger);margin-top:10px"></div>
+  </div>
+
+  <div id="adminView" class="hidden">
+    <div class="tabs">
+      <button class="btn active" data-tab="dashboard" onclick="showTab('dashboard',this)">Dashboard</button>
+      <button class="btn" data-tab="users" onclick="showTab('users',this)">Users & Premium</button>
+      <button class="btn" data-tab="promos" onclick="showTab('promos',this)">Promo codes</button>
+      <button class="btn" data-tab="flags" onclick="showTab('flags',this)">Feature flags</button>
+      <button class="btn" data-tab="system" onclick="showTab('system',this)">System</button>
+      <button class="btn" data-tab="logs" onclick="showTab('logs',this)">Admin log</button>
+    </div>
+
+    <section id="tab-dashboard">
+      <div id="metrics" class="grid"></div>
+      <div class="two" style="margin-top:12px">
+        <div class="card"><h3>Services</h3><div id="services"></div></div>
+        <div class="card"><h3>Privacy boundary</h3><p class="sub">This panel manages Waypoint IDs, entitlement status, promo codes, feature flags, operational metrics, and admin actions. It intentionally does not expose itinerary, chat, document, or expense contents from user trips.</p></div>
+      </div>
+    </section>
+
+    <section id="tab-users" class="hidden">
+      <div class="card">
+        <div class="toolbar">
+          <input id="userSearch" placeholder="Search Waypoint ID, name, plan…" onkeydown="if(event.key==='Enter')loadUsers()">
+          <button class="btn primary" onclick="loadUsers()">Search</button>
+        </div>
+        <div id="usersList"></div>
+      </div>
+    </section>
+
+    <section id="tab-promos" class="hidden">
+      <div class="two">
+        <div class="card">
+          <h3>Create promo code</h3>
+          <div class="field"><label>Code</label><input id="promoCode" placeholder="WAYPOINTVIP"></div>
+          <div class="field"><label>Premium duration</label>
+            <select id="promoDays">
+              <option value="7">7 days</option>
+              <option value="30" selected>30 days</option>
+              <option value="365">1 year</option>
+              <option value="0">Permanent</option>
+            </select>
+          </div>
+          <div class="field"><label>Maximum redemptions (0 = unlimited)</label><input id="promoMax" type="number" min="0" value="10"></div>
+          <div class="field"><label>Expiration date (optional)</label><input id="promoExpires" type="date"></div>
+          <button class="btn primary" onclick="createPromo()">Create code</button>
+          <div id="promoError" class="sub" style="color:var(--danger);margin-top:8px"></div>
+        </div>
+        <div class="card"><h3>Promo codes</h3><div id="promoList"></div></div>
+      </div>
+    </section>
+
+    <section id="tab-flags" class="hidden">
+      <div class="card">
+        <h3>Global feature flags</h3>
+        <p class="sub">These flags express the administrator's desired state. Ads, billing, and affiliate UI will remain effectively unavailable until real providers are connected.</p>
+        <div id="flagsList"></div>
+        <button class="btn primary" onclick="saveFlags()" style="margin-top:12px">Save flags</button>
+      </div>
+    </section>
+
+    <section id="tab-system" class="hidden">
+      <div class="card"><h3>System status</h3><div id="systemInfo"></div></div>
+    </section>
+
+    <section id="tab-logs" class="hidden">
+      <div class="card"><h3>Admin audit log</h3><div id="logsList"></div></div>
+    </section>
+  </div>
+</div>
+
+<div id="modal" class="modal-bg hidden" onclick="if(event.target===this)closeModal()"><div class="modal" id="modalBody"></div></div>
+
+<script>
+let totpRequired=false;
+let flags={};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtBytes=n=>{n=Number(n||0);if(n<1024)return n+' B';if(n<1048576)return (n/1024).toFixed(1)+' KB';if(n<1073741824)return (n/1048576).toFixed(1)+' MB';return (n/1073741824).toFixed(2)+' GB'};
+const fmtDate=v=>{try{return v?new Date(v).toLocaleString():'—'}catch(e){return '—'}};
+async function api(url,opt={}){
+  const r=await fetch(url,{cache:'no-store',credentials:'same-origin',...opt});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw Object.assign(new Error(j.error||('HTTP '+r.status)),{status:r.status,data:j});
+  return j;
+}
+async function init(){
+  try{
+    const st=await api('/api/admin/status');
+    totpRequired=!!st.totpRequired;
+    $('#totpField').classList.toggle('hidden',!totpRequired);
+    if(!st.configured){$('#notConfigured').classList.remove('hidden');$('#loginBtn').disabled=true}
+    await api('/api/admin/me');
+    enterAdmin();
+  }catch(e){}
+}
+async function login(){
+  $('#loginError').textContent='';
+  try{
+    await api('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      email:$('#email').value.trim(),password:$('#password').value,totp:$('#totp')?.value||''
+    })});
+    $('#password').value='';if($('#totp'))$('#totp').value='';
+    enterAdmin();
+  }catch(e){$('#loginError').textContent=e.message==='invalid admin credentials'?'Invalid credentials or authenticator code.':e.message}
+}
+async function logout(){try{await api('/api/admin/logout',{method:'POST'})}catch(e){}location.reload()}
+function enterAdmin(){
+  $('#loginView').classList.add('hidden');$('#adminView').classList.remove('hidden');$('#logoutBtn').classList.remove('hidden');
+  loadDashboard();
+}
+function showTab(name,btn){
+  document.querySelectorAll('[id^="tab-"]').forEach(x=>x.classList.add('hidden'));
+  $('#tab-'+name).classList.remove('hidden');
+  document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));btn?.classList.add('active');
+  if(name==='dashboard')loadDashboard();
+  if(name==='users')loadUsers();
+  if(name==='promos')loadPromos();
+  if(name==='flags')loadFlags();
+  if(name==='system')loadSystem();
+  if(name==='logs')loadLogs();
+}
+async function loadDashboard(){
+  try{
+    const d=await api('/api/admin/dashboard');
+    const metrics=[
+      ['Registered IDs',d.registeredUsers],['Premium',d.premiumUsers],['Free',d.freeUsers],
+      ['Shared trips',d.sharedTrips],['Promo codes',d.promoCodes],['File storage',fmtBytes(d.fileStorageBytes)]
+    ];
+    $('#metrics').innerHTML=metrics.map(([k,v])=>`<div class="metric"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`).join('');
+    $('#services').innerHTML=Object.entries(d.services||{}).map(([k,v])=>`<div class="row"><div class="row-main"><div class="name">${esc(k)}</div></div><span class="pill ${v?'ok':'off'}">${v?'ON':'OFF'}</span></div>`).join('');
+  }catch(e){if(e.status===401)location.reload()}
+}
+async function loadUsers(){
+  try{
+    const q=encodeURIComponent($('#userSearch')?.value||'');
+    const d=await api('/api/admin/users?q='+q);
+    $('#usersList').innerHTML=d.users.length?d.users.map(u=>`
+      <div class="row">
+        <div class="row-main">
+          <div class="name">${esc(u.displayName||'Unnamed')} <span class="pill ${u.plan==='premium'?'premium':''}">${esc(u.plan.toUpperCase())}</span></div>
+          <div class="meta"><code>${esc(u.waypointId)}</code> · ${esc(u.entitlementSource||'none')} · Last seen ${esc(fmtDate(u.lastSeenAt))}${u.premiumUntil?' · Premium until '+esc(fmtDate(u.premiumUntil)):''}</div>
+          ${u.note?`<div class="meta">Note: ${esc(u.note)}</div>`:''}
+        </div>
+        <div class="actions">
+          <button class="btn" onclick="openPremium('${esc(u.waypointId)}','${esc(u.displayName||'')}')">★ Premium</button>
+          <button class="btn" onclick="openUserNote('${esc(u.waypointId)}','${esc((u.note||'').replace(/'/g,'&#39;'))}')">Note</button>
+        </div>
+      </div>`).join(''):`<div class="sub">No registered Waypoint IDs found.</div>`;
+  }catch(e){if(e.status===401)location.reload();else $('#usersList').innerHTML='<div class="sub">'+esc(e.message)+'</div>'}
+}
+function openPremium(id,name){
+  $('#modalBody').innerHTML=`
+    <h3>Premium access</h3><p class="sub">${esc(name||'User')} · <code>${esc(id)}</code></p>
+    <div class="field"><label>Duration</label><select id="grantDays"><option value="7">7 days</option><option value="30" selected>30 days</option><option value="365">1 year</option><option value="permanent">Permanent</option></select></div>
+    <div class="field"><label>Reason / internal note</label><input id="grantReason" placeholder="Courtesy, tester, support…"></div>
+    <div class="actions"><button class="btn primary" onclick="grantPremium('${esc(id)}')">Grant Premium</button><button class="btn danger" onclick="revokePremium('${esc(id)}')">Revoke Premium</button><button class="btn" onclick="closeModal()">Cancel</button></div>`;
+  $('#modal').classList.remove('hidden');
+}
+function closeModal(){$('#modal').classList.add('hidden');$('#modalBody').innerHTML=''}
+async function grantPremium(id){
+  const v=$('#grantDays').value,permanent=v==='permanent',days=permanent?30:Number(v);
+  await api('/api/admin/users/'+encodeURIComponent(id)+'/premium',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'grant',permanent,days,reason:$('#grantReason').value})});
+  closeModal();loadUsers();loadDashboard();
+}
+async function revokePremium(id){
+  if(!confirm('Revoke Premium for '+id+'?'))return;
+  await api('/api/admin/users/'+encodeURIComponent(id)+'/premium',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'revoke',reason:$('#grantReason')?.value||''})});
+  closeModal();loadUsers();loadDashboard();
+}
+function openUserNote(id,note){
+  $('#modalBody').innerHTML=`<h3>Internal user note</h3><p class="sub"><code>${esc(id)}</code></p><div class="field"><label>Note</label><textarea id="userNote" rows="5">${esc(note||'')}</textarea></div><div class="actions"><button class="btn primary" onclick="saveUserNote('${esc(id)}')">Save</button><button class="btn" onclick="closeModal()">Cancel</button></div>`;
+  $('#modal').classList.remove('hidden');
+}
+async function saveUserNote(id){
+  await api('/api/admin/users/'+encodeURIComponent(id),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({note:$('#userNote').value})});
+  closeModal();loadUsers();
+}
+async function createPromo(){
+  $('#promoError').textContent='';
+  try{
+    const exp=$('#promoExpires').value;
+    await api('/api/admin/promo-codes',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      code:$('#promoCode').value,premiumDays:Number($('#promoDays').value),maxUses:Number($('#promoMax').value||0),expiresAt:exp?exp+'T23:59:59':null
+    })});
+    $('#promoCode').value='';loadPromos();loadDashboard();
+  }catch(e){$('#promoError').textContent=e.message}
+}
+async function loadPromos(){
+  try{
+    const d=await api('/api/admin/promo-codes');
+    $('#promoList').innerHTML=d.promoCodes.length?d.promoCodes.map(p=>`
+      <div class="row"><div class="row-main"><div class="name"><code>${esc(p.code)}</code> ${p.disabled?'<span class="pill off">DISABLED</span>':''}</div>
+      <div class="meta">${p.premiumDays===0?'Permanent':p.premiumDays+' days'} · ${p.redemptionCount}/${p.maxUses||'∞'} uses · expires ${esc(p.expiresAt?fmtDate(p.expiresAt):'never')}</div></div>
+      <button class="btn" onclick="togglePromo('${esc(p.code)}',${!p.disabled})">${p.disabled?'Enable':'Disable'}</button></div>`).join(''):'<div class="sub">No promo codes yet.</div>';
+  }catch(e){}
+}
+async function togglePromo(code,disabled){
+  await api('/api/admin/promo-codes/'+encodeURIComponent(code),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({disabled})});
+  loadPromos();
+}
+async function loadFlags(){
+  const d=await api('/api/admin/feature-flags');flags=d.featureFlags||{};
+  const defs=[
+    ['adsDesired','Advertising','Desired advertising state. Effective ads remain OFF until an ad provider is integrated.'],
+    ['affiliatesDesired','Affiliate offers','Desired affiliate-offer state. Effective offers remain OFF until provider links are configured.'],
+    ['premiumPurchasesDesired','Premium purchases','Desired billing state. Effective purchases remain OFF until verified billing is connected.'],
+    ['betaFeatures','Beta features','Allow future beta features to be exposed when implemented.']
+  ];
+  $('#flagsList').innerHTML=defs.map(([k,n,d])=>`<div class="flag"><div><div class="name">${esc(n)}</div><div class="meta">${esc(d)}</div></div><button class="toggle ${flags[k]?'on':''}" data-flag="${k}" onclick="this.classList.toggle('on');flags['${k}']=this.classList.contains('on')"></button></div>`).join('');
+}
+async function saveFlags(){await api('/api/admin/feature-flags',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(flags)});loadDashboard()}
+async function loadSystem(){
+  const d=await api('/api/admin/system');
+  $('#systemInfo').innerHTML=Object.entries(d).map(([k,v])=>`<div class="row"><div class="row-main"><div class="name">${esc(k)}</div></div><div class="meta">${esc(typeof v==='object'?JSON.stringify(v):v)}</div></div>`).join('');
+}
+async function loadLogs(){
+  const d=await api('/api/admin/security-logs?limit=250');
+  $('#logsList').innerHTML=d.logs.length?d.logs.map(x=>`<div class="row"><div class="row-main"><div class="name">${esc(x.action)}</div><div class="meta">${esc(fmtDate(x.at))}${x.waypointId?' · '+esc(x.waypointId):''}${x.code?' · '+esc(x.code):''}${x.admin?' · '+esc(x.admin):''}</div></div></div>`).join(''):'<div class="sub">No admin events yet.</div>';
+}
+init();
+</script>
+</body>
+</html>

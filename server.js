@@ -32,6 +32,164 @@ function notifyTyping(id){
 const fxCache=new Map();
 
 const FILE_ROOT=process.env.WAYPOINT_FILE_DIR||path.join(path.dirname(DATA_FILE),'waypoint-files');
+
+const ADMIN_DATA_FILE=process.env.WAYPOINT_ADMIN_DATA_FILE||path.join(path.dirname(DATA_FILE),'waypoint-admin-data.json');
+const adminSessions=new Map();
+const adminLoginAttempts=new Map();
+function adminLoginAllowed(req){
+  const ip=String(req.headers['x-forwarded-for']||req.socket.remoteAddress||'unknown').split(',')[0].trim();
+  const now=Date.now(),windowMs=10*60*1000;
+  const arr=(adminLoginAttempts.get(ip)||[]).filter(t=>now-t<windowMs);
+  if(arr.length>=8)return false;
+  arr.push(now);adminLoginAttempts.set(ip,arr);return true;
+}
+
+function defaultAdminData(){
+  return {
+    version:1,
+    users:{},
+    promoCodes:{},
+    featureFlags:{
+      adsDesired:false,
+      affiliatesDesired:false,
+      premiumPurchasesDesired:false,
+      betaFeatures:false
+    },
+    adminLog:[]
+  };
+}
+function loadAdminData(){
+  try{
+    const raw=JSON.parse(fs.readFileSync(ADMIN_DATA_FILE,'utf8'))||{};
+    return {
+      ...defaultAdminData(),
+      ...raw,
+      users:raw.users&&typeof raw.users==='object'?raw.users:{},
+      promoCodes:raw.promoCodes&&typeof raw.promoCodes==='object'?raw.promoCodes:{},
+      featureFlags:{...defaultAdminData().featureFlags,...(raw.featureFlags||{})},
+      adminLog:Array.isArray(raw.adminLog)?raw.adminLog:[]
+    };
+  }catch(e){return defaultAdminData();}
+}
+const adminData=loadAdminData();
+function persistAdminData(){
+  fs.mkdirSync(path.dirname(ADMIN_DATA_FILE),{recursive:true});
+  const tmp=ADMIN_DATA_FILE+'.tmp';
+  fs.writeFileSync(tmp,JSON.stringify(adminData,null,2));
+  fs.renameSync(tmp,ADMIN_DATA_FILE);
+}
+function adminAudit(action,meta={}){
+  adminData.adminLog.push({id:crypto.randomUUID(),at:new Date().toISOString(),action,...meta});
+  adminData.adminLog=adminData.adminLog.slice(-1000);
+  persistAdminData();
+}
+function timingSafeTextEqual(a,b){
+  const aa=Buffer.from(String(a||'')),bb=Buffer.from(String(b||''));
+  if(aa.length!==bb.length)return false;
+  return crypto.timingSafeEqual(aa,bb);
+}
+function parseCookies(req){
+  const out={};
+  for(const part of String(req.headers.cookie||'').split(';')){
+    const i=part.indexOf('=');if(i<0)continue;
+    try{out[part.slice(0,i).trim()]=decodeURIComponent(part.slice(i+1).trim());}catch(e){}
+  }
+  return out;
+}
+function adminConfigured(){
+  return Boolean(String(process.env.WAYPOINT_ADMIN_EMAIL||'').trim()&&String(process.env.WAYPOINT_ADMIN_PASSWORD||''));
+}
+function adminSession(req){
+  const token=parseCookies(req).waypoint_admin_session||String(req.headers['x-admin-session']||'');
+  if(!token)return null;
+  const s=adminSessions.get(token);
+  if(!s||s.expiresAt<=Date.now()){if(s)adminSessions.delete(token);return null;}
+  s.lastSeenAt=Date.now();
+  return {token,...s};
+}
+function requireAdmin(req,res){
+  const s=adminSession(req);
+  if(!s){json(res,401,{error:'admin authentication required'});return null;}
+  return s;
+}
+function base32Decode(input){
+  const alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  const s=String(input||'').toUpperCase().replace(/[^A-Z2-7]/g,'');
+  let bits='',out=[];
+  for(const c of s){const v=alphabet.indexOf(c);if(v<0)continue;bits+=v.toString(2).padStart(5,'0');}
+  for(let i=0;i+8<=bits.length;i+=8)out.push(parseInt(bits.slice(i,i+8),2));
+  return Buffer.from(out);
+}
+function totpCode(secret,step=Math.floor(Date.now()/30000)){
+  const key=base32Decode(secret);if(!key.length)return '';
+  const counter=Buffer.alloc(8);counter.writeBigUInt64BE(BigInt(step));
+  const h=crypto.createHmac('sha1',key).update(counter).digest();
+  const o=h[h.length-1]&15;
+  const n=(h.readUInt32BE(o)&0x7fffffff)%1000000;
+  return String(n).padStart(6,'0');
+}
+function verifyTotp(code,secret){
+  if(!secret)return true;
+  const clean=String(code||'').replace(/\D/g,'').slice(0,6);
+  if(clean.length!==6)return false;
+  const step=Math.floor(Date.now()/30000);
+  return [-1,0,1].some(d=>timingSafeTextEqual(clean,totpCode(secret,step+d)));
+}
+function waypointPublicCode(){
+  const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s='WP-';
+  for(let block=0;block<2;block++){
+    if(block)s+='-';
+    for(let i=0;i<4;i++)s+=alphabet[crypto.randomInt(alphabet.length)];
+  }
+  return s;
+}
+function uniqueWaypointCode(){
+  for(let i=0;i<30;i++){const c=waypointPublicCode();if(!adminData.users[c])return c;}
+  return 'WP-'+crypto.randomBytes(6).toString('hex').toUpperCase();
+}
+function clientAuth(req){
+  const clientId=String(req.headers['x-waypoint-client-id']||'').trim().slice(0,160);
+  const secret=String(req.headers['x-waypoint-client-secret']||'').trim().slice(0,260);
+  if(!clientId||!secret)return null;
+  const secretHash=hash(secret);
+  const entry=Object.values(adminData.users).find(u=>u.clientId===clientId&&u.clientSecretHash===secretHash);
+  if(!entry)return null;
+  entry.lastSeenAt=new Date().toISOString();
+  return entry;
+}
+function entitlementForUser(u){
+  if(!u)return {plan:'free',source:'none',premiumUntil:null};
+  const until=u.premiumUntil||null;
+  const active=u.plan==='premium'&&(!until||Date.parse(until)>Date.now());
+  return {plan:active?'premium':'free',source:active?(u.entitlementSource||'admin_grant'):'none',premiumUntil:active?until:null};
+}
+function publicUser(u){
+  if(!u)return null;
+  const ent=entitlementForUser(u);
+  return {
+    waypointId:u.waypointId,
+    displayName:u.displayName||'',
+    createdAt:u.createdAt,
+    lastSeenAt:u.lastSeenAt,
+    plan:ent.plan,
+    entitlementSource:ent.source,
+    premiumUntil:ent.premiumUntil
+  };
+}
+function adminUser(u){return {...publicUser(u),note:u?.note||''};}
+function directorySize(dir){
+  let total=0;
+  try{
+    for(const e of fs.readdirSync(dir,{withFileTypes:true})){
+      const p=path.join(dir,e.name);
+      if(e.isDirectory())total+=directorySize(p);
+      else total+=fs.statSync(p).size;
+    }
+  }catch(e){}
+  return total;
+}
+
 function ensureFileRoot(){fs.mkdirSync(FILE_ROOT,{recursive:true});}
 function safeStoredFilePath(roomId,fileId){
   const roomDir=path.join(FILE_ROOT,String(roomId).replace(/[^a-zA-Z0-9_-]/g,'_'));
@@ -349,7 +507,7 @@ const server=http.createServer(async(req,res)=>{
     const u=new URL(req.url,'http://localhost');
     if((u.pathname.startsWith('/api/')||u.pathname==='/health')&&!allowRate(req))return json(res,429,{error:'rate limit exceeded'});
 
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'10.0.8',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'10.1.1',time:new Date().toISOString()});
 
     if(req.method==='GET'&&u.pathname==='/api/fx/rate'){
       const from=String(u.searchParams.get('from')||'').trim().toUpperCase();
@@ -554,6 +712,221 @@ const server=http.createServer(async(req,res)=>{
       return json(res,200,{enabled:Boolean(key),apiKey:key||null,provider:key?'GIPHY':null});
     }
 
+
+    /* ===================== Waypoint identity / entitlements ===================== */
+    if(req.method==='POST'&&u.pathname==='/api/client/register'){
+      const body=await readBody(req);
+      const clientId=String(body.clientId||'').trim().slice(0,160);
+      const clientSecret=String(body.clientSecret||'').trim().slice(0,260);
+      const displayName=String(body.displayName||'').trim().slice(0,80);
+      if(clientId.length<12||clientSecret.length<24)return json(res,400,{error:'invalid client credentials'});
+      const secretHash=hash(clientSecret);
+      let existing=Object.values(adminData.users).find(x=>x.clientId===clientId);
+      if(existing&&existing.clientSecretHash!==secretHash)return json(res,403,{error:'client credential mismatch'});
+      if(!existing){
+        const waypointId=uniqueWaypointCode();
+        existing=adminData.users[waypointId]={
+          waypointId,clientId,clientSecretHash:secretHash,displayName,
+          plan:'free',entitlementSource:'none',premiumUntil:null,
+          createdAt:new Date().toISOString(),lastSeenAt:new Date().toISOString(),note:''
+        };
+        adminAudit('client_registered',{waypointId});
+      }else{
+        existing.displayName=displayName||existing.displayName||'';
+        existing.lastSeenAt=new Date().toISOString();
+        persistAdminData();
+      }
+      return json(res,200,{ok:true,user:publicUser(existing)});
+    }
+    if(req.method==='GET'&&u.pathname==='/api/client/status'){
+      const user=clientAuth(req);
+      if(!user)return json(res,401,{error:'invalid client credentials'});
+      persistAdminData();
+      return json(res,200,{ok:true,user:publicUser(user)});
+    }
+    if(req.method==='POST'&&u.pathname==='/api/client/redeem'){
+      const user=clientAuth(req);
+      if(!user)return json(res,401,{error:'invalid client credentials'});
+      const body=await readBody(req);
+      const code=String(body.code||'').trim().toUpperCase().replace(/\s+/g,'').slice(0,40);
+      const promo=adminData.promoCodes[code];
+      if(!promo||promo.disabled)return json(res,404,{error:'invalid promo code'});
+      if(promo.expiresAt&&Date.parse(promo.expiresAt)<=Date.now())return json(res,410,{error:'promo code expired'});
+      promo.redemptions=Array.isArray(promo.redemptions)?promo.redemptions:[];
+      if(promo.redemptions.some(x=>x.waypointId===user.waypointId))return json(res,409,{error:'promo code already redeemed'});
+      if(Number(promo.maxUses||0)>0&&promo.redemptions.length>=Number(promo.maxUses))return json(res,410,{error:'promo code fully redeemed'});
+      const days=Number(promo.premiumDays||0);
+      user.plan='premium';user.entitlementSource='promo_code';
+      user.premiumUntil=days>0?new Date(Date.now()+days*86400000).toISOString():null;
+      promo.redemptions.push({waypointId:user.waypointId,at:new Date().toISOString()});
+      adminAudit('promo_redeemed',{waypointId:user.waypointId,code});
+      return json(res,200,{ok:true,user:publicUser(user)});
+    }
+
+    /* ===================== Admin authentication ===================== */
+    if(req.method==='GET'&&u.pathname==='/api/admin/status'){
+      return json(res,200,{configured:adminConfigured(),totpRequired:Boolean(process.env.WAYPOINT_ADMIN_TOTP_SECRET)});
+    }
+    if(req.method==='POST'&&u.pathname==='/api/admin/login'){
+      if(!adminLoginAllowed(req))return json(res,429,{error:'too many admin login attempts'});
+      if(!adminConfigured())return json(res,503,{error:'admin is not configured'});
+      const body=await readBody(req);
+      const email=String(body.email||'').trim().toLowerCase();
+      const password=String(body.password||'');
+      const expectedEmail=String(process.env.WAYPOINT_ADMIN_EMAIL||'').trim().toLowerCase();
+      const expectedPassword=String(process.env.WAYPOINT_ADMIN_PASSWORD||'');
+      if(!timingSafeTextEqual(email,expectedEmail)||!timingSafeTextEqual(password,expectedPassword)||!verifyTotp(body.totp,process.env.WAYPOINT_ADMIN_TOTP_SECRET||'')){
+        return json(res,401,{error:'invalid admin credentials'});
+      }
+      const token=crypto.randomBytes(32).toString('base64url');
+      adminSessions.set(token,{email:expectedEmail,createdAt:Date.now(),lastSeenAt:Date.now(),expiresAt:Date.now()+8*60*60*1000});
+      adminAudit('admin_login',{email:expectedEmail});
+      return json(res,200,{ok:true,email:expectedEmail},{
+        'Set-Cookie':`waypoint_admin_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800${String(req.headers['x-forwarded-proto']||'').includes('https')?'; Secure':''}`
+      });
+    }
+    if(req.method==='POST'&&u.pathname==='/api/admin/logout'){
+      const s=adminSession(req);if(s)adminSessions.delete(s.token);
+      return json(res,200,{ok:true},{'Set-Cookie':'waypoint_admin_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'});
+    }
+    if(req.method==='GET'&&u.pathname==='/api/admin/me'){
+      const s=requireAdmin(req,res);if(!s)return;
+      return json(res,200,{ok:true,email:s.email,expiresAt:new Date(s.expiresAt).toISOString()});
+    }
+
+    /* ===================== Admin dashboard / users ===================== */
+    if(req.method==='GET'&&u.pathname==='/api/admin/dashboard'){
+      const s=requireAdmin(req,res);if(!s)return;
+      const users=Object.values(adminData.users);
+      const premium=users.filter(x=>entitlementForUser(x).plan==='premium').length;
+      const promoCodes=Object.values(adminData.promoCodes);
+      return json(res,200,{
+        registeredUsers:users.length,
+        premiumUsers:premium,
+        freeUsers:Math.max(0,users.length-premium),
+        promoCodes:promoCodes.length,
+        sharedTrips:Object.keys(rooms).length,
+        fileStorageBytes:directorySize(FILE_ROOT),
+        featureFlags:adminData.featureFlags,
+        services:{
+          weather:Boolean(process.env.WEATHERAPI_KEY),
+          giphy:Boolean(process.env.GIPHY_API_KEY),
+          traffic:Boolean(process.env.GOOGLE_ROUTES_API_KEY),
+          ocr:Boolean(process.env.OCR_API_URL),
+          cloudFiles:true,
+          billing:false,
+          adsProvider:false,
+          affiliatesProvider:false
+        }
+      });
+    }
+    if(req.method==='GET'&&u.pathname==='/api/admin/users'){
+      const s=requireAdmin(req,res);if(!s)return;
+      const q=String(u.searchParams.get('q')||'').trim().toLowerCase();
+      let users=Object.values(adminData.users).map(adminUser);
+      if(q)users=users.filter(x=>[x.waypointId,x.displayName,x.plan,x.entitlementSource].some(v=>String(v||'').toLowerCase().includes(q)));
+      users.sort((a,b)=>Date.parse(b.lastSeenAt||0)-Date.parse(a.lastSeenAt||0));
+      return json(res,200,{users:users.slice(0,500)});
+    }
+    const premiumMatch=u.pathname.match(/^\/api\/admin\/users\/([^/]+)\/premium$/);
+    if(premiumMatch&&req.method==='PATCH'){
+      const s=requireAdmin(req,res);if(!s)return;
+      const waypointId=decodeURIComponent(premiumMatch[1]).toUpperCase();
+      const user=adminData.users[waypointId];if(!user)return json(res,404,{error:'user not found'});
+      const body=await readBody(req);
+      const action=String(body.action||'grant');
+      if(action==='revoke'){
+        user.plan='free';user.entitlementSource='none';user.premiumUntil=null;
+        adminAudit('premium_revoked',{waypointId,admin:s.email,reason:String(body.reason||'').slice(0,200)});
+      }else{
+        const permanent=Boolean(body.permanent);
+        const days=Math.max(1,Math.min(3650,Number(body.days||30)));
+        user.plan='premium';user.entitlementSource='admin_grant';
+        user.premiumUntil=permanent?null:new Date(Date.now()+days*86400000).toISOString();
+        adminAudit('premium_granted',{waypointId,admin:s.email,permanent,days:permanent?null:days,reason:String(body.reason||'').slice(0,200)});
+      }
+      persistAdminData();
+      return json(res,200,{ok:true,user:publicUser(user)});
+    }
+    const userNoteMatch=u.pathname.match(/^\/api\/admin\/users\/([^/]+)$/);
+    if(userNoteMatch&&req.method==='PATCH'){
+      const s=requireAdmin(req,res);if(!s)return;
+      const waypointId=decodeURIComponent(userNoteMatch[1]).toUpperCase();
+      const user=adminData.users[waypointId];if(!user)return json(res,404,{error:'user not found'});
+      const body=await readBody(req);
+      if(body.displayName!==undefined)user.displayName=String(body.displayName||'').trim().slice(0,80);
+      if(body.note!==undefined)user.note=String(body.note||'').trim().slice(0,500);
+      adminAudit('user_updated',{waypointId,admin:s.email});
+      return json(res,200,{ok:true,user:adminUser(user)});
+    }
+
+    /* ===================== Promo codes ===================== */
+    if(req.method==='GET'&&u.pathname==='/api/admin/promo-codes'){
+      const s=requireAdmin(req,res);if(!s)return;
+      const codes=Object.values(adminData.promoCodes).map(p=>({...p,redemptionCount:(p.redemptions||[]).length,redemptions:undefined}));
+      return json(res,200,{promoCodes:codes.sort((a,b)=>Date.parse(b.createdAt||0)-Date.parse(a.createdAt||0))});
+    }
+    if(req.method==='POST'&&u.pathname==='/api/admin/promo-codes'){
+      const s=requireAdmin(req,res);if(!s)return;
+      const body=await readBody(req);
+      const code=String(body.code||'').trim().toUpperCase().replace(/[^A-Z0-9_-]/g,'').slice(0,32);
+      if(code.length<4)return json(res,400,{error:'promo code too short'});
+      if(adminData.promoCodes[code])return json(res,409,{error:'promo code exists'});
+      const premiumDays=Math.max(0,Math.min(3650,Number(body.premiumDays??30)));
+      const maxUses=Math.max(0,Math.min(100000,Number(body.maxUses||0)));
+      const expiresAt=body.expiresAt?new Date(body.expiresAt):null;
+      if(expiresAt&&Number.isNaN(expiresAt.getTime()))return json(res,400,{error:'invalid expiration date'});
+      adminData.promoCodes[code]={code,premiumDays,maxUses,expiresAt:expiresAt?expiresAt.toISOString():null,disabled:false,createdAt:new Date().toISOString(),redemptions:[]};
+      adminAudit('promo_created',{code,admin:s.email,premiumDays,maxUses});
+      return json(res,201,{ok:true,promoCode:{...adminData.promoCodes[code],redemptions:undefined,redemptionCount:0}});
+    }
+    const promoMatch=u.pathname.match(/^\/api\/admin\/promo-codes\/([^/]+)$/);
+    if(promoMatch&&req.method==='PATCH'){
+      const s=requireAdmin(req,res);if(!s)return;
+      const code=decodeURIComponent(promoMatch[1]).toUpperCase(),p=adminData.promoCodes[code];
+      if(!p)return json(res,404,{error:'promo code not found'});
+      const body=await readBody(req);
+      if(body.disabled!==undefined)p.disabled=Boolean(body.disabled);
+      if(body.maxUses!==undefined)p.maxUses=Math.max(0,Math.min(100000,Number(body.maxUses||0)));
+      if(body.expiresAt!==undefined)p.expiresAt=body.expiresAt?new Date(body.expiresAt).toISOString():null;
+      adminAudit('promo_updated',{code,admin:s.email});
+      return json(res,200,{ok:true,promoCode:{...p,redemptions:undefined,redemptionCount:(p.redemptions||[]).length}});
+    }
+
+    /* ===================== Feature flags / logs / system ===================== */
+    if(req.method==='GET'&&u.pathname==='/api/admin/feature-flags'){
+      const s=requireAdmin(req,res);if(!s)return;
+      return json(res,200,{featureFlags:adminData.featureFlags});
+    }
+    if(req.method==='PUT'&&u.pathname==='/api/admin/feature-flags'){
+      const s=requireAdmin(req,res);if(!s)return;
+      const body=await readBody(req);
+      for(const k of Object.keys(adminData.featureFlags))if(body[k]!==undefined)adminData.featureFlags[k]=Boolean(body[k]);
+      adminAudit('feature_flags_updated',{admin:s.email,featureFlags:adminData.featureFlags});
+      return json(res,200,{ok:true,featureFlags:adminData.featureFlags});
+    }
+    if(req.method==='GET'&&u.pathname==='/api/admin/security-logs'){
+      const s=requireAdmin(req,res);if(!s)return;
+      const limit=Math.max(1,Math.min(500,Number(u.searchParams.get('limit')||200)));
+      return json(res,200,{logs:adminData.adminLog.slice(-limit).reverse()});
+    }
+    if(req.method==='GET'&&u.pathname==='/api/admin/system'){
+      const s=requireAdmin(req,res);if(!s)return;
+      return json(res,200,{
+        version:'10.1.1',
+        uptimeSeconds:Math.round(process.uptime()),
+        node:process.version,
+        dataFile:DATA_FILE,
+        adminDataFile:ADMIN_DATA_FILE,
+        fileRoot:FILE_ROOT,
+        roomCount:Object.keys(rooms).length,
+        registeredUsers:Object.keys(adminData.users).length,
+        fileStorageBytes:directorySize(FILE_ROOT),
+        adminConfigured:adminConfigured(),
+        totpConfigured:Boolean(process.env.WAYPOINT_ADMIN_TOTP_SECRET)
+      });
+    }
+
     if(req.method==='GET'&&u.pathname==='/api/features'){
       return json(res,200,{
         giphy:Boolean(process.env.GIPHY_API_KEY),
@@ -563,7 +936,18 @@ const server=http.createServer(async(req,res)=>{
         ocr:Boolean(process.env.OCR_API_URL),
         push:false,
         emailImport:false,
-        smartTextImport:true
+        smartTextImport:true,
+        monetization:true,
+        adminControlCenter:adminConfigured(),
+        premiumPurchases:false,
+        ads:false,
+        affiliates:false,
+        desired:{
+          premiumPurchases:Boolean(adminData.featureFlags.premiumPurchasesDesired),
+          ads:Boolean(adminData.featureFlags.adsDesired),
+          affiliates:Boolean(adminData.featureFlags.affiliatesDesired),
+          betaFeatures:Boolean(adminData.featureFlags.betaFeatures)
+        }
       });
     }
 
@@ -634,13 +1018,13 @@ const server=http.createServer(async(req,res)=>{
         const incoming=await readBody(req);
         const participantId=String(incoming.participantId||'').trim().slice(0,100);
         const name=String(incoming.name||'').trim().slice(0,60);
-        if(!participantId||!name) return json(res,400,{error:'participant identity required'});
+        if(!participantId||name.length<2||name.length>60||!/\p{L}/u.test(name)||/[\u0000-\u001f\u007f]/.test(name)||name===participantId||/^p-[a-f0-9]{20,}$/i.test(name)) return json(res,400,{error:'valid participant name required'});
         if(!Array.isArray(room.participants)) room.participants=[];
         const existing=room.participants.find(p=>p.participantId===participantId);
         const requestedRole=String(incoming.role||'editor');
         const ownerKey=String(req.headers['x-owner-key']||'');
         const invite=activeInvite(room,accessKey);
-        const role=(ownerKey&&room.ownerKeyHash&&hash(ownerKey)===room.ownerKeyHash)?'owner':invite?.role||(requestedRole==='viewer'?'viewer':'editor');
+        const role=(ownerKey&&room.ownerKeyHash&&hash(ownerKey)===room.ownerKeyHash)?'owner':invite?.role||(accessRole(room,accessKey)==='viewer'?'viewer':(requestedRole==='viewer'?'viewer':'editor'));
         if(existing){ existing.name=name; existing.role=role; existing.inviteId=invite?.id||existing.inviteId||null; existing.revokedAt=null; existing.lastSeenAt=new Date().toISOString(); }
         else room.participants.push({participantId,name,role,inviteId:invite?.id||null,joinedAt:new Date().toISOString(),lastSeenAt:new Date().toISOString(),revokedAt:null});
         addSecurity(room,'participant_joined',`${name} joined as ${role}`,{participantId,inviteId:invite?.id||null});
@@ -851,7 +1235,7 @@ const server=http.createServer(async(req,res)=>{
     }
 
     if(req.method!=='GET'&&req.method!=='HEAD') return json(res,405,{error:'method not allowed'});
-    let file=safePublicPath(u.pathname);
+    let file=u.pathname==='/admin'||u.pathname==='/admin/'?path.join(PUBLIC_DIR,'admin.html'):safePublicPath(u.pathname);
     if(!file) return json(res,400,{error:'invalid path'});
     if(!fs.existsSync(file)||fs.statSync(file).isDirectory()){
       // SPA fallback for navigation routes.
@@ -870,4 +1254,4 @@ const server=http.createServer(async(req,res)=>{
   }
 });
 
-server.listen(PORT,HOST,()=>console.log(`Waypoint 10.0.8 listening on http://${HOST}:${PORT}`));
+server.listen(PORT,HOST,()=>console.log(`Waypoint 10.1.1 listening on http://${HOST}:${PORT}`));

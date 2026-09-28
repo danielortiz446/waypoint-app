@@ -1,4 +1,4 @@
-const CACHE='waypoint-v10.0.8-offline-parity-final';
+const CACHE='waypoint-v10.1.1-shared-join-monetization-fix';
 const DATA_CACHE='waypoint-v9-data-v1';
 const SHELL=['/','/index.html','/manifest.webmanifest','/privacy.html','/terms.html','/assets/icons/icon-192.png','/assets/icons/icon-512.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
@@ -6,26 +6,10 @@ self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=
 
 self.addEventListener('message',event=>{
   if(event.data?.type==='CACHE_TRIP'){
-    const urls=[...new Set(Array.isArray(event.data.urls)?event.data.urls:[])];
-    const task=(async()=>{
-      let cached=0; const failed=[];
-      for(const u of urls){
-        try{
-          const req=new Request(u,{cache:'reload'});
-          const res=await fetch(req);
-          if(!res.ok)throw new Error(String(res.status));
-          const parsed=new URL(req.url);
-          const target=parsed.origin===self.location.origin&&parsed.pathname.startsWith('/api/')?DATA_CACHE:CACHE;
-          await (await caches.open(target)).put(req,res.clone());
-          if(parsed.pathname==='/index.html'||parsed.pathname==='/')await (await caches.open(CACHE)).put('/index.html',res.clone()).catch(()=>{});
-          cached++;
-        }catch(e){failed.push(String(u));}
-      }
-      const payload={ok:cached>0&&failed.length===0,cached,failed,total:urls.length};
-      if(event.ports&&event.ports[0])event.ports[0].postMessage(payload);
-      return payload;
-    })();
-    event.waitUntil(task);
+    const urls=Array.isArray(event.data.urls)?event.data.urls:[];
+    event.waitUntil(caches.open(CACHE).then(async c=>{
+      for(const u of urls){try{await c.add(new Request(u,{cache:'reload'}));}catch(e){}}
+    }));
   }
 });
 
@@ -51,6 +35,12 @@ self.addEventListener('fetch',event=>{
 
   if(url.origin!==self.location.origin)return;
   if(url.pathname.startsWith('/api/'))return;
+
+  // Never cache the private admin interface. It should always be loaded from the server.
+  if(url.pathname==='/admin'||url.pathname==='/admin/'||url.pathname==='/admin.html'){
+    event.respondWith(fetch(new Request(req,{cache:'no-store'})));
+    return;
+  }
 
   if(req.mode==='navigate'){
     event.respondWith(fetch(new Request(req,{cache:'no-store'})).then(res=>{

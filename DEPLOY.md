@@ -95,3 +95,59 @@ Add this Railway variable:
 `WEATHERAPI_KEY=your_real_key_here`
 
 Do not put the key in `public/index.html`, GitHub, or the collaboration link. Railway redeploys automatically after the variable is saved.
+
+
+## Waypoint 10.1.0 — Admin Control Center setup
+
+Keep using the existing Railway project/service and the same `/data` persistent volume.
+
+Add these Railway Variables:
+
+```text
+WAYPOINT_ADMIN_EMAIL=your-admin-email@example.com
+WAYPOINT_ADMIN_PASSWORD=USE_A_LONG_UNIQUE_PASSWORD
+WAYPOINT_ADMIN_DATA_FILE=/data/waypoint-admin-data.json
+```
+
+Strongly recommended for two-factor authentication:
+
+```text
+WAYPOINT_ADMIN_TOTP_SECRET=YOUR_BASE32_TOTP_SECRET
+```
+
+Do not commit the admin email/password/TOTP secret into GitHub or into the client HTML.
+
+Existing variables remain:
+
+```text
+WAYPOINT_DATA_FILE=/data/waypoint-sync-data.json
+WAYPOINT_FILE_DIR=/data/waypoint-files
+WEATHERAPI_KEY=...
+GIPHY_API_KEY=...
+GOOGLE_ROUTES_API_KEY=...
+```
+
+After deployment:
+1. Open `/health` and confirm `10.1.0`.
+2. Open `/admin`.
+3. Sign in using the Railway admin credentials.
+4. If TOTP is configured, enter the current six-digit authenticator code.
+5. In the normal app, Settings → Create Waypoint ID.
+6. Copy that public `WP-XXXX-XXXX` code.
+7. Search the code under Admin → Users & Premium.
+8. Grant 7 days, 30 days, 1 year, or permanent Premium.
+9. In the user's app, tap Refresh plan or reopen Waypoint.
+
+Admin data is written to `/data/waypoint-admin-data.json`, so the same persistent Railway volume must remain attached.
+
+## Version 10.1.1 — shared-trip entry and monetization checks
+
+Use the same repository and Railway service; do not create a second deployment. Publish the ZIP content at the repository root, keep the existing `/data` volume, and confirm `/health` reports `10.1.1`.
+
+When someone opens a sharing link, the app now shows a mandatory English/Spanish name-entry screen. The user cannot open or locally save a newly shared trip until the participant registration has succeeded. Canceling leaves the link without importing the trip; on a failed registration the user can retry. Existing participants from an earlier version can still open a previously joined trip when the server confirms their stored name and participant ID.
+
+In Settings the user can create a Waypoint ID. You can grant complimentary Premium through `/admin` → Users & Premium; the user then taps Refresh plan. Promo codes with duration 0 now grant permanent access, and internal admin notes do not appear in the user's API response.
+
+This release does **not** enable Apple/Google/web purchases, real advertisements, affiliate conversions, or server-side Premium feature paywalls. Those providers and enforcement rules still require implementation. Do not announce that Waypoint collects real subscription revenue until they are integrated and verified.
+
+For admin credentials, never include passwords in the repository. Continue using Railway `WAYPOINT_ADMIN_EMAIL`, `WAYPOINT_ADMIN_PASSWORD`, optional `WAYPOINT_ADMIN_TOTP_SECRET`, and persistent `WAYPOINT_ADMIN_DATA_FILE=/data/waypoint-admin-data.json`.
