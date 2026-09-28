@@ -1,0 +1,1 @@
+Waypoint V10.3.3: se elimina por completo el fallback y la llamada a OpenAI del endpoint de IA; Gemini es el único proveedor. Modelo predeterminado: gemini-2.5-flash-lite. Sin cambios en datos persistentes, estructura de viajes, AdSense o demás funciones.

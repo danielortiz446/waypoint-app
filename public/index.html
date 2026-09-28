@@ -5950,7 +5950,18 @@ async function requestWaypointAI(id){
      days:(state.itineraries[id]||[]).slice(0,12).map(d=>({date:d.date,activities:(d.activities||[]).map(a=>a.title||a.name||'').filter(Boolean).slice(0,7)}))};
    const response=await fetch('/api/ai/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,trip})});
    const data=await response.json();
-   if(!response.ok){ui.aiResult=data.error==='ai_not_configured'?(es?'La IA aún no está habilitada. Configura OPENAI_API_KEY y WAYPOINT_AI_ENABLED=true en Railway.':'AI is not enabled. Configure OPENAI_API_KEY and WAYPOINT_AI_ENABLED=true in Railway.'):data.error==='ai_usage_limit'?(es?'Límite temporal de consultas alcanzado. Intenta después.':'Temporary AI usage limit reached. Try later.'):(es?'No se pudo consultar la IA. Intenta de nuevo.':'AI unavailable. Try again.');}
+   if(!response.ok){
+     const errors={
+       ai_not_configured:[`La IA aún no está configurada. Revisa WAYPOINT_AI_ENABLED, WAYPOINT_AI_PROVIDER y la clave del proveedor en Railway.`,`AI is not configured. Check WAYPOINT_AI_ENABLED, WAYPOINT_AI_PROVIDER, and provider API key in Railway.`],
+       ai_usage_limit:[`Límite de consultas de Waypoint alcanzado. Prueba más tarde.`,`Waypoint request limit reached. Try later.`],
+       ai_provider_quota:[`Google/OpenAI rechazó la solicitud por cuota o facturación. Consulta los límites del proveedor.`,`The AI provider rejected the request due to quota or billing. Check its usage limits.`],
+       ai_credentials_rejected:[`El proveedor rechazó la clave API o sus permisos. Revísala en Railway.`,`The AI provider rejected the API key or its permissions. Review Railway settings.`],
+       ai_model_unavailable:[`El modelo de IA no está disponible en tu cuenta. Revisa WAYPOINT_AI_MODEL.`,`The selected AI model is unavailable. Check WAYPOINT_AI_MODEL.`],
+       ai_empty_reply:[`El proveedor respondió sin texto. Intenta otra pregunta.`,`The provider returned no text. Try a different question.`],
+       ai_temporarily_unavailable:[`No se pudo conectar al proveedor a tiempo. Intenta de nuevo.`,`Could not reach the AI provider in time. Try again.`]
+     };
+     ui.aiResult=(errors[data.error]||[`No se pudo consultar la IA. Intenta de nuevo.`,`AI unavailable. Try again.`])[es?0:1];
+   }
    else ui.aiResult=String(data.answer||'');
  }catch(e){ui.aiResult=es?'Error de red al consultar la IA.':'Network error while contacting AI.';}
  finally{ui.aiBusy=false;if(ui.currentTripId===id&&ui.tripSubTab==='ai')render();}
