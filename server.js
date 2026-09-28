@@ -251,7 +251,7 @@ function securityHeaders(){
   return {
     'X-Content-Type-Options':'nosniff',
     'Referrer-Policy':'strict-origin-when-cross-origin',
-    'Permissions-Policy':'camera=(self), microphone=(), geolocation=()',
+    'Permissions-Policy':'camera=(self), microphone=(), geolocation=(self)',
     'Cross-Origin-Opener-Policy':'same-origin-allow-popups'
   };
 }
@@ -496,7 +496,7 @@ function allowRate(req,limit=180,windowMs=60000){
 function applySecurityHeaders(res){
   res.setHeader('X-Content-Type-Options','nosniff');
   res.setHeader('Referrer-Policy','strict-origin-when-cross-origin');
-  res.setHeader('Permissions-Policy','camera=(self), microphone=(), geolocation=()');
+  res.setHeader('Permissions-Policy','camera=(self), microphone=(), geolocation=(self)');
   res.setHeader('Cross-Origin-Opener-Policy','same-origin-allow-popups');
   res.setHeader('Content-Security-Policy',"default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://pagead2.googlesyndication.com; connect-src 'self' https:; frame-src https://www.google.com https://maps.google.com; media-src 'self' data: https:; object-src 'none'; base-uri 'self'; form-action 'self'");
 }
@@ -543,7 +543,7 @@ const server=http.createServer(async(req,res)=>{
         return json(res,200,{answer:output.slice(0,4500),source:'generated',live:false});
       }catch(e){return json(res,502,{error:'ai_temporarily_unavailable'});}
     }
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'10.3.0',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'10.3.1',time:new Date().toISOString()});
 
     if(req.method==='GET'&&u.pathname==='/api/fx/rate'){
       const from=String(u.searchParams.get('from')||'').trim().toUpperCase();
@@ -949,7 +949,7 @@ const server=http.createServer(async(req,res)=>{
     if(req.method==='GET'&&u.pathname==='/api/admin/system'){
       const s=requireAdmin(req,res);if(!s)return;
       return json(res,200,{
-        version:'10.3.0',
+        version:'10.3.1',
         uptimeSeconds:Math.round(process.uptime()),
         node:process.version,
         dataFile:DATA_FILE,
@@ -1303,4 +1303,4 @@ const server=http.createServer(async(req,res)=>{
   }
 });
 
-server.listen(PORT,HOST,()=>console.log(`Waypoint 10.3.0 listening on http://${HOST}:${PORT}`));
+server.listen(PORT,HOST,()=>console.log(`Waypoint 10.3.1 listening on http://${HOST}:${PORT}`));

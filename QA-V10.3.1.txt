@@ -1,0 +1,16 @@
+Waypoint 10.3.1 — geolocation and touch UI
+
+Confirmed:
+- 61 existing Node smoke tests passed.
+- Vault AES-GCM test passed.
+- Mocked AI integration test passed.
+- Syntax checks passed: Node server, service worker, and extracted inline JavaScript.
+- Local HTTP returned Permissions-Policy: geolocation=(self) (previously blocked).
+- UI source now separates GPS retrieval from an explicit share action; provides copy link and manual selection.
+- Tool buttons have accessible aria-pressed state, focus and touch feedback.
+
+Not confirmed:
+- Real GPS or native iPhone location permission, live Railway deployment, Safari share sheet, visual browser click through: browser in this environment blocked local URL navigation.
+- AdMob/Apple push/widget/Live Activities are NOT implemented here.
+
+Deploy to existing GitHub repo/Railway service; keep volume /data and credentials unchanged.
