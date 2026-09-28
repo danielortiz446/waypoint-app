@@ -5958,7 +5958,8 @@ async function requestWaypointAI(id){
        ai_credentials_rejected:[`El proveedor rechazó la clave API o sus permisos. Revísala en Railway.`,`The AI provider rejected the API key or its permissions. Review Railway settings.`],
        ai_model_unavailable:[`El modelo de IA no está disponible en tu cuenta. Revisa WAYPOINT_AI_MODEL.`,`The selected AI model is unavailable. Check WAYPOINT_AI_MODEL.`],
        ai_empty_reply:[`El proveedor respondió sin texto. Intenta otra pregunta.`,`The provider returned no text. Try a different question.`],
-       ai_temporarily_unavailable:[`No se pudo conectar al proveedor a tiempo. Intenta de nuevo.`,`Could not reach the AI provider in time. Try again.`]
+       ai_temporarily_unavailable:[`Gemini no respondió tras varios intentos. Espera un momento y vuelve a probar.`,`Gemini did not respond after several attempts. Please try again shortly.`],
+       ai_provider_unavailable:[`Gemini está temporalmente saturado o no disponible. Waypoint reintentó automáticamente; prueba más tarde.`,`Gemini is temporarily overloaded or unavailable. Waypoint retried automatically; try later.`]
      };
      ui.aiResult=(errors[data.error]||[`No se pudo consultar la IA. Intenta de nuevo.`,`AI unavailable. Try again.`])[es?0:1];
    }

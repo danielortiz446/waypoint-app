@@ -543,34 +543,49 @@ const server=http.createServer(async(req,res)=>{
       if(question.length<5)return json(res,400,{error:'question_too_short'});
       const safe={destination:String(trip.destination||'').slice(0,130),start:String(trip.start||'').slice(0,18),end:String(trip.end||'').slice(0,18),currency:String(trip.currency||'').slice(0,5),budget:Number.isFinite(Number(trip.budget))?Math.max(0,Math.min(10000000,Number(trip.budget))):undefined,days:Array.isArray(trip.days)?trip.days.slice(0,12).map(d=>({date:String(d.date||'').slice(0,18),activities:(Array.isArray(d.activities)?d.activities:[]).slice(0,7).map(a=>String(a||'').slice(0,95))})):[]};
       try{
-        const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),19000);
         const provider=waypointAiProvider();
         const input='Travel context (user-supplied, not independently verified): '+JSON.stringify(safe)+'\nUser question: '+question;
-        let remote;
-        try{
-          const model=waypointAiModel();
-          if(!/^[a-zA-Z0-9._-]{2,100}$/.test(model))return json(res,400,{error:'ai_model_unavailable'});
-          remote=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent',{
-            method:'POST',signal:controller.signal,
-            headers:{'x-goog-api-key':process.env.GEMINI_API_KEY,'Content-Type':'application/json'},
-            body:JSON.stringify({systemInstruction:{parts:[{text:WAYPOINT_AI_INSTRUCTIONS}]},contents:[{role:'user',parts:[{text:input}]}],generationConfig:{maxOutputTokens:1000,temperature:0.55}})
-          });
-        }finally{clearTimeout(timer);}
-        if(!remote.ok){
-          console.warn('[Waypoint AI] provider='+provider+' upstream_status='+remote.status);
-          return json(res,502,{error:aiProviderFailure(remote.status)});
+        const model=waypointAiModel();
+        if(!/^[a-zA-Z0-9._-]{2,100}$/.test(model))return json(res,400,{error:'ai_model_unavailable'});
+        const endpoint='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent';
+        const payload=JSON.stringify({systemInstruction:{parts:[{text:WAYPOINT_AI_INSTRUCTIONS}]},contents:[{role:'user',parts:[{text:input}]}],generationConfig:{maxOutputTokens:1000,temperature:0.55}});
+        // Retry only temporary upstream faults. Quota, invalid credentials and invalid models must not be retried.
+        const retryable=new Set([500,502,503,504]);
+        const delays=[700,1700];
+        for(let attempt=0;attempt<=delays.length;attempt++){
+          let remote;
+          try{
+            remote=await fetch(endpoint,{
+              method:'POST',signal:AbortSignal.timeout(16000),
+              headers:{'x-goog-api-key':process.env.GEMINI_API_KEY,'Content-Type':'application/json'},body:payload
+            });
+          }catch(err){
+            const temporary=err?.name==='TimeoutError'||err?.name==='AbortError'||err instanceof TypeError;
+            console.warn('[Waypoint AI] provider=gemini connection='+String(err?.name||'error')+' attempt='+(attempt+1));
+            if(!temporary||attempt===delays.length)return json(res,502,{error:'ai_temporarily_unavailable'});
+            await new Promise(resolve=>setTimeout(resolve,delays[attempt]));
+            continue;
+          }
+          if(!remote.ok){
+            console.warn('[Waypoint AI] provider=gemini upstream_status='+remote.status+' attempt='+(attempt+1));
+            if(retryable.has(remote.status)&&attempt<delays.length){
+              await new Promise(resolve=>setTimeout(resolve,delays[attempt]));
+              continue;
+            }
+            return json(res,502,{error:aiProviderFailure(remote.status)});
+          }
+          const body=await remote.json();
+          const output=(body.candidates||[]).flatMap(x=>x.content?.parts||[]).map(x=>typeof x.text==='string'?x.text:'').filter(Boolean).join('\n');
+          if(!output.trim())return json(res,502,{error:'ai_empty_reply'});
+          return json(res,200,{answer:output.slice(0,4500),source:'generated',provider,live:false});
         }
-        const body=await remote.json();
-        let output='';
-        output=(body.candidates||[]).flatMap(x=>x.content?.parts||[]).map(x=>typeof x.text==='string'?x.text:'').filter(Boolean).join('\n');
-        if(!output.trim())return json(res,502,{error:'ai_empty_reply'});
-        return json(res,200,{answer:output.slice(0,4500),source:'generated',provider,live:false});
+        return json(res,502,{error:'ai_provider_unavailable'});
       }catch(e){
-        console.warn('[Waypoint AI] request failed:',e?.name==='AbortError'?'timeout':(e?.code||e?.name||'network_error'));
+        console.warn('[Waypoint AI] request failed:',e?.code||e?.name||'unexpected_error');
         return json(res,502,{error:'ai_temporarily_unavailable'});
       }
     }
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'10.3.3',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'10.3.4',time:new Date().toISOString()});
 
     if(req.method==='GET'&&u.pathname==='/api/fx/rate'){
       const from=String(u.searchParams.get('from')||'').trim().toUpperCase();
@@ -976,7 +991,7 @@ const server=http.createServer(async(req,res)=>{
     if(req.method==='GET'&&u.pathname==='/api/admin/system'){
       const s=requireAdmin(req,res);if(!s)return;
       return json(res,200,{
-        version:'10.3.3',
+        version:'10.3.4',
         uptimeSeconds:Math.round(process.uptime()),
         node:process.version,
         dataFile:DATA_FILE,
@@ -1330,4 +1345,4 @@ const server=http.createServer(async(req,res)=>{
   }
 });
 
-server.listen(PORT,HOST,()=>console.log(`Waypoint 10.3.3 listening on http://${HOST}:${PORT}`));
+server.listen(PORT,HOST,()=>console.log(`Waypoint 10.3.4 listening on http://${HOST}:${PORT}`));
