@@ -5930,11 +5930,13 @@ async function deleteDoc(tripId,docId){
 /* ================= WAYPOINT AI + FLIGHTS + ASSISTANCE ================= */
 // Prompts and responses are deliberately not saved in the trip or cloud sync.
 function viewWaypointAI(tr){
-  const es=state.lang==='es',item=ui.aiResult&&ui.aiTripId===tr.id?ui.aiResult:'';
+  const es=state.lang==='es',item=ui.aiResult&&ui.aiTripId===tr.id?ui.aiResult:'', suggestions=ui.aiTripId===tr.id?(ui.aiSuggestions||[]):[];
   return `<section class="panel wp-tool-panel"><div class="section-head"><div><h3>✦ Waypoint AI</h3><p class="sub">${es?'Asistente para ideas y organización. No consulta datos en tiempo real.':'Ideas and planning assistant. Does not access live data.'}</p></div><span class="tag">${es?'Online':'Online'}</span></div>
     <div class="field"><label for="waypoint-ai-question">${es?'¿Qué quieres planificar?':'What would you like to plan?'}</label><textarea id="waypoint-ai-question" rows="3" maxlength="650" placeholder="${es?'Ej.: Organiza tres días de actividades económicas según mi destino.':'E.g. Plan three affordable days in my destination.'}">${escapeHtml(ui.aiQuestion||'')}</textarea></div>
     <div class="wp-action-row"><button class="btn btn-brass btn-sm viewer-safe" onclick="requestWaypointAI('${tr.id}')" ${ui.aiBusy?'disabled':''}>${ui.aiBusy?(es?'Consultando…':'Thinking…'):(es?'Generar sugerencias':'Generate suggestions')}</button><button class="btn btn-ghost btn-sm viewer-safe" onclick="setSuggestedAIQuestion('${es?'Sugiere actividades según mi destino y fechas, con un horario realista.':'Suggest activities for my destination and dates with a realistic schedule.'}')">${es?'Ideas rápidas':'Quick ideas'}</button></div>
     ${item?`<div class="wp-ai-answer" aria-live="polite">${escapeHtml(item).replace(/\n/g,'<br>')}</div>`:''}
+    ${suggestions.length?`<div class="panel" style="margin-top:14px"><h4 style="margin:0 0 7px;color:var(--paper)">📍 ${es?'Lugares y actividades sugeridos':'Suggested places & activities'}</h4><p class="field-hint">${es?'Elige cuándo ir y pulsa Agregar. Las sugerencias pueden contener errores; comprueba las direcciones y horarios.':'Choose when to go and tap Add. Suggestions may be inaccurate; confirm addresses and hours.'}</p>
+      ${suggestions.map((s,i)=>`<div class="map-place wp-ai-suggestion" style="margin-top:10px;flex-wrap:wrap;gap:9px"><div class="main"><div class="name">${escapeHtml(s.title)}</div><div class="sub">📍 ${escapeHtml(s.location)}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:end"><label style="font-size:11px">${es?'Fecha':'Date'}<input aria-label="${es?'Fecha de la actividad':'Activity date'}" type="date" id="wp-ai-date-${i}" min="${escapeHtml(tr.start||'')}" max="${escapeHtml(tr.end||'')}" value="${escapeHtml(s.date||tripFocusDate(tr)||'')}" style="min-width:128px"></label><label style="font-size:11px">${es?'Hora':'Time'}<input aria-label="${es?'Hora opcional':'Optional time'}" type="time" id="wp-ai-time-${i}" value="${escapeHtml(s.time||'')}" style="min-width:92px"></label><button class="btn btn-brass btn-sm" onclick="addAISuggestionToItinerary('${tr.id}',${i})" ${canEditTrip(tr)?'':'disabled'}>＋ ${es?'Agregar al itinerario':'Add to itinerary'}</button></div></div>`).join('')}</div>`:''}
     <p class="field-hint">${es?'Solo se envían destino, fechas, presupuesto y nombres de actividades; nunca documentos, chat ni información de pagos. El servicio necesita una clave configurada en Railway. Comprueba siempre horarios, requisitos y precios.':'Only destination, dates, budget and activity titles are sent; never documents, chat or payment information. Service requires a Railway API key. Always verify hours, requirements and prices.'}</p>
   </section>`;
 }
@@ -5944,7 +5946,7 @@ async function requestWaypointAI(id){
  const es=state.lang==='es',question=String(document.getElementById('waypoint-ai-question')?.value||'').trim();
  if(question.length<5){showToast(es?'Escribe una pregunta.':'Enter a question.');return;}
  if(navigator.onLine===false){showToast(es?'La IA necesita internet.':'AI requires internet.');return;}
- ui.aiBusy=true;ui.aiQuestion=question;ui.aiResult='';ui.aiTripId=id;render();
+ ui.aiBusy=true;ui.aiQuestion=question;ui.aiResult='';ui.aiSuggestions=[];ui.aiTripId=id;render();
  try{
    const trip={destination:tr.destination,start:tr.start,end:tr.end,currency:tr.currency,budget:tr.budgetGoal,
      days:(state.itineraries[id]||[]).slice(0,12).map(d=>({date:d.date,activities:(d.activities||[]).map(a=>a.title||a.name||'').filter(Boolean).slice(0,7)}))};
@@ -5963,9 +5965,32 @@ async function requestWaypointAI(id){
      };
      ui.aiResult=(errors[data.error]||[`No se pudo consultar la IA. Intenta de nuevo.`,`AI unavailable. Try again.`])[es?0:1];
    }
-   else ui.aiResult=String(data.answer||'');
+   else {ui.aiResult=String(data.answer||'');ui.aiSuggestions=Array.isArray(data.suggestions)?data.suggestions.slice(0,8):[];}
  }catch(e){ui.aiResult=es?'Error de red al consultar la IA.':'Network error while contacting AI.';}
  finally{ui.aiBusy=false;if(ui.currentTripId===id&&ui.tripSubTab==='ai')render();}
+}
+// Explicit user action only: AI output never changes a trip automatically.
+function addAISuggestionToItinerary(tripId,index){
+  const tr=tripById(tripId),es=state.lang==='es';
+  if(!tr||!canEditTrip(tr)||ui.aiTripId!==tripId)return;
+  const s=(ui.aiSuggestions||[])[index];if(!s||typeof s.title!=='string'||typeof s.location!=='string')return;
+  const title=s.title.trim().slice(0,120),location=s.location.trim().slice(0,150);
+  const date=String(document.getElementById('wp-ai-date-'+index)?.value||'');
+  const time=String(document.getElementById('wp-ai-time-'+index)?.value||'');
+  if(!title||!location||!/^\d{4}-\d{2}-\d{2}$/.test(date)||Number.isNaN(Date.parse(date+'T12:00:00Z'))||(tr.start&&date<tr.start)||(tr.end&&date>tr.end)){
+    showToast(es?'Selecciona una fecha válida dentro del viaje.':'Choose a valid date within the trip.');return;
+  }
+  if(time&&!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time)){showToast(es?'Introduce una hora válida.':'Enter a valid time.');return;}
+  state.itineraries[tripId]=state.itineraries[tripId]||[];
+  let day=state.itineraries[tripId].find(d=>d.date===date);
+  if(day&&(day.activities||[]).some(a=>String(a.title||'').toLowerCase()===title.toLowerCase()&&String(a.location||'').toLowerCase()===location.toLowerCase())){
+    showToast(es?'Esta actividad ya está guardada para ese día.':'This activity is already saved for that day.');return;
+  }
+  if(!day){day={id:uid(),label:'',date,activities:[]};state.itineraries[tripId].push(day);state.itineraries[tripId].sort((a,b)=>(a.date||'').localeCompare(b.date||''));}
+  day.activities=day.activities||[];
+  day.activities.push({id:uid(),title,location,time,durationMinutes:60,travelBufferMinutes:0,status:'planned',note:es?'Sugerencia de Waypoint AI; verificar detalles.':'Waypoint AI suggestion; verify details.'});
+  day.activities.sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99'));
+  saveState();showToast(es?'Actividad agregada al itinerario.':'Activity added to itinerary.');render();
 }
 function flightEntries(tr){return Array.isArray(state.flightJournal?.[tr.id])?state.flightJournal[tr.id]:[];}
 function viewFlightJournal(tr){

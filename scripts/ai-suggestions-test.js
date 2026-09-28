@@ -1,0 +1,22 @@
+// Additional checks for the AI suggestions opt-in itinerary flow.
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
+const root=path.join(__dirname,'..');
+const server=fs.readFileSync(path.join(root,'server.js'),'utf8');
+const parserSource=server.slice(server.indexOf('function extractWaypointSuggestions('),server.indexOf('function aiProviderFailure('));
+const parse=vm.runInNewContext(parserSource+'\nextractWaypointSuggestions');
+const raw='Visita lugares.\nWAYPOINT_SUGGESTIONS_JSON_START\n'+JSON.stringify([{title:'Parque Los Fundadores',location:'Parque Los Fundadores, Villavicencio',date:'2026-10-05',time:'09:30'},{title:'Parque Los Fundadores',location:'Parque Los Fundadores, Villavicencio',date:'2026-10-05',time:'09:30'},{title:'Otro',location:'Bogotá',date:'2029-01-01',time:'99:30'}])+'\nWAYPOINT_SUGGESTIONS_JSON_END';
+const parsed=parse(raw,{start:'2026-10-05',end:'2026-10-12'});
+assert.equal(parsed.answer,'Visita lugares.');assert.equal(parsed.suggestions.length,2);assert.equal(parsed.suggestions[1].date,'');assert.equal(parsed.suggestions[1].time,'');
+assert.equal(parse('Normal answer',{}).suggestions.length,0);
+const html=fs.readFileSync(path.join(root,'public','index.html'),'utf8');
+const fn=html.slice(html.indexOf('function addAISuggestionToItinerary('),html.indexOf('function flightEntries('));
+const tr={id:'trip-test',start:'2026-10-05',end:'2026-10-12'};
+const state={lang:'es',itineraries:{'trip-test':[]}},ui={aiTripId:'trip-test',aiSuggestions:[{title:'Parque Los Fundadores',location:'Villavicencio',time:'10:00'}]};
+let saved=0,permission=true,fieldDate='2026-10-05';
+const ctx={state,ui,tripById:()=>tr,canEditTrip:()=>permission,document:{getElementById:id=>({value:id.includes('date')?fieldDate:'10:00'})},uid:()=>String(saved+1),saveState:()=>{saved++},render:()=>{},showToast:()=>{}};
+vm.runInNewContext(fn,ctx);ctx.addAISuggestionToItinerary('trip-test',0);
+assert.equal(state.itineraries['trip-test'][0].activities.length,1);assert.equal(saved,1);
+ctx.addAISuggestionToItinerary('trip-test',0);assert.equal(saved,1);
+permission=false;ctx.addAISuggestionToItinerary('trip-test',0);assert.equal(saved,1);
+permission=true;fieldDate='2027-01-01';ctx.addAISuggestionToItinerary('trip-test',0);assert.equal(saved,1);
+console.log('PASS AI suggestions: structured parsing, dedup, date/time validation, viewer restrictions and one-click add');
