@@ -1,4 +1,4 @@
-const CACHE='waypoint-v10.1.5-adsense-verification';
+const CACHE='waypoint-v10.2.0-phase1';
 const DATA_CACHE='waypoint-v9-data-v1';
 const SHELL=['/','/index.html','/manifest.webmanifest','/privacy.html','/terms.html','/assets/icons/icon-192.png','/assets/icons/icon-512.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
@@ -7,9 +7,19 @@ self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=
 self.addEventListener('message',event=>{
   if(event.data?.type==='CACHE_TRIP'){
     const urls=Array.isArray(event.data.urls)?event.data.urls:[];
-    event.waitUntil(caches.open(CACHE).then(async c=>{
-      for(const u of urls){try{await c.add(new Request(u,{cache:'reload'}));}catch(e){}}
-    }));
+    const port=event.ports&&event.ports[0];
+    event.waitUntil((async()=>{
+      try{
+        const cache=await caches.open(CACHE);
+        for(const u of urls){
+          if(typeof u!=='string'||!u.startsWith('/')||u.startsWith('//')||u.startsWith('/api/')||u.startsWith('/admin'))throw Error('Unsafe URL');
+          const response=await fetch(new Request(u,{cache:'reload',credentials:'same-origin'}));
+          if(!response.ok)throw Error('Cannot cache '+u);
+          await cache.put(u,response);
+        }
+        if(port)port.postMessage({ok:true,count:urls.length});
+      }catch(e){if(port)port.postMessage({ok:false,reason:'cache-failed'});}
+    })());
   }
 });
 

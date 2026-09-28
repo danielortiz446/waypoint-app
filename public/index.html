@@ -1604,22 +1604,37 @@ function catSpent(tripId,cat){ return state.expenses.filter(e=>e.tripId===tripId
 
 
 
+// Cache acknowledgement means the app shell was written; trip data is stored separately.
+async function cacheOfflineShell(){
+  if(!('serviceWorker' in navigator))return {ok:false,reason:'unsupported'};
+  let reg=await navigator.serviceWorker.ready;
+  const worker=navigator.serviceWorker.controller||reg.active;
+  if(!worker)return {ok:false,reason:'not-active'};
+  return new Promise(resolve=>{
+    const channel=new MessageChannel();
+    const timeout=setTimeout(()=>{channel.port1.close();resolve({ok:false,reason:'timeout'});},9000);
+    channel.port1.onmessage=event=>{clearTimeout(timeout);channel.port1.close();resolve(event.data||{ok:false,reason:'no-response'});};
+    worker.postMessage({type:'CACHE_TRIP',urls:['/','/index.html','/manifest.webmanifest','/privacy.html','/terms.html']},[channel.port2]);
+  });
+}
 async function downloadTripOffline(tripId){
   const tr=tripById(tripId);if(!tr)return;
+  const es=state.lang==='es';
+  if(navigator.onLine===false){showToast(es?'Conéctate a internet para descargar el paquete. Los datos guardados siguen disponibles sin conexión.':'Go online to download the package. Your saved data remains available offline.');return;}
   try{
-    await loadTripWeather(tripId,true);
-    if('serviceWorker' in navigator&&navigator.serviceWorker.controller){
-      navigator.serviceWorker.controller.postMessage({type:'CACHE_TRIP',urls:['/','/index.html','/manifest.webmanifest','/privacy.html','/terms.html']});
-    }
+    // Weather is best effort; failure must not be labelled as a successful download.
+    try{await loadTripWeather(tripId,true);}catch(e){}
+    const result=await cacheOfflineShell();
+    if(!result.ok){showToast(es?'No se pudo confirmar la descarga offline. Inténtalo con conexión.':'Offline download could not be confirmed. Try again while connected.');return;}
     tr.offlineReadyAt=new Date().toISOString();
     await saveState();render();
-    showToast(state.lang==='es'?'Viaje preparado para uso offline':'Trip prepared for offline use');
-  }catch(e){showToast(state.lang==='es'?'Se guardaron los datos locales disponibles':'Available local data was saved');}
+    showToast(es?'Pantallas esenciales guardadas. Mapas y servicios externos necesitan internet.':'Essential screens cached. Maps and external services still need internet.');
+  }catch(e){showToast(es?'Falló la preparación offline. Inténtalo de nuevo.':'Offline preparation failed. Please retry.');}
 }
 function offlineTripStatusHtml(tr){
   const es=state.lang==='es';
   const ready=Boolean(tr.offlineReadyAt);
-  return `<div class="offline-ready-card ${ready?'':'warn'}">${ready?'✓':'↓'} ${ready?(es?'Disponible offline':'Available offline'):(es?'Aún no preparado para offline':'Not prepared for offline yet')} ${ready?`· ${escapeHtml(new Date(tr.offlineReadyAt).toLocaleString())}`:''}</div>`;
+  return `<div class="offline-ready-card ${ready?'':'warn'}">${ready?'✓':'↓'} ${ready?(es?'Pantallas básicas preparadas offline':'Basic screens prepared offline'):(es?'Paquete offline sin verificar':'Offline package not verified')} ${ready?`· ${escapeHtml(new Date(tr.offlineReadyAt).toLocaleString())}`:''}<div class="field-hint" style="margin-top:4px">${es?'Los mapas, vuelos, IA, chat en vivo y datos externos requieren conexión. Los cambios colaborativos se sincronizan cuando hay internet.':'Maps, flights, AI, live chat and external data require connectivity. Shared edits synchronize when connected.'}</div><button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="downloadTripOffline('${tr.id}')">↻ ${es?'Preparar / actualizar':'Prepare / refresh'}</button></div>`;
 }
 
 function syncStatusHtml(tr){
@@ -4404,7 +4419,7 @@ function viewTravelModeSub(tr){
 
   ${emergencyModeHtml(tr)}
   ${offlineTripStatusHtml(tr)}
-  ${!tr.offlineReadyAt?`<div style="margin:10px 0"><button class="btn btn-ghost btn-sm" onclick="downloadTripOffline('${tr.id}')">↓ ${es?'Preparar viaje para offline':'Prepare trip offline'}</button></div>`:''}
+  
 
   <div class="panel">
     <div class="section-head"><div><h3 style="margin:0;color:var(--paper)">${es?'Información práctica':'Practical info'}</h3><p class="sub">${es?'Solo lo esencial durante el viaje.':'Only the essentials while traveling.'}</p></div></div>
@@ -4522,15 +4537,34 @@ function tripRouteUrl(tr){
   const origin=places[0], destination=places[places.length-1], waypoints=places.slice(1,-1).join('|');
   return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}${waypoints?`&waypoints=${encodeURIComponent(waypoints)}`:''}`;
 }
+function setTripMapDay(tripId,date){
+  if(ui.currentTripId!==tripId)return;
+  ui.mapDayFilter=date||'';render();
+}
+function tripMapPlacesForDate(tr,date){
+  if(!date)return tripPlaces(tr);
+  const out=[];const seen=new Set();
+  const add=(name,kind)=>{name=String(name||'').trim();if(name&&!seen.has(name.toLowerCase())){seen.add(name.toLowerCase());out.push({name,kind,date});}};
+  for(const d of state.itineraries[tr.id]||[])if(d.date===date)for(const a of d.activities||[])add(a.location,'activity');
+  for(const b of state.bookings[tr.id]||[])if(b.date===date)add(b.location,'booking');
+  return out;
+}
 function viewMapSub(tr){
-  const es=state.lang==='es'; const places=tripPlaces(tr);
-  const q=tr.destination||places[0]?.name||'';
-  return `<div class="panel"><div class="section-head"><div><h3 style="margin:0;color:var(--paper);">${es?'Mapa del viaje':'Trip map'}</h3><p class="sub">${es?'Todos los lugares guardados en un solo centro.':'All saved places in one hub.'}</p></div>${places.length?`<a class="btn btn-brass btn-sm viewer-safe" target="_blank" rel="noopener" href="${tripRouteUrl(tr)}">🧭 ${es?'Abrir ruta':'Open route'}</a>`:''}</div>
-    <div class="day-tools">${(state.itineraries[tr.id]||[]).filter(d=>(d.activities||[]).some(a=>a.location)||(state.bookings[tr.id]||[]).some(b=>b.date===d.date&&b.location)).slice(0,7).map((d,i)=>`<a class="btn btn-ghost btn-sm viewer-safe" target="_blank" rel="noopener" href="${dayRouteUrl(tr,d.date)}">${state.lang==='es'?'Día':'Day'} ${i+1} 🧭</a>`).join('')}</div>
+  const es=state.lang==='es';
+  const dates=[...new Set([...(state.itineraries[tr.id]||[]).map(d=>d.date),...(state.bookings[tr.id]||[]).map(b=>b.date)].filter(Boolean))].sort();
+  const date=dates.includes(ui.mapDayFilter)?ui.mapDayFilter:'';
+  const places=tripMapPlacesForDate(tr,date);
+  const q=places[0]?.name||(!date?tr.destination:'');
+  const route=date?dayRouteUrl(tr,date):tripRouteUrl(tr);
+  const hasPlaces=places.length>0;
+  return `<div class="panel"><div class="section-head"><div><h3 style="margin:0;color:var(--paper);">${es?'Mapa del viaje':'Trip map'}</h3><p class="sub">${es?'Filtra las paradas del itinerario por fecha. Las ubicaciones se abren en el proveedor de mapas.':'Filter itinerary stops by date. Locations open in your maps provider.'}</p></div>${hasPlaces?`<a class="btn btn-brass btn-sm viewer-safe" target="_blank" rel="noopener" href="${route}">🧭 ${es?'Abrir ruta':'Open route'}</a>`:''}</div>
+    ${dates.length?`<div class="field"><label for="waypoint-map-day">${es?'Fecha del mapa':'Map date'}</label><select id="waypoint-map-day" onchange="setTripMapDay('${tr.id}',this.value)"><option value="">${es?'Todo el viaje':'Entire trip'}</option>${dates.map(d=>`<option value="${escapeHtml(d)}" ${d===date?'selected':''}>${escapeHtml(d)}</option>`).join('')}</select></div>`:''}
     ${q?`<iframe class="map-frame" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=${encodeURIComponent(q)}&output=embed" title="${es?'Mapa':'Map'}"></iframe>`:''}
-    <div class="map-place-list" style="margin-top:10px;">${places.length?places.map(p=>`<div class="map-place"><div class="main"><div class="name">📍 ${escapeHtml(p.name)}</div><div class="sub">${p.kind==='destination'?(es?'Destino':'Destination'):p.kind==='booking'?(es?'Reserva':'Booking'):(es?'Actividad':'Activity')}${p.date?' · '+escapeHtml(p.date):''}</div></div><a class="btn btn-ghost btn-sm viewer-safe" target="_blank" rel="noopener" href="${googleMapsSearchUrl(p.name)}">${es?'Abrir':'Open'}</a></div>`).join(''):`<div class="chat-empty">${es?'Agrega lugares a tus actividades o reservas para verlos aquí.':'Add places to activities or bookings to see them here.'}</div>`}</div>
+    <div class="map-place-list" style="margin-top:10px;">${hasPlaces?places.map((p,i)=>`<div class="map-place"><div class="main"><div class="name">${i+1}. 📍 ${escapeHtml(p.name)}</div><div class="sub">${p.kind==='destination'?(es?'Destino':'Destination'):p.kind==='booking'?(es?'Reserva':'Booking'):(es?'Actividad':'Activity')}${p.date?' · '+escapeHtml(p.date):''}</div></div><a class="btn btn-ghost btn-sm viewer-safe" target="_blank" rel="noopener" href="${googleMapsSearchUrl(p.name)}">${es?'Abrir':'Open'}</a></div>`).join(''):`<div class="chat-empty">${es?'No hay ubicaciones guardadas para esta fecha.':'No saved locations for this date.'}</div>`}</div>
+    <div class="field-hint" style="margin-top:10px">${es?'Vista previa del primer lugar. La ruta completa se abre al tocar «Abrir ruta». Necesita internet.':'Preview of the first place. Open the full route with “Open route”. Internet required.'}</div>
   </div>`;
 }
+
 function viewIdeasSub(tr){
   const es=state.lang==='es'; const ideas=state.ideas[tr.id]||[];
   return `<div class="panel"><h3 style="margin:0 0 10px;color:var(--paper);">☆ ${es?'Ideas y favoritos':'Ideas & favorites'}</h3>
@@ -5863,7 +5897,7 @@ async function deleteDoc(tripId,docId){
 function viewSettings(){
   const t=tt();
   return `
-    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v10.1.5</div></div></div>
+    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v10.2.0</div></div></div>
     <div class="panel" style="background:linear-gradient(135deg,rgba(210,173,59,.08),rgba(255,255,255,.025));">
       <div class="section-head" style="margin:0">
         <div>
@@ -6341,7 +6375,7 @@ document.addEventListener('change', (e)=>{
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('/service-worker.js?v=10.1.5',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('/service-worker.js?v=10.2.0',{updateViaCache:'none'});
       await reg.update();
       let reloading=false;
       navigator.serviceWorker.addEventListener('controllerchange',()=>{

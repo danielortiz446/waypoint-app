@@ -1,0 +1,7 @@
+Waypoint iOS scaffold QA — 2026-09-28
+- Source: Waypoint V10.2.0 complete ZIP.
+- iOS project: capacitor.config.ts, package.json, placeholder www/index.html, README, setup guide.
+- Remote target URL: read from WAYPOINT_IOS_URL; refused unless HTTPS origin.
+- Original web source and backend: copied without modifications.
+- Limitation: node dependencies not installed; no macOS/Xcode compilation or real iPhone run in this container.
+- App Store: NOT production-ready; webview testing shell only; native capabilities, true offline and AdMob pending.

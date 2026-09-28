@@ -1,0 +1,8 @@
+Waypoint 10.2.0 phase 1 — QA notes
+- 61 existing automated backend/smoke checks: PASS.
+- Node parse checks: server.js, service-worker.js and inline public/index.html JavaScript: PASS.
+- /health responds version 10.2.0: PASS during a local run.
+- New map day selection: code/static validation only; not exercised by mobile automation.
+- Offline cache acknowledgements: code/static validation only; must be tested in Chrome/Safari while online then with network disconnected. Browser headless run timed out, so no browser pass is claimed.
+- Old project data model, Railway volume location, API routes and Capacitor remote target requirements remain unchanged.
+- No App Store submission, macOS/Xcode build, Face ID, push, AdMob, flight provider or AI service in this version.
