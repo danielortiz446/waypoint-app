@@ -521,3 +521,12 @@ The existing `WAYPOINT_DATA_FILE=/data/waypoint-sync-data.json` and `WAYPOINT_FI
 - Recognizes explicit country names without punctuation and a curated set of unambiguous city-only destination names.
 - Does not invent a country for unknown or ambiguous cities.
 - Source data is a limited offline reference that must be checked against official destination guidance.
+
+## V10.1.4 — Google AdSense ownership verification
+
+- Added official publisher snippet to `public/index.html` `<head>` for `ca-pub-1755628880712670`.
+- Added `public/ads.txt` containing `google.com, pub-1755628880712670, DIRECT, f08c47fec0942fa0`. Verify the final line against the one shown in your AdSense account.
+- Allowed Google's AdSense JavaScript origin in the server's script Content-Security-Policy. This does **not** activate ad placement or override user consent.
+- Made `/ads.txt` network-only in the service worker.
+- AdSense account/site approval is external; app-level ads, consent management, paid subscriptions and AdMob SDK are **not** wired up by this patch.
+- Deploy using the existing Railway service, GitHub repository and `/data` volume. Check `/health` for version `10.1.4` and that `/ads.txt` returns plain text.

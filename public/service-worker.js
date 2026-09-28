@@ -1,4 +1,4 @@
-const CACHE='waypoint-v10.1.3-destination-auto-fix';
+const CACHE='waypoint-v10.1.4-adsense-verification';
 const DATA_CACHE='waypoint-v9-data-v1';
 const SHELL=['/','/index.html','/manifest.webmanifest','/privacy.html','/terms.html','/assets/icons/icon-192.png','/assets/icons/icon-512.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
@@ -35,6 +35,8 @@ self.addEventListener('fetch',event=>{
 
   if(url.origin!==self.location.origin)return;
   if(url.pathname.startsWith('/api/'))return;
+  // Serve ads.txt from the network, avoiding stale PWA shell responses.
+  if(url.pathname==='/ads.txt'){event.respondWith(fetch(new Request(req,{cache:'no-store'})));return;}
 
   // Never cache the private admin interface. It should always be loaded from the server.
   if(url.pathname==='/admin'||url.pathname==='/admin/'||url.pathname==='/admin.html'){

@@ -151,3 +151,7 @@ In Settings the user can create a Waypoint ID. You can grant complimentary Premi
 This release does **not** enable Apple/Google/web purchases, real advertisements, affiliate conversions, or server-side Premium feature paywalls. Those providers and enforcement rules still require implementation. Do not announce that Waypoint collects real subscription revenue until they are integrated and verified.
 
 For admin credentials, never include passwords in the repository. Continue using Railway `WAYPOINT_ADMIN_EMAIL`, `WAYPOINT_ADMIN_PASSWORD`, optional `WAYPOINT_ADMIN_TOTP_SECRET`, and persistent `WAYPOINT_ADMIN_DATA_FILE=/data/waypoint-admin-data.json`.
+
+
+### Google AdSense verification — V10.1.4
+Commit the `public/index.html`, `public/ads.txt`, `server.js`, `public/service-worker.js` and other changed files to your existing GitHub repo. Railway deploys them. Then open `https://YOUR-DOMAIN/ads.txt` to confirm the **text** appears (not Waypoint UI) and check View Source of `/` for `ca-pub-1755628880712670`. Verify site ownership and request review in AdSense. No account approval or revenue is implied.
