@@ -1745,18 +1745,70 @@ function offlineCountryMatch(value){
   const byAlias=PRACTICAL_COUNTRY_ALIASES[key];if(byAlias)return byAlias;
   return Object.keys(OFFLINE_PRACTICAL_BY_COUNTRY).find(name=>normalizePracticalCountry(name)===key)||'';
 }
+// Conservative city-only fallback for established unambiguous destinations.
+// When a city name is ambiguous, users must select the exact destination instead.
+const PRACTICAL_CITY_COUNTRY={
+  'bogota':'Colombia','bogota dc':'Colombia','medellin':'Colombia','villavicencio':'Colombia',
+  'cali':'Colombia','cartagena de indias':'Colombia','barranquilla':'Colombia','pereira':'Colombia',
+  'bucaramanga':'Colombia','manizales':'Colombia','santa marta':'Colombia',
+  'orlando':'United States','miami':'United States','tallahassee':'United States',
+  'jacksonville florida':'United States','kissimmee':'United States','new york':'United States',
+  'los angeles':'United States','las vegas':'United States','washington dc':'United States',
+  'madrid':'Spain','barcelona':'Spain','valencia spain':'Spain','sevilla':'Spain',
+  'ciudad de mexico':'Mexico','mexico city':'Mexico','cancun':'Mexico','guadalajara mexico':'Mexico',
+  'rio de janeiro':'Brazil','sao paulo':'Brazil','brasilia':'Brazil',
+  'buenos aires':'Argentina','santiago de chile':'Chile','lima':'Peru',
+  'quito':'Ecuador','guayaquil':'Ecuador','panama city panama':'Panama',
+  'san jose costa rica':'Costa Rica','santo domingo':'Dominican Republic',
+  'tokyo':'Japan','tokio':'Japan','osaka':'Japan','kyoto':'Japan',
+  'seoul':'South Korea','seul':'South Korea','beijing':'China',
+  'bangkok':'Thailand','new delhi':'India','singapore':'Singapore',
+  'sydney':'Australia','melbourne australia':'Australia',
+  'auckland':'New Zealand','dubai':'United Arab Emirates',
+  'lisbon':'Portugal','lisboa':'Portugal','amsterdam':'Netherlands',
+  'berlin':'Germany','munich':'Germany','paris france':'France',
+  'rome':'Italy','roma':'Italy','venice':'Italy','florence italy':'Italy',
+  'london england':'United Kingdom','londres':'United Kingdom',
+  'dublin':'Ireland','brussels':'Belgium','bruselas':'Belgium',
+  'stockholm':'Sweden','oslo':'Norway','copenhagen':'Denmark',
+  'helsinki':'Finland','reykjavik':'Iceland','prague':'Czech Republic',
+  'warsaw':'Poland','budapest':'Hungary','zagreb':'Croatia',
+  'kingston jamaica':'Jamaica','nassau':'Bahamas','oranjestad':'Aruba',
+  'willemstad':'Curaçao','cape town':'South Africa','casablanca':'Morocco','cairo':'Egypt'
+};
+function countryFromDestinationText(value){
+  const raw=String(value||'').trim();if(!raw)return '';
+  const normalized=normalizePracticalCountry(raw);
+  const direct=offlineCountryMatch(normalized);if(direct)return direct;
+  const chunks=normalized.split(/[,;|/]+/).map(x=>x.trim()).filter(Boolean);
+  // First trust an explicit country token, including Spanish names.
+  for(let i=chunks.length-1;i>=0;i--){
+    const c=offlineCountryMatch(chunks[i]);if(c)return c;
+  }
+  // Support 'Bogotá Colombia' or 'Madrid España' even without a comma.
+  const countryTokens=Object.keys(PRACTICAL_COUNTRY_ALIASES).concat(Object.keys(OFFLINE_PRACTICAL_BY_COUNTRY));
+  for(const token of countryTokens.sort((a,b)=>b.length-a.length)){
+    const k=normalizePracticalCountry(token);
+    if(k.length<4)continue;
+    if(normalized.endsWith(' '+k))return offlineCountryMatch(token);
+  }
+  // Fall back to a small curated map only when there is no explicit country.
+  const city=chunks[0].replace(/\s+(?:city|ciudad)$/,'').trim();
+  return PRACTICAL_CITY_COUNTRY[city]||'';
+}
 function practicalCountryForTrip(tr){
-  const w=weatherForTrip(tr);
-  const declared=[tr?.destinationCountry,w?.country,tr?.detectedCountry,tr?.autoPractical?.country,w?.practical?.country];
-  for(const v of declared){const match=offlineCountryMatch(v);if(match)return match;}
-  // Only identify an explicitly named country in a comma-delimited destination.
-  // Do not guess based on the city alone, which can be ambiguous.
-  for(const loc of [tr?.destinationCanonical,tr?.resolvedLocation,tr?.destination]){
-    const parts=String(loc||'').split(',').map(x=>x.trim());
-    if(!parts.length)continue;
-    const last=parts.at(-1);
-    const match=offlineCountryMatch(last);if(match)return match;
-    if(parts.length===1){const single=offlineCountryMatch(parts[0]);if(single)return single;}
+  // The selected destination is authoritative. Weather responses can be stale
+  // or contain a country for an earlier destination.
+  const explicit=offlineCountryMatch(tr?.destinationCountry);
+  if(explicit)return explicit;
+  for(const loc of [tr?.destinationCanonical,tr?.destination,tr?.resolvedLocation]){
+    const country=countryFromDestinationText(loc);
+    if(country)return country;
+  }
+  const weather=weatherForTrip(tr);
+  for(const value of [tr?.detectedCountry,weather?.country,tr?.autoPractical?.country,weather?.practical?.country]){
+    const country=offlineCountryMatch(value);
+    if(country)return country;
   }
   return '';
 }
@@ -1770,20 +1822,30 @@ function automaticPracticalForTrip(tr){
   return {country:country||'',...(matched||(!country?remote:{})),
     source:matched?'offline-country-profile':(!country&&remote.emergency?'weather-country-profile':'unavailable')};
 }
+function practicalAutoField(el,value){
+  if(!el)return;
+  const auto=el.dataset.autoValue==='true';
+  // Never overwrite a value that the user has entered manually.
+  if(auto || !String(el.value||'').trim()){
+    el.value=value||'';
+    el.dataset.autoValue='true';
+  }
+  el.placeholder=value|| (state.lang==='es'?'No disponible automáticamente':'No automatic value available');
+}
+function markPracticalManual(id){
+  const el=document.getElementById(id);if(el)el.dataset.autoValue='false';
+}
 function refreshPracticalFormPreview(){
   const country=document.getElementById('f-dest-country')?.value||'';
   const dest=document.getElementById('f-dest')?.value||'';
   const pr=automaticPracticalForTrip({destinationCountry:country,destination:dest});
-  for(const [id,key] of [['f-emergency','emergency'],['f-power','power']]){
-    const el=document.getElementById(id);
-    if(el)el.placeholder=pr[key]|| (state.lang==='es'?'Se completa al elegir un país compatible':'Filled when you select a supported country');
-  }
+  practicalAutoField(document.getElementById('f-emergency'),pr.emergency||'');
+  practicalAutoField(document.getElementById('f-power'),pr.power||'');
   const el=document.getElementById('practical-autofill-status');
   if(el)el.textContent=pr.emergency&&pr.power
-    ?(state.lang==='es'?`✓ Se completará automáticamente para ${pr.country} si dejas los campos vacíos.`:`✓ Automatic values available for ${pr.country} when the fields are left empty.`)
-    :(state.lang==='es'?'Selecciona un destino con país reconocido para consultar referencias automáticas.':'Select a destination with a recognized country for automatic reference data.');
+    ?(state.lang==='es'?`✓ Datos automáticos de ${pr.country}. Puedes editarlos si es necesario.`:`✓ Automatic values for ${pr.country}. You may edit them when needed.`)
+    :(state.lang==='es'?'País sin identificar. Busca y selecciona el destino o escribe el país; también puedes introducir los datos manualmente.':'Country not identified. Search and select a destination or include the country; you may also enter values manually.');
 }
-
 function practicalForTrip(tr){
   const p=automaticPracticalForTrip(tr);
   const unavailable=state.lang==='es'?'No disponible':'Unavailable';
@@ -2430,8 +2492,8 @@ async function saveTripForm(destinationResolved=false){
     timezone:g('f-timezone').trim(),
     localCurrency:g('f-local-currency').trim().toUpperCase(),
     localLanguage:g('f-language').trim(),
-    emergencyInfo:g('f-emergency').trim(),
-    powerInfo:g('f-power').trim(),
+    emergencyInfo:document.getElementById('f-emergency')?.dataset.autoValue==='true'?'':g('f-emergency').trim(),
+    powerInfo:document.getElementById('f-power')?.dataset.autoValue==='true'?'':g('f-power').trim(),
     notes:g('f-notes').trim()
   };
 
@@ -5819,7 +5881,7 @@ function diagnosticsHtml(){
 function viewSettings(){
   const t=tt();
   return `
-    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v10.1.2</div></div></div>
+    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v10.1.3</div></div></div>
     <div class="panel" style="background:linear-gradient(135deg,rgba(210,173,59,.08),rgba(255,255,255,.025));">
       <div class="section-head" style="margin:0">
         <div>
@@ -5877,7 +5939,7 @@ function viewSettings(){
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><a class="btn btn-ghost btn-sm" href="/privacy.html" target="_blank" rel="noopener">${state.lang==='es'?'Política de Privacidad':'Privacy Policy'}</a><a class="btn btn-ghost btn-sm" href="/terms.html" target="_blank" rel="noopener">${state.lang==='es'?'Términos de Uso':'Terms of Use'}</a></div>
     </div>
     <div class="panel"><h3 style="margin:0 0 8px;color:var(--paper)">☁ ${state.lang==='es'?'Offline y copias locales':'Offline & local backups'}</h3><p class="field-hint">${state.lang==='es'?'Waypoint guarda automáticamente hasta 5 copias recientes en este dispositivo.':'Waypoint automatically keeps up to 5 recent backups on this device.'}</p><div class="backup-list">${(state.offlineSnapshots||[]).map(s=>`<div class="backup-row"><span>${escapeHtml(new Date(s.at).toLocaleString())}</span><button class="btn btn-ghost btn-sm" onclick="restoreSnapshot('${s.id}')">${state.lang==='es'?'Restaurar':'Restore'}</button></div>`).join('')||`<div class="field-hint">${state.lang==='es'?'Aún no hay copias':'No backups yet'}</div>`}</div></div>
-    <div class="panel"><h3 style="margin:0 0 8px;font-size:16px;color:var(--paper);">🩺 ${state.lang==='es'?'Diagnóstico':'Diagnostics'}</h3><p class="field-hint">${state.lang==='es'?'Comprueba conexión, servidor e integraciones principales.':'Check connection, server and core integrations.'}</p>${diagnosticsHtml()}<div class="participant-last" style="margin-top:10px">Waypoint v10.1.2 · ${state.trips.length} ${state.lang==='es'?'viaje(s) local(es)':'local trip(s)'}</div><div style="margin-top:12px">${integrationStatusHtml()}</div></div>
+    <div class="panel"><h3 style="margin:0 0 8px;font-size:16px;color:var(--paper);">🩺 ${state.lang==='es'?'Diagnóstico':'Diagnostics'}</h3><p class="field-hint">${state.lang==='es'?'Comprueba conexión, servidor e integraciones principales.':'Check connection, server and core integrations.'}</p>${diagnosticsHtml()}<div class="participant-last" style="margin-top:10px">Waypoint v10.1.3 · ${state.trips.length} ${state.lang==='es'?'viaje(s) local(es)':'local trip(s)'}</div><div style="margin-top:12px">${integrationStatusHtml()}</div></div>
     <div class="panel">
       <h3 style="margin:0 0 6px;font-size:16px;color:var(--paper);">${t.settings.data}</h3>
       <p style="font-size:12px;color:var(--muted);margin:0 0 12px;">${t.settings.dataSub}</p>
@@ -6023,7 +6085,7 @@ function renderModal(){
       <div class="field"><label>${t.trip.passportExpiry}</label><input id="f-passport" type="date" value="${tr.passportExpiry||''}">
         <p class="field-hint">${t.trip.passportHint}</p></div>
       <div class="form-row"><div class="field"><label>${state.lang==='es'?'Zona horaria (IANA)':'Timezone (IANA)'}</label><input id="f-timezone" value="${escapeHtml(tr.timezone||'')}" placeholder="${state.lang==='es'?'Automático según destino':'Automatic from destination'}"></div><div class="field"><label>${state.lang==='es'?'Moneda local (opcional)':'Local currency (optional)'}</label><input id="f-local-currency" value="${escapeHtml(tr.localCurrency||'')}" placeholder="${state.lang==='es'?'Automática, ej. COP':'Automatic, e.g. COP'}"></div></div><div class="form-row"><div class="field"><label>${state.lang==='es'?'Idioma local / nota':'Local language / note'}</label><input id="f-language" value="${escapeHtml(tr.localLanguage||'')}" placeholder="${state.lang==='es'?'Automático según país':'Automatic from country'}"></div></div>
-      <div class="form-row"><div class="field"><label>${state.lang==='es'?'Emergencia (automática)':'Emergency (automatic)'}</label><input id="f-emergency" value="${escapeHtml(tr.emergencyInfo||'')}" placeholder="${escapeHtml(automaticPracticalForTrip(tr).emergency||(state.lang==='es'?'Al seleccionar destino':'Select a destination'))}"><p class="field-hint">${state.lang==='es'?'Vacío = usar referencia del país; escribe aquí para corregirla.':'Leave blank to use the country reference; enter a value to override it.'}</p></div><div class="field"><label>${state.lang==='es'?'Enchufe / energía (automático)':'Power / plug (automatic)'}</label><input id="f-power" value="${escapeHtml(tr.powerInfo||'')}" placeholder="${escapeHtml(automaticPracticalForTrip(tr).power||(state.lang==='es'?'Al seleccionar destino':'Select a destination'))}"><p class="field-hint">${state.lang==='es'?'Vacío = usar el dato del país; algunos lugares varían.':'Leave blank for the country reference; regional exceptions may apply.'}</p></div></div>
+      <div class="form-row"><div class="field"><label>${state.lang==='es'?'Emergencia (automática)':'Emergency (automatic)'}</label><input id="f-emergency" data-auto-value="${tr.emergencyInfo?'false':'true'}" oninput="markPracticalManual('f-emergency')" value="${escapeHtml(tr.emergencyInfo||automaticPracticalForTrip(tr).emergency||'')}" placeholder="${state.lang==='es'?'No disponible':'Unavailable'}"><p class="field-hint">${state.lang==='es'?'Vacío = usar referencia del país; escribe aquí para corregirla.':'Leave blank to use the country reference; enter a value to override it.'}</p></div><div class="field"><label>${state.lang==='es'?'Enchufe / energía (automático)':'Power / plug (automatic)'}</label><input id="f-power" data-auto-value="${tr.powerInfo?'false':'true'}" oninput="markPracticalManual('f-power')" value="${escapeHtml(tr.powerInfo||automaticPracticalForTrip(tr).power||'')}" placeholder="${state.lang==='es'?'No disponible':'Unavailable'}"><p class="field-hint">${state.lang==='es'?'Vacío = usar el dato del país; algunos lugares varían.':'Leave blank for the country reference; regional exceptions may apply.'}</p></div></div>
       <p class="field-hint" id="practical-autofill-status">${state.lang==='es'?'Se completan automáticamente según el país del destino cuando está reconocido.':'Filled automatically when the destination country is recognized.'}</p>
       <div class="field"><label>${t.trip.notes}</label><textarea id="f-notes">${escapeHtml(tr.notes||'')}</textarea></div>
       <div class="form-actions">
@@ -6297,7 +6359,7 @@ document.addEventListener('change', (e)=>{
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('/service-worker.js?v=10.1.2',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('/service-worker.js?v=10.1.3',{updateViaCache:'none'});
       await reg.update();
       let reloading=false;
       navigator.serviceWorker.addEventListener('controllerchange',()=>{

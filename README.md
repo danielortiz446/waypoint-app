@@ -512,3 +512,12 @@ The existing `WAYPOINT_DATA_FILE=/data/waypoint-sync-data.json` and `WAYPOINT_FI
 - Today tab includes a destination essentials card; emergency mode and Travel Mode use the same reference.
 - Trip-book export now includes power/plug.
 - Unsupported/unknown countries show unavailable, not invented safety guidance. Always confirm official emergency numbers and electrical conditions before traveling.
+
+
+## 10.1.3 automatic destination essentials fix
+- Emergency numbers and outlet/voltage values are displayed as real editable field values, not placeholders.
+- Automatically identified reference values are not stored as manual overrides.
+- Existing manual customizations remain available and are not overwritten in the edit form.
+- Recognizes explicit country names without punctuation and a curated set of unambiguous city-only destination names.
+- Does not invent a country for unknown or ambiguous cities.
+- Source data is a limited offline reference that must be checked against official destination guidance.
