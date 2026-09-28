@@ -155,3 +155,8 @@ For admin credentials, never include passwords in the repository. Continue using
 
 ### Google AdSense verification — V10.1.4
 Commit the `public/index.html`, `public/ads.txt`, `server.js`, `public/service-worker.js` and other changed files to your existing GitHub repo. Railway deploys them. Then open `https://YOUR-DOMAIN/ads.txt` to confirm the **text** appears (not Waypoint UI) and check View Source of `/` for `ca-pub-1755628880712670`. Verify site ownership and request review in AdSense. No account approval or revenue is implied.
+
+
+### V10.1.5 — private diagnostics
+
+Deploy the files to the **existing** GitHub repository and Railway service. Verify `/health` returns `10.1.5`, `/ads.txt` shows the authorized publisher line, and the Settings view no longer contains diagnostics. To run diagnostics, authenticate at `/admin`, then open **System** and choose **Run diagnostics**. `/api/admin/system` must return HTTP 401 without a logged-in admin session. Preserve `/data` and all existing Railway environment variables.

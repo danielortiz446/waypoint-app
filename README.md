@@ -530,3 +530,10 @@ The existing `WAYPOINT_DATA_FILE=/data/waypoint-sync-data.json` and `WAYPOINT_FI
 - Made `/ads.txt` network-only in the service worker.
 - AdSense account/site approval is external; app-level ads, consent management, paid subscriptions and AdMob SDK are **not** wired up by this patch.
 - Deploy using the existing Railway service, GitHub repository and `/data` volume. Check `/health` for version `10.1.4` and that `/ads.txt` returns plain text.
+
+
+## V10.1.5 — Admin-only diagnostics
+
+- Removed the publicly visible Diagnostics and integrations status panel from Settings. End-user app retains its normal functional connection/synchronization indicators, plan details and user data controls.
+- Admin-only diagnostics are available after login at `/admin` → **System** → **Run diagnostics**. The technical status endpoint `/api/admin/system` remains protected with the existing administrator session and now includes nonsecret provider configuration flags.
+- No changes to traveler data schemas, trip sharing credentials, persistent `/data` volume, or AdSense publisher identification / `ads.txt`. Advertising is not enabled merely by verifying the site.

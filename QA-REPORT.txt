@@ -1,82 +1,20 @@
-WAYPOINT 10.1.3 QA
+Waypoint V10.1.5 — Admin-only diagnostics QA
 
-Base API/server smoke suite:
-PASS static index
-PASS manifest
-PASS health
-PASS create
-PASS read
-PASS viewer read access
-PASS viewer write blocked
-PASS invalid key
-PASS revision conflict
-PASS live SSE event
-PASS participant preregistration
-PASS giphy config endpoint
-PASS participant identity
-PASS participant list
-PASS viewer participant registration
-PASS viewer chat read
-PASS viewer chat send blocked
-PASS read receipt participant
-PASS chat read receipt
-PASS chat trusted participant name
-PASS chat reactions
-PASS chat photo and reply
-PASS weather config gate
-PASS chat idempotent duplicate
-PASS chat rejects unregistered sender
-PASS typing indicator endpoint
-PASS invite owner auth
-PASS owner room create
-PASS individual invite create
-PASS individual invite read access
-PASS invite role enforced
-PASS owner participant role change
-PASS security log
-PASS invite revoke
-PASS revoked invite blocked
-PASS revoke room create
-PASS revoke owner register
-PASS revoke editor register
-PASS participant remove
-PASS removed participant write blocked
-PASS missing participant write blocked
-PASS V10.1.3 health version
-PASS health hides room count
-PASS security nosniff
-PASS security CSP
-PASS normal API traffic allowed
-PASS V10 cloud files feature
-PASS V10 smart text import feature
-PASS V10 push not faked
-PASS V10 direct email not faked
-PASS cloud room create
-PASS cloud file upload
-PASS cloud file read
-PASS cloud file delete
-PASS traffic config gate
-PASS ocr config gate
-PASS file security participant register
-PASS cloud file missing participant blocked
-PASS cloud file active participant allowed
-PASS file participant revoke
-PASS revoked participant file delete blocked
+Changes:
+- Removed diagnostic panel and provider/integration cards from public Settings.
+- Kept consumer itinerary, backups, consent, profile and account settings unchanged.
+- Added System diagnostics refresh button at /admin (requires logged-in administrator).
+- Extended already-authenticated /api/admin/system response with configured-provider booleans (no API keys exposed).
+- Preserved Google AdSense client ID and /ads.txt.
+- Bumped server health, admin status, package, app label and service worker version to 10.1.5.
 
-Destination country, emergency, power, form value tests:
-PASS automatic Bogotá, Colombia → Colombia
-PASS automatic Villavicencio → Colombia
-PASS automatic Medellín → Colombia
-PASS automatic Madrid España → Spain
-PASS automatic Barcelona, Spain → Spain
-PASS automatic Orlando, FL, United States → United States
-PASS automatic Tokyo → Japan
-PASS automatic Cancún → Mexico
-PASS automatic Cidade desconhecida → unrecognized
-PASS automatic Springfield → unrecognized
-PASS form fills actual visible values instead of placeholders
-PASS manual emergency preserved, automatic power follows destination
-PASS automatic form values are not saved as custom overrides
+Checks:
+- node --check server.js, service-worker.js, client inline JavaScript, admin inline JavaScript: PASS
+- Existing npm test (scripts/smoke-test.js): PASS
+- GET /api/admin/system without admin session: HTTP 401 PASS
+- POST /api/admin/login and GET /api/admin/system with session: HTTP 200 PASS
+- GET /ads.txt contains pub-1755628880712670: PASS
+- Public /index.html lacks diagnostics UI: PASS
+- GET /health shows 10.1.5: PASS
 
-Syntax checks: PASS (frontend, server, SW)
-Browser-rendered test: NOT EXECUTED; verify on real device after deploy.
+Limits: These automated checks do not replace real browser/mobile regression tests and Railway deployment tests. AdSense ownership verification does not enable ad serving. Do not delete /data volume or existing Railway environment variables.

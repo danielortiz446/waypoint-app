@@ -1638,11 +1638,6 @@ async function getFeatureFlags(force=false){
   if(!force&&ui.featureFlags&&Date.now()-Number(ui.featureFlagsAt||0)<5*60*1000)return ui.featureFlags;
   try{const r=await fetch('/api/features',{cache:'no-store'});const j=await r.json();ui.featureFlags=j;ui.featureFlagsAt=Date.now();return j;}catch(e){return ui.featureFlags||{};}
 }
-function integrationStatusHtml(){
-  const f=ui.featureFlags||{},es=state.lang==='es';
-  const card=(name,ready,desc)=>`<div class="integration-card ${ready?'ready':''}"><div class="k">${name}</div><div class="v">${ready?'✓ '+(es?'Listo':'Ready'):'○ '+(es?'No configurado':'Not configured')}</div><div class="provider-note">${desc}</div></div>`;
-  return `<div class="smart-integration-grid">${card('Cloud Files',Boolean(f.cloudFiles),es?'Archivos compartidos en el volumen del servidor.':'Shared files on server storage.')}${card('Traffic / ETA',Boolean(f.traffic),es?'Requiere GOOGLE_ROUTES_API_KEY.':'Requires GOOGLE_ROUTES_API_KEY.')}${card('Receipt OCR',Boolean(f.ocr),es?'Requiere OCR_API_URL.':'Requires OCR_API_URL.')}${card('Push',Boolean(f.push),es?'Aún requiere proveedor de push.':'Still requires a push provider.')}${card('Email import',Boolean(f.emailImport),es?'Importación directa desde correo aún requiere conector.':'Direct email import still requires a connector.')}${card('Smart text import',Boolean(f.smartTextImport),es?'Funciona pegando una confirmación o recibo.':'Works by pasting confirmation or receipt text.')}</div>`;
-}
 
 
 function hasDestinationCoords(tr){
@@ -5865,25 +5860,10 @@ async function deleteDoc(tripId,docId){
 
 /* ===================== SETTINGS ===================== */
 
-async function runDiagnostics(){
-  ui.diag={loading:true};render();await getFeatureFlags(true);
-  const out={time:new Date().toISOString(),online:navigator.onLine,storage:true,health:null,features:null};
-  try{const r=await fetch('/health',{cache:'no-store'});out.health=await r.json();out.healthOk=r.ok;}catch(e){out.healthOk=false;}
-  try{const r=await fetch('/api/features',{cache:'no-store'});out.features=await r.json();out.featuresOk=r.ok;}catch(e){out.featuresOk=false;}
-  ui.diag=out;render();
-}
-function diagnosticsHtml(){
-  const d=ui.diag,es=state.lang==='es';
-  if(!d)return `<button class="btn btn-ghost btn-sm" onclick="runDiagnostics()">🩺 ${es?'Ejecutar diagnóstico':'Run diagnostics'}</button>`;
-  if(d.loading)return `<div class="field-hint">${es?'Ejecutando diagnóstico…':'Running diagnostics…'}</div>`;
-  const row=(name,ok,val='')=>`<div class="diag-row"><span>${name}</span><span class="${ok?'status-ok':'status-bad'}">${ok?'✓':'✕'} ${escapeHtml(String(val||''))}</span></div>`;
-  return `${row(es?'Conexión':'Connection',d.online,d.online?'Online':'Offline')}${row('Server',d.healthOk,d.health?.version||'')}${row('WeatherAPI',Boolean(d.features?.weather??d.features?.features?.weather),(d.features?.weather??d.features?.features?.weather)?'Ready':'Not configured')}${row('GIPHY',Boolean(d.features?.giphy??d.features?.features?.giphy),(d.features?.giphy??d.features?.features?.giphy)?'Ready':'Not configured')}${row(es?'Almacenamiento local':'Local storage',d.storage,'OK')}`;
-}
-
 function viewSettings(){
   const t=tt();
   return `
-    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v10.1.4</div></div></div>
+    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v10.1.5</div></div></div>
     <div class="panel" style="background:linear-gradient(135deg,rgba(210,173,59,.08),rgba(255,255,255,.025));">
       <div class="section-head" style="margin:0">
         <div>
@@ -5941,7 +5921,7 @@ function viewSettings(){
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><a class="btn btn-ghost btn-sm" href="/privacy.html" target="_blank" rel="noopener">${state.lang==='es'?'Política de Privacidad':'Privacy Policy'}</a><a class="btn btn-ghost btn-sm" href="/terms.html" target="_blank" rel="noopener">${state.lang==='es'?'Términos de Uso':'Terms of Use'}</a></div>
     </div>
     <div class="panel"><h3 style="margin:0 0 8px;color:var(--paper)">☁ ${state.lang==='es'?'Offline y copias locales':'Offline & local backups'}</h3><p class="field-hint">${state.lang==='es'?'Waypoint guarda automáticamente hasta 5 copias recientes en este dispositivo.':'Waypoint automatically keeps up to 5 recent backups on this device.'}</p><div class="backup-list">${(state.offlineSnapshots||[]).map(s=>`<div class="backup-row"><span>${escapeHtml(new Date(s.at).toLocaleString())}</span><button class="btn btn-ghost btn-sm" onclick="restoreSnapshot('${s.id}')">${state.lang==='es'?'Restaurar':'Restore'}</button></div>`).join('')||`<div class="field-hint">${state.lang==='es'?'Aún no hay copias':'No backups yet'}</div>`}</div></div>
-    <div class="panel"><h3 style="margin:0 0 8px;font-size:16px;color:var(--paper);">🩺 ${state.lang==='es'?'Diagnóstico':'Diagnostics'}</h3><p class="field-hint">${state.lang==='es'?'Comprueba conexión, servidor e integraciones principales.':'Check connection, server and core integrations.'}</p>${diagnosticsHtml()}<div class="participant-last" style="margin-top:10px">Waypoint v10.1.4 · ${state.trips.length} ${state.lang==='es'?'viaje(s) local(es)':'local trip(s)'}</div><div style="margin-top:12px">${integrationStatusHtml()}</div></div>
+
     <div class="panel">
       <h3 style="margin:0 0 6px;font-size:16px;color:var(--paper);">${t.settings.data}</h3>
       <p style="font-size:12px;color:var(--muted);margin:0 0 12px;">${t.settings.dataSub}</p>
@@ -6361,7 +6341,7 @@ document.addEventListener('change', (e)=>{
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('/service-worker.js?v=10.1.4',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('/service-worker.js?v=10.1.5',{updateViaCache:'none'});
       await reg.update();
       let reloading=false;
       navigator.serviceWorker.addEventListener('controllerchange',()=>{

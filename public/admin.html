@@ -148,7 +148,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:rgba(0,0,0,.18);paddin
     </section>
 
     <section id="tab-system" class="hidden">
-      <div class="card"><h3>System status</h3><div id="systemInfo"></div></div>
+      <div class="card"><h3>System diagnostics <button class="btn" style="margin-left:12px" onclick="loadSystem()">↻ Run diagnostics</button></h3><p class="sub">Administrator only. Connection, server, storage and integration configuration.</p><div id="systemInfo"></div></div>
     </section>
 
     <section id="tab-logs" class="hidden">
@@ -299,8 +299,17 @@ async function loadFlags(){
 }
 async function saveFlags(){await api('/api/admin/feature-flags',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(flags)});loadDashboard()}
 async function loadSystem(){
-  const d=await api('/api/admin/system');
-  $('#systemInfo').innerHTML=Object.entries(d).map(([k,v])=>`<div class="row"><div class="row-main"><div class="name">${esc(k)}</div></div><div class="meta">${esc(typeof v==='object'?JSON.stringify(v):v)}</div></div>`).join('');
+  const target=$('#systemInfo');
+  target.textContent='Running diagnostics…';
+  try{
+    // This API requires an authenticated administrator cookie on the server.
+    const d=await api('/api/admin/system');
+    const rows=[['Connection',navigator.onLine?'Online':'Browser reports offline'],['Server','Online'],...Object.entries(d)];
+    target.innerHTML=rows.map(([k,v])=>`<div class="row"><div class="row-main"><div class="name">${esc(k)}</div></div><div class="meta">${esc(typeof v==='object'?JSON.stringify(v):v)}</div></div>`).join('');
+  }catch(e){
+    target.textContent='Unable to run diagnostics: '+e.message;
+    if(e.status===401)location.reload();
+  }
 }
 async function loadLogs(){
   const d=await api('/api/admin/security-logs?limit=250');
