@@ -504,3 +504,11 @@ The existing `WAYPOINT_DATA_FILE=/data/waypoint-sync-data.json` and `WAYPOINT_FI
 - Premium state is refreshed server-side each app session and on app reactivation, with a per-session verified entitlement flag; local JSON alone no longer activates the Premium badge.
 - Permanent promotional codes now respect a zero-day duration, expiry dates are validated, and internal user notes are excluded from public client responses.
 - Real billing, ad networks and affiliate conversion reporting remain unintegrated; Free features are not paywalled yet.
+
+## V10.1.2 — Automatic country emergency and power reference
+- Destinations now resolve emergency numbers and plug/voltage details from the embedded offline country reference independent of WeatherAPI.
+- Country aliases supported in English/Spanish; the destination's explicit country is checked rather than guessing from an ambiguous city.
+- When opening/editing a trip, automatic reference values appear as form placeholders and manual overrides remain optional.
+- Today tab includes a destination essentials card; emergency mode and Travel Mode use the same reference.
+- Trip-book export now includes power/plug.
+- Unsupported/unknown countries show unavailable, not invented safety guidance. Always confirm official emergency numbers and electrical conditions before traveling.

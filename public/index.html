@@ -1660,14 +1660,139 @@ function resolvedTripTimezone(tr){
   if(automatic)return automatic;
   return browserTz;
 }
+// Offline country profiles — same reference data as the server; no weather key required.
+const OFFLINE_PRACTICAL_BY_COUNTRY={
+  'Japan':{currency:'JPY',language:'Japanese',emergency:'110 Police · 119 Fire/Ambulance',power:'Type A/B · 100V'},
+  'Colombia':{currency:'COP',language:'Spanish',emergency:'123',power:'Type A/B · 110V'},
+  'United States of America':{currency:'USD',language:'English',emergency:'911',power:'Type A/B · 120V'},
+  'United States':{currency:'USD',language:'English',emergency:'911',power:'Type A/B · 120V'},
+  'Spain':{currency:'EUR',language:'Spanish',emergency:'112',power:'Type C/F · 230V'},
+  'France':{currency:'EUR',language:'French',emergency:'112',power:'Type C/E · 230V'},
+  'Italy':{currency:'EUR',language:'Italian',emergency:'112',power:'Type C/F/L · 230V'},
+  'Mexico':{currency:'MXN',language:'Spanish',emergency:'911',power:'Type A/B · 127V'},
+  'Brazil':{currency:'BRL',language:'Portuguese',emergency:'190 Police · 192 Ambulance · 193 Fire',power:'Type C/N · 127/220V'},
+  'Canada':{currency:'CAD',language:'English / French',emergency:'911',power:'Type A/B · 120V'},
+  'United Kingdom':{currency:'GBP',language:'English',emergency:'999 / 112',power:'Type G · 230V'},
+  'Germany':{currency:'EUR',language:'German',emergency:'112',power:'Type C/F · 230V'},
+  'Portugal':{currency:'EUR',language:'Portuguese',emergency:'112',power:'Type C/F · 230V'},
+  'Netherlands':{currency:'EUR',language:'Dutch',emergency:'112',power:'Type C/F · 230V'},
+  'Switzerland':{currency:'CHF',language:'German / French / Italian',emergency:'112',power:'Type C/J · 230V'},
+  'Argentina':{currency:'ARS',language:'Spanish',emergency:'911',power:'Type C/I · 220V'},
+  'Chile':{currency:'CLP',language:'Spanish',emergency:'133 Police · 131 Ambulance · 132 Fire',power:'Type C/L · 220V'},
+  'Peru':{currency:'PEN',language:'Spanish',emergency:'105 Police · 116 Fire · 106 Ambulance (Lima)',power:'Type A/B/C · 220V'},
+  'Ecuador':{currency:'USD',language:'Spanish',emergency:'911',power:'Type A/B · 120V'},
+  'Dominican Republic':{currency:'DOP',language:'Spanish',emergency:'911',power:'Type A/B · 120V'},
+  'Costa Rica':{currency:'CRC',language:'Spanish',emergency:'911',power:'Type A/B · 120V'},
+  'Panama':{currency:'PAB / USD',language:'Spanish',emergency:'911',power:'Type A/B · 120V'},
+  'Australia':{currency:'AUD',language:'English',emergency:'000',power:'Type I · 230V'},
+  'New Zealand':{currency:'NZD',language:'English / Māori',emergency:'111',power:'Type I · 230V'},
+  'South Korea':{currency:'KRW',language:'Korean',emergency:'112 Police · 119 Fire/Ambulance',power:'Type C/F · 220V'},
+  'China':{currency:'CNY',language:'Mandarin Chinese',emergency:'110 Police · 120 Ambulance · 119 Fire',power:'Type A/C/I · 220V'},
+  'Thailand':{currency:'THB',language:'Thai',emergency:'191 Police · 1669 Medical · 199 Fire',power:'Type A/B/C/O · 230V'},
+  'India':{currency:'INR',language:'Hindi / English',emergency:'112',power:'Type C/D/M · 230V'},
+  'Singapore':{currency:'SGD',language:'English / Malay / Mandarin / Tamil',emergency:'999 Police · 995 Fire/Ambulance',power:'Type G · 230V'},
+  'United Arab Emirates':{currency:'AED',language:'Arabic / English',emergency:'999 Police · 998 Ambulance · 997 Fire',power:'Type G · 230V'},
+  'Turkey':{currency:'TRY',language:'Turkish',emergency:'112',power:'Type C/F · 230V'},
+  'Greece':{currency:'EUR',language:'Greek',emergency:'112',power:'Type C/F · 230V'},
+  'Ireland':{currency:'EUR',language:'English / Irish',emergency:'112 / 999',power:'Type G · 230V'},
+  'Belgium':{currency:'EUR',language:'Dutch / French / German',emergency:'112',power:'Type C/E · 230V'},
+  'Austria':{currency:'EUR',language:'German',emergency:'112',power:'Type C/F · 230V'},
+  'Sweden':{currency:'SEK',language:'Swedish',emergency:'112',power:'Type C/F · 230V'},
+  'Norway':{currency:'NOK',language:'Norwegian',emergency:'112 Police · 113 Medical · 110 Fire',power:'Type C/F · 230V'},
+  'Denmark':{currency:'DKK',language:'Danish',emergency:'112',power:'Type C/E/F/K · 230V'},
+  'Finland':{currency:'EUR',language:'Finnish / Swedish',emergency:'112',power:'Type C/F · 230V'},
+  'Iceland':{currency:'ISK',language:'Icelandic',emergency:'112',power:'Type C/F · 230V'},
+  'Czech Republic':{currency:'CZK',language:'Czech',emergency:'112',power:'Type C/E · 230V'},
+  'Poland':{currency:'PLN',language:'Polish',emergency:'112',power:'Type C/E · 230V'},
+  'Hungary':{currency:'HUF',language:'Hungarian',emergency:'112',power:'Type C/F · 230V'},
+  'Croatia':{currency:'EUR',language:'Croatian',emergency:'112',power:'Type C/F · 230V'},
+  'Puerto Rico':{currency:'USD',language:'Spanish / English',emergency:'911',power:'Type A/B · 120V'},
+  'Jamaica':{currency:'JMD',language:'English',emergency:'119 Police/Ambulance · 110 Fire',power:'Type A/B · 110V'},
+  'Bahamas':{currency:'BSD',language:'English',emergency:'911 / 919',power:'Type A/B · 120V'},
+  'Aruba':{currency:'AWG',language:'Dutch / Papiamento',emergency:'911',power:'Type A/B/F · 127V'},
+  'Curaçao':{currency:'ANG',language:'Dutch / Papiamento / English',emergency:'911',power:'Type A/B · 127V'},
+  'South Africa':{currency:'ZAR',language:'Multiple official languages',emergency:'112 mobile · 10111 Police · 10177 Ambulance',power:'Type C/M/N · 230V'},
+  'Morocco':{currency:'MAD',language:'Arabic / Amazigh',emergency:'19 Police · 15 Ambulance/Fire',power:'Type C/E · 220V'},
+  'Egypt':{currency:'EGP',language:'Arabic',emergency:'122 Police · 123 Ambulance · 180 Fire',power:'Type C/F · 220V'}
+};
+const PRACTICAL_COUNTRY_ALIASES={
+  'usa':'United States','us':'United States','united states of america':'United States',
+  'estados unidos':'United States','eeuu':'United States','ee uu':'United States',
+  'colombia':'Colombia','columbia':'Colombia',
+  'espana':'Spain','espana ':'Spain','spain':'Spain',
+  'mexico':'Mexico','méxico':'Mexico','peru':'Peru','perú':'Peru',
+  'brasil':'Brazil','brazil':'Brazil','reino unido':'United Kingdom','uk':'United Kingdom',
+  'inglaterra':'United Kingdom','alemania':'Germany','deutschland':'Germany',
+  'francia':'France','italia':'Italy','portugal':'Portugal','japon':'Japan','japan':'Japan',
+  'corea del sur':'South Korea','sudafrica':'South Africa','sudafrica ':'South Africa',
+  'paises bajos':'Netherlands','holanda':'Netherlands','suiza':'Switzerland',
+  'argentina':'Argentina','chile':'Chile','ecuador':'Ecuador','panama':'Panama',
+  'republica dominicana':'Dominican Republic','costa rica':'Costa Rica',
+  'puerto rico':'Puerto Rico','jamaica':'Jamaica','aruba':'Aruba',
+  'curazao':'Curaçao','curacao':'Curaçao','bahamas':'Bahamas',
+  'irlanda':'Ireland','belgica':'Belgium','austria':'Austria','suecia':'Sweden',
+  'noruega':'Norway','dinamarca':'Denmark','finlandia':'Finlandia',
+  'islandia':'Iceland','grecia':'Greece','turquia':'Turkey','marruecos':'Morocco',
+  'egipto':'Egypt','china':'China','india':'India','tailandia':'Thailand',
+  'singapur':'Singapore','emiratos arabes unidos':'United Arab Emirates',
+  'australia':'Australia','nueva zelanda':'New Zealand'
+};
+PRACTICAL_COUNTRY_ALIASES.finlandia='Finland';
+function normalizePracticalCountry(s){return String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[.]/g,'').replace(/\s+/g,' ');}
+function offlineCountryMatch(value){
+  const raw=String(value||'').trim();if(!raw)return '';
+  const key=normalizePracticalCountry(raw);
+  const byAlias=PRACTICAL_COUNTRY_ALIASES[key];if(byAlias)return byAlias;
+  return Object.keys(OFFLINE_PRACTICAL_BY_COUNTRY).find(name=>normalizePracticalCountry(name)===key)||'';
+}
+function practicalCountryForTrip(tr){
+  const w=weatherForTrip(tr);
+  const declared=[tr?.destinationCountry,w?.country,tr?.detectedCountry,tr?.autoPractical?.country,w?.practical?.country];
+  for(const v of declared){const match=offlineCountryMatch(v);if(match)return match;}
+  // Only identify an explicitly named country in a comma-delimited destination.
+  // Do not guess based on the city alone, which can be ambiguous.
+  for(const loc of [tr?.destinationCanonical,tr?.resolvedLocation,tr?.destination]){
+    const parts=String(loc||'').split(',').map(x=>x.trim());
+    if(!parts.length)continue;
+    const last=parts.at(-1);
+    const match=offlineCountryMatch(last);if(match)return match;
+    if(parts.length===1){const single=offlineCountryMatch(parts[0]);if(single)return single;}
+  }
+  return '';
+}
+function automaticPracticalForTrip(tr){
+  const country=practicalCountryForTrip(tr);
+  const matched=country?OFFLINE_PRACTICAL_BY_COUNTRY[country]:null;
+  const w=weatherForTrip(tr);
+  const remote=w?.practical||{};
+  const cached=tr?.autoPractical||{};
+  // Explicit match to current destination takes priority over stale cached weather.
+  return {country:country||'',...(matched||(!country?remote:{})),
+    source:matched?'offline-country-profile':(!country&&remote.emergency?'weather-country-profile':'unavailable')};
+}
+function refreshPracticalFormPreview(){
+  const country=document.getElementById('f-dest-country')?.value||'';
+  const dest=document.getElementById('f-dest')?.value||'';
+  const pr=automaticPracticalForTrip({destinationCountry:country,destination:dest});
+  for(const [id,key] of [['f-emergency','emergency'],['f-power','power']]){
+    const el=document.getElementById(id);
+    if(el)el.placeholder=pr[key]|| (state.lang==='es'?'Se completa al elegir un país compatible':'Filled when you select a supported country');
+  }
+  const el=document.getElementById('practical-autofill-status');
+  if(el)el.textContent=pr.emergency&&pr.power
+    ?(state.lang==='es'?`✓ Se completará automáticamente para ${pr.country} si dejas los campos vacíos.`:`✓ Automatic values available for ${pr.country} when the fields are left empty.`)
+    :(state.lang==='es'?'Selecciona un destino con país reconocido para consultar referencias automáticas.':'Select a destination with a recognized country for automatic reference data.');
+}
+
 function practicalForTrip(tr){
-  const w=weatherForTrip(tr),p=w?.practical||tr.autoPractical||{};
+  const p=automaticPracticalForTrip(tr);
+  const unavailable=state.lang==='es'?'No disponible':'Unavailable';
   return {
-    currency:tr.localCurrency||p.currency||'No disponible',
-    language:tr.localLanguage||p.language||'No disponible',
-    emergency:tr.emergencyInfo||p.emergency||'No disponible',
-    power:tr.powerInfo||p.power||'No disponible',
-    country:p.country||w?.country||tr.detectedCountry||''
+    currency:tr.localCurrency||p.currency||unavailable,
+    language:tr.localLanguage||p.language||unavailable,
+    emergency:tr.emergencyInfo||p.emergency||unavailable,
+    power:tr.powerInfo||p.power||unavailable,
+    country:p.country||''
   };
 }
 function smartResolvedPlaceHtml(tr){
@@ -2193,6 +2318,7 @@ function clearDestinationSelection(){
 }
 function destinationInputChanged(){
   clearDestinationSelection();
+  refreshPracticalFormPreview();
   const results=document.getElementById('destination-results');
   if(results)results.innerHTML='';
 }
@@ -2245,6 +2371,7 @@ function selectDestinationCandidate(candidate,autoSave=false){
   set('f-dest-country',candidate.country||'');
   set('f-dest-lat',candidate.lat);
   set('f-dest-lon',candidate.lon);
+  refreshPracticalFormPreview();
   const results=document.getElementById('destination-results');
   if(results)results.innerHTML='';
   const chosen=document.getElementById('destination-selected');
@@ -4089,9 +4216,17 @@ function addEmergencyContact(tripId){
   state.emergencyContacts[tripId].push({id:uid(),name,phone});saveState();render();
 }
 function deleteEmergencyContact(tripId,id){state.emergencyContacts[tripId]=(state.emergencyContacts[tripId]||[]).filter(x=>x.id!==id);saveState();render();}
+function tripPracticalSummaryHtml(tr){
+  const es=state.lang==='es',p=practicalForTrip(tr);
+  const num=String(p.emergency||'').match(/^([0-9]{2,5})(?=\s|$)/)?.[1]||'';
+  const dial=num?`<a class="btn btn-ghost btn-sm" href="tel:${num}">${es?'Llamar':'Call'} ${num}</a>`:'';
+  return `<div class="panel" style="margin-top:12px"><div class="section-head"><div><h3 style="margin:0;color:var(--paper)">${es?'Información del destino':'Destination essentials'}</h3><p class="sub">${escapeHtml(p.country||tr.destinationCountry||'')} · ${es?'Referencia por país, disponible offline cuando está reconocida.':'Country reference, available offline when recognized.'}</p></div><button class="btn btn-ghost btn-sm" onclick="openTripForm('${tr.id}')">${es?'Editar':'Edit'}</button></div>
+    <div class="travel-os-grid"><div class="travel-os-card"><div class="k">🚨 ${es?'Emergencia':'Emergency'}</div><div class="v">${escapeHtml(p.emergency)}</div>${dial}</div><div class="travel-os-card"><div class="k">🔌 ${es?'Enchufe / energía':'Power / plug'}</div><div class="v">${escapeHtml(p.power)}</div></div></div>
+    <p class="field-hint" style="margin-top:8px">${es?'Referencia orientativa: verifica números oficiales y excepciones eléctricas antes de viajar. No sustituye servicios de emergencia.':'Reference only: verify official emergency numbers and local electrical exceptions before travel. Not an emergency service.'}</p></div>`;
+}
 function emergencyModeHtml(tr){
   const es=state.lang==='es',pr=practicalForTrip(tr),contacts=tripEmergencyContacts(tr.id),docs=(state.tripDocs[tr.id]||[]).filter(d=>d.important||d.type==='insurance'||d.type==='contact'||d.type==='address');
-  return `<div class="panel emergency-panel"><div class="section-head"><div><div class="booking-type">SOS</div><div class="emergency-big">${es?'Modo emergencia':'Emergency mode'}</div></div><button class="btn btn-ghost btn-sm" onclick="addEmergencyContact('${tr.id}')">+ ${es?'Contacto':'Contact'}</button></div><div class="travel-os-grid"><div class="travel-os-card"><div class="k">${es?'Emergencia local':'Local emergency'}</div><div class="v">${escapeHtml(pr.emergency)}</div></div><div class="travel-os-card"><div class="k">${es?'Alojamiento / destino':'Lodging / destination'}</div><div class="v">${escapeHtml((state.bookings[tr.id]||[]).find(b=>b.type==='hotel')?.location||tr.resolvedLocation||tr.destination)}</div></div></div>${contacts.length?`<div class="row-list" style="margin-top:10px">${contacts.map(c=>`<div class="li"><div class="main"><div class="t">${escapeHtml(c.name)}</div><div class="s">${escapeHtml(c.phone)}</div></div><a class="btn btn-brass btn-sm" href="tel:${encodeURIComponent(c.phone)}">☎</a><button class="del" onclick="deleteEmergencyContact('${tr.id}','${c.id}')">✕</button></div>`).join('')}</div>`:''}${docs.length?`<div class="row-list" style="margin-top:10px">${docs.map(d=>`<div class="li"><div class="main"><div class="t">⭐ ${escapeHtml(d.label)}</div><div class="s">${escapeHtml(d.value)}</div></div></div>`).join('')}</div>`:''}</div>`;
+  return `<div class="panel emergency-panel"><div class="section-head"><div><div class="booking-type">SOS</div><div class="emergency-big">${es?'Modo emergencia':'Emergency mode'}</div><div class="field-hint">${es?'Referencia del país. Confirma el número local.':'Country reference. Confirm the local number.'}</div></div><button class="btn btn-ghost btn-sm" onclick="addEmergencyContact('${tr.id}')">+ ${es?'Contacto':'Contact'}</button></div><div class="travel-os-grid"><div class="travel-os-card"><div class="k">${es?'Emergencia local':'Local emergency'}</div><div class="v">${escapeHtml(pr.emergency)}</div></div><div class="travel-os-card"><div class="k">${es?'Alojamiento / destino':'Lodging / destination'}</div><div class="v">${escapeHtml((state.bookings[tr.id]||[]).find(b=>b.type==='hotel')?.location||tr.resolvedLocation||tr.destination)}</div></div></div>${contacts.length?`<div class="row-list" style="margin-top:10px">${contacts.map(c=>`<div class="li"><div class="main"><div class="t">${escapeHtml(c.name)}</div><div class="s">${escapeHtml(c.phone)}</div></div><a class="btn btn-brass btn-sm" href="tel:${encodeURIComponent(c.phone)}">☎</a><button class="del" onclick="deleteEmergencyContact('${tr.id}','${c.id}')">✕</button></div>`).join('')}</div>`:''}${docs.length?`<div class="row-list" style="margin-top:10px">${docs.map(d=>`<div class="li"><div class="main"><div class="t">⭐ ${escapeHtml(d.label)}</div><div class="s">${escapeHtml(d.value)}</div></div></div>`).join('')}</div>`:''}</div>`;
 }
 function convertUnitLocal(){
   const kind=document.getElementById('unit-kind')?.value,val=Number(document.getElementById('unit-value')?.value||0),out=document.getElementById('unit-result');if(!out)return;
@@ -4246,7 +4381,7 @@ function jumpToTripDate(iso){
 function printTripBook(tripId){
   const tr=tripById(tripId);if(!tr)return;const es=state.lang==='es',days=state.itineraries[tripId]||[],books=state.bookings[tripId]||[],docs=state.tripDocs[tripId]||[],contacts=tripEmergencyContacts(tripId),pr=practicalForTrip(tr);
   const esc=s=>escapeHtml(s||'');
-  const body=`<!doctype html><html><head><meta charset="utf-8"><title>${esc(tr.name)} · Waypoint</title><style>body{font-family:Arial,sans-serif;color:#17212b;max-width:900px;margin:30px auto;padding:0 22px}h1{margin-bottom:4px}h2{margin-top:28px;border-bottom:1px solid #ddd;padding-bottom:5px}.item{padding:8px 0;border-bottom:1px solid #eee}.muted{color:#667;font-size:12px}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.card{border:1px solid #ddd;border-radius:8px;padding:10px}@media print{button{display:none}}</style></head><body><h1>${esc(tr.name)}</h1><div class="muted">${esc(tr.destinationCanonical||tr.destination)} · ${esc(tr.start)} → ${esc(tr.end)}</div><h2>${es?'Información práctica':'Practical info'}</h2><div class="grid"><div class="card">${es?'Zona horaria':'Timezone'}: ${esc(tripTimezone(tr))}</div><div class="card">${es?'Moneda':'Currency'}: ${esc(pr.currency)}</div><div class="card">${es?'Idioma':'Language'}: ${esc(pr.language)}</div><div class="card">${es?'Emergencia':'Emergency'}: ${esc(pr.emergency)}</div></div><h2>${es?'Itinerario':'Itinerary'}</h2>${days.map((d,i)=>`<h3>${es?'Día':'Day'} ${i+1} · ${esc(d.date)}</h3>${(d.activities||[]).map(a=>`<div class="item"><strong>${esc(formatTime12(a.time))} ${esc(a.title)}</strong><div class="muted">${esc(a.location)}${a.note?' · '+esc(a.note):''}</div></div>`).join('')}`).join('')}<h2>${es?'Reservas':'Bookings'}</h2>${books.map(b=>`<div class="item"><strong>${esc(b.title)}</strong><div class="muted">${esc(b.date)} ${esc(formatTime12(b.time))} · ${esc(b.confirmation)} · ${esc(b.location)}</div></div>`).join('')}<h2>${es?'Documentos y contactos':'Documents & contacts'}</h2>${docs.filter(d=>d.important).map(d=>`<div class="item"><strong>${esc(d.label)}</strong><div class="muted">${esc(d.value)}</div></div>`).join('')}${contacts.map(c=>`<div class="item"><strong>${esc(c.name)}</strong><div class="muted">${esc(c.phone)}</div></div>`).join('')}<script>window.onload=()=>window.print()<\/script></body></html>`;
+  const body=`<!doctype html><html><head><meta charset="utf-8"><title>${esc(tr.name)} · Waypoint</title><style>body{font-family:Arial,sans-serif;color:#17212b;max-width:900px;margin:30px auto;padding:0 22px}h1{margin-bottom:4px}h2{margin-top:28px;border-bottom:1px solid #ddd;padding-bottom:5px}.item{padding:8px 0;border-bottom:1px solid #eee}.muted{color:#667;font-size:12px}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.card{border:1px solid #ddd;border-radius:8px;padding:10px}@media print{button{display:none}}</style></head><body><h1>${esc(tr.name)}</h1><div class="muted">${esc(tr.destinationCanonical||tr.destination)} · ${esc(tr.start)} → ${esc(tr.end)}</div><h2>${es?'Información práctica':'Practical info'}</h2><div class="grid"><div class="card">${es?'Zona horaria':'Timezone'}: ${esc(tripTimezone(tr))}</div><div class="card">${es?'Moneda':'Currency'}: ${esc(pr.currency)}</div><div class="card">${es?'Idioma':'Language'}: ${esc(pr.language)}</div><div class="card">${es?'Emergencia':'Emergency'}: ${esc(pr.emergency)}</div><div class="card">${es?'Enchufe / energía':'Power / plug'}: ${esc(pr.power)}</div></div><h2>${es?'Itinerario':'Itinerary'}</h2>${days.map((d,i)=>`<h3>${es?'Día':'Day'} ${i+1} · ${esc(d.date)}</h3>${(d.activities||[]).map(a=>`<div class="item"><strong>${esc(formatTime12(a.time))} ${esc(a.title)}</strong><div class="muted">${esc(a.location)}${a.note?' · '+esc(a.note):''}</div></div>`).join('')}`).join('')}<h2>${es?'Reservas':'Bookings'}</h2>${books.map(b=>`<div class="item"><strong>${esc(b.title)}</strong><div class="muted">${esc(b.date)} ${esc(formatTime12(b.time))} · ${esc(b.confirmation)} · ${esc(b.location)}</div></div>`).join('')}<h2>${es?'Documentos y contactos':'Documents & contacts'}</h2>${docs.filter(d=>d.important).map(d=>`<div class="item"><strong>${esc(d.label)}</strong><div class="muted">${esc(d.value)}</div></div>`).join('')}${contacts.map(c=>`<div class="item"><strong>${esc(c.name)}</strong><div class="muted">${esc(c.phone)}</div></div>`).join('')}<script>window.onload=()=>window.print()<\/script></body></html>`;
   const w=window.open('','_blank');if(!w){showToast(es?'Permite ventanas emergentes para generar el Trip Book.':'Allow pop-ups to generate the Trip Book.');return;}w.document.write(body);w.document.close();
 }
 
@@ -4310,7 +4445,8 @@ function viewTodaySub(tr){
       <div class="timeline">${items.length?items.map(x=>`<div class="timeline-row ${timelineNowClass(date,x.time)}"><div class="timeline-time">${escapeHtml(formatTime12(x.time||''))||'—'}</div><div><div style="font-size:12px;font-weight:750">${x.kind==='booking'?'🎟 ':'• '}${escapeHtml(x.title)}</div>${x.location?`<div class="field-hint">📍 ${escapeHtml(x.location)}</div>`:''}${x.kind==='activity'?`<div class="activity-duration">${es?'Duración':'Duration'} ${x.durationMinutes||60} min${x.travelBufferMinutes?` · +${x.travelBufferMinutes} min ${es?'traslado':'travel'}`:''}</div>`:''}</div></div>`).join(''):`<div class="chat-empty">${es?'No hay actividades ni reservas para este día.':'No activities or bookings for this day.'}</div>`}</div>
     </div>
     ${weatherCardHtml(tr)}
-  </div>`;
+  </div>
+  ${tripPracticalSummaryHtml(tr)}`;
 }
 function tripPlaces(tr){
   const out=[]; const add=(name,kind,date='')=>{name=String(name||'').trim();if(name&&!out.some(x=>x.name.toLowerCase()===name.toLowerCase()))out.push({name,kind,date});};
@@ -5683,7 +5819,7 @@ function diagnosticsHtml(){
 function viewSettings(){
   const t=tt();
   return `
-    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v10.1.1</div></div></div>
+    <div class="section-head"><div><h2>${t.settings.title}</h2><p class="sub">${t.settings.sub}</p><div class="field-hint" style="margin-top:4px;">Waypoint v10.1.2</div></div></div>
     <div class="panel" style="background:linear-gradient(135deg,rgba(210,173,59,.08),rgba(255,255,255,.025));">
       <div class="section-head" style="margin:0">
         <div>
@@ -5741,7 +5877,7 @@ function viewSettings(){
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><a class="btn btn-ghost btn-sm" href="/privacy.html" target="_blank" rel="noopener">${state.lang==='es'?'Política de Privacidad':'Privacy Policy'}</a><a class="btn btn-ghost btn-sm" href="/terms.html" target="_blank" rel="noopener">${state.lang==='es'?'Términos de Uso':'Terms of Use'}</a></div>
     </div>
     <div class="panel"><h3 style="margin:0 0 8px;color:var(--paper)">☁ ${state.lang==='es'?'Offline y copias locales':'Offline & local backups'}</h3><p class="field-hint">${state.lang==='es'?'Waypoint guarda automáticamente hasta 5 copias recientes en este dispositivo.':'Waypoint automatically keeps up to 5 recent backups on this device.'}</p><div class="backup-list">${(state.offlineSnapshots||[]).map(s=>`<div class="backup-row"><span>${escapeHtml(new Date(s.at).toLocaleString())}</span><button class="btn btn-ghost btn-sm" onclick="restoreSnapshot('${s.id}')">${state.lang==='es'?'Restaurar':'Restore'}</button></div>`).join('')||`<div class="field-hint">${state.lang==='es'?'Aún no hay copias':'No backups yet'}</div>`}</div></div>
-    <div class="panel"><h3 style="margin:0 0 8px;font-size:16px;color:var(--paper);">🩺 ${state.lang==='es'?'Diagnóstico':'Diagnostics'}</h3><p class="field-hint">${state.lang==='es'?'Comprueba conexión, servidor e integraciones principales.':'Check connection, server and core integrations.'}</p>${diagnosticsHtml()}<div class="participant-last" style="margin-top:10px">Waypoint v10.1.1 · ${state.trips.length} ${state.lang==='es'?'viaje(s) local(es)':'local trip(s)'}</div><div style="margin-top:12px">${integrationStatusHtml()}</div></div>
+    <div class="panel"><h3 style="margin:0 0 8px;font-size:16px;color:var(--paper);">🩺 ${state.lang==='es'?'Diagnóstico':'Diagnostics'}</h3><p class="field-hint">${state.lang==='es'?'Comprueba conexión, servidor e integraciones principales.':'Check connection, server and core integrations.'}</p>${diagnosticsHtml()}<div class="participant-last" style="margin-top:10px">Waypoint v10.1.2 · ${state.trips.length} ${state.lang==='es'?'viaje(s) local(es)':'local trip(s)'}</div><div style="margin-top:12px">${integrationStatusHtml()}</div></div>
     <div class="panel">
       <h3 style="margin:0 0 6px;font-size:16px;color:var(--paper);">${t.settings.data}</h3>
       <p style="font-size:12px;color:var(--muted);margin:0 0 12px;">${t.settings.dataSub}</p>
@@ -5887,7 +6023,8 @@ function renderModal(){
       <div class="field"><label>${t.trip.passportExpiry}</label><input id="f-passport" type="date" value="${tr.passportExpiry||''}">
         <p class="field-hint">${t.trip.passportHint}</p></div>
       <div class="form-row"><div class="field"><label>${state.lang==='es'?'Zona horaria (IANA)':'Timezone (IANA)'}</label><input id="f-timezone" value="${escapeHtml(tr.timezone||'')}" placeholder="${state.lang==='es'?'Automático según destino':'Automatic from destination'}"></div><div class="field"><label>${state.lang==='es'?'Moneda local (opcional)':'Local currency (optional)'}</label><input id="f-local-currency" value="${escapeHtml(tr.localCurrency||'')}" placeholder="${state.lang==='es'?'Automática, ej. COP':'Automatic, e.g. COP'}"></div></div><div class="form-row"><div class="field"><label>${state.lang==='es'?'Idioma local / nota':'Local language / note'}</label><input id="f-language" value="${escapeHtml(tr.localLanguage||'')}" placeholder="${state.lang==='es'?'Automático según país':'Automatic from country'}"></div></div>
-      <div class="form-row"><div class="field"><label>${state.lang==='es'?'Emergencia':'Emergency'}</label><input id="f-emergency" value="${escapeHtml(tr.emergencyInfo||'')}" placeholder="911 / 123 / embassy"></div><div class="field"><label>${state.lang==='es'?'Enchufe / energía':'Power / plug'}</label><input id="f-power" value="${escapeHtml(tr.powerInfo||'')}" placeholder="Type A/B · 120V"></div></div>
+      <div class="form-row"><div class="field"><label>${state.lang==='es'?'Emergencia (automática)':'Emergency (automatic)'}</label><input id="f-emergency" value="${escapeHtml(tr.emergencyInfo||'')}" placeholder="${escapeHtml(automaticPracticalForTrip(tr).emergency||(state.lang==='es'?'Al seleccionar destino':'Select a destination'))}"><p class="field-hint">${state.lang==='es'?'Vacío = usar referencia del país; escribe aquí para corregirla.':'Leave blank to use the country reference; enter a value to override it.'}</p></div><div class="field"><label>${state.lang==='es'?'Enchufe / energía (automático)':'Power / plug (automatic)'}</label><input id="f-power" value="${escapeHtml(tr.powerInfo||'')}" placeholder="${escapeHtml(automaticPracticalForTrip(tr).power||(state.lang==='es'?'Al seleccionar destino':'Select a destination'))}"><p class="field-hint">${state.lang==='es'?'Vacío = usar el dato del país; algunos lugares varían.':'Leave blank for the country reference; regional exceptions may apply.'}</p></div></div>
+      <p class="field-hint" id="practical-autofill-status">${state.lang==='es'?'Se completan automáticamente según el país del destino cuando está reconocido.':'Filled automatically when the destination country is recognized.'}</p>
       <div class="field"><label>${t.trip.notes}</label><textarea id="f-notes">${escapeHtml(tr.notes||'')}</textarea></div>
       <div class="form-actions">
         <button class="btn btn-brass btn-block" onclick="saveTripForm()">${t.common.save}</button>
@@ -6160,7 +6297,7 @@ document.addEventListener('change', (e)=>{
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
   window.addEventListener('load',async()=>{
     try{
-      const reg=await navigator.serviceWorker.register('/service-worker.js?v=10.1.1',{updateViaCache:'none'});
+      const reg=await navigator.serviceWorker.register('/service-worker.js?v=10.1.2',{updateViaCache:'none'});
       await reg.update();
       let reloading=false;
       navigator.serviceWorker.addEventListener('controllerchange',()=>{
