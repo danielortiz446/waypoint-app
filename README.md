@@ -1,3 +1,5 @@
+# V10.3.7: Google Places (optional) supplies exact addresses to AI suggestions. See RELEASE-V10.3.7.md.
+
 > **Current release: Waypoint V10.3.0.** See [RELEASE-V10.3.0.md](RELEASE-V10.3.0.md) and [QA-V10.3.0.txt](QA-V10.3.0.txt) for actual feature status; older notes below are historical.
 
 # Waypoint 4.0 — Production Release

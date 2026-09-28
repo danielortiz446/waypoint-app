@@ -1,0 +1,9 @@
+Waypoint v10.3.6 — Wallet test report
+- node --check server.js: PASS
+- node --check public/service-worker.js: PASS
+- client inline JS parse via HTMLParser and node --check: PASS
+- existing suite: 61 PASS / 0 FAIL (version assertions updated to 10.3.6)
+- dedicated Wallet VM/WebCrypto tests: 4 PASS / 0 FAIL
+- legacy AES-GCM records read; details private by default; reveal/lock; encrypted create/update verified.
+- Browser-device QA and Xcode build not performed.
+- No native Face ID, no encrypted file attachments, no encrypted cross-device syncing.
