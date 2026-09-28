@@ -1,8 +1,10 @@
-# Waypoint V10.2.0 → iOS with Capacitor (development baseline)
+> **Current release: Waypoint V10.3.0.** See [RELEASE-V10.3.0.md](RELEASE-V10.3.0.md) and [QA-V10.3.0.txt](QA-V10.3.0.txt) for actual feature status; older notes below are historical.
+
+# Waypoint V10.3.0 → iOS with Capacitor (development baseline)
 
 ## Qué incluye y qué NO
 
-- El ZIP conserva la **aplicación web y servidor V10.2.0 intactos** en la raíz (GitHub / Railway actual). `ios-capacitor/` es un proyecto secundario para preparar una app iOS de prueba. No cambies el servicio ni el volumen de Railway.
+- El ZIP conserva la **aplicación web y servidor V10.3.0** en la raíz (GitHub / Railway actual). `ios-capacitor/` es un proyecto secundario para preparar una app iOS de prueba. No cambies el servicio ni el volumen de Railway.
 - La primera compilación iOS abre el **sitio HTTPS existente**, con las mismas rutas de API, chat y sincronización. Esto es una **envoltura de desarrollo**, NO una compilación App Store lista y NO es offline autónoma. Si Railway está caído o no hay internet, este modo depende de la página en caché y puede fallar.
 - No incluye un proyecto Xcode generado, porque `npx cap add ios` debe ejecutarse en macOS con dependencias instaladas. No instalé ni compilé dependencias nativas en este entorno.
 - No se incorporó AdMob aún: primero necesitas una app iOS nativa probada, los App ID y ad unit de AdMob, consentimiento UMP y una estrategia de publicidad que excluya Premium.
@@ -26,7 +28,7 @@ npm install
 
 ### Configura TU dominio real antes de sincronizar
 
-Escribe la URL HTTPS pública **sin barra final ni rutas**, por ejemplo `https://tu-servicio.up.railway.app`; el nombre es un ejemplo y debes usar el dominio real. Comprueba en el navegador `https://TU_DOMINIO/health` (la app debe indicar v10.2.0).
+Escribe la URL HTTPS pública **sin barra final ni rutas**, por ejemplo `https://tu-servicio.up.railway.app`; el nombre es un ejemplo y debes usar el dominio real. Comprueba en el navegador `https://TU_DOMINIO/health` (la app debe indicar v10.3.0).
 
 macOS Terminal (reemplaza la URL):
 

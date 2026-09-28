@@ -1,0 +1,13 @@
+Waypoint V10.3.0 — QA
+
+PASS: node --check server.js
+PASS: node --check public/service-worker.js
+PASS: node --check extracted inline public/index.html script
+PASS: npm test: 61 existing API smoke tests
+PASS: node scripts/ai-integration-test.js: 6 assertions — health, AI disabled status, disabled request, cross-origin, ads.txt, admin guard
+PASS: node scripts/ai-mocked-test.js: configured mode, simulated AI response, private field filtering, quota cut-off (no live provider charged)
+PASS: node scripts/wallet-crypto-test.js: ciphertext, wrong passphrase and tamper detection
+PASS: static checks for new UI/functions and service-worker version
+NOT TESTED: live OpenAI request using user's API key, deployed Railway site, App Store build, iPhone and push notifications.
+BLOCKER: graphical browser test attempt was blocked by environment administrator (net::ERR_BLOCKED_BY_ADMINISTRATOR). No claim of mobile browser E2E success.
+LIMITATION: direct real-time flight tracking, native Face ID encrypted vault, APNs push, WidgetKit/ActivityKit, production iOS build, and AdMob still require implementation/infrastructure.

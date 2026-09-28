@@ -1,0 +1,22 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync(require('node:path').resolve(__dirname,'../public/index.html'),'utf8');
+const code=source.slice(source.indexOf('function vaultBytesToB64'),source.indexOf('async function unlockPrivateVault'));
+assert(code.includes('async function vaultSeal'));
+const context=vm.createContext({crypto:require('node:crypto').webcrypto,TextEncoder,TextDecoder,Uint8Array,btoa,atob,JSON});
+vm.runInContext(code,context);
+(async()=>{
+ const salt=require('node:crypto').webcrypto.getRandomValues(new Uint8Array(16));
+ const password='a long strong passphrase 2026';
+ const key=await context.vaultDeriveKey(password,salt);
+ const records=[{label:'Private note',value:'Secret travel information'}];
+ const sealed=await context.vaultSeal(key,salt,records);
+ assert(!JSON.stringify(sealed).includes('Secret travel'));
+ const decoded=JSON.parse(new TextDecoder().decode(await require("node:crypto").webcrypto.subtle.decrypt({name:'AES-GCM',iv:context.vaultB64ToBytes(sealed.iv)},key,context.vaultB64ToBytes(sealed.ciphertext))));
+ assert.equal(decoded[0].value,records[0].value);console.log('PASS AES-GCM ciphertext does not reveal plaintext and decrypts correctly');
+ const wrongKey=await context.vaultDeriveKey('incorrect user passphrase',salt);
+ await assert.rejects(()=>require("node:crypto").webcrypto.subtle.decrypt({name:'AES-GCM',iv:context.vaultB64ToBytes(sealed.iv)},wrongKey,context.vaultB64ToBytes(sealed.ciphertext)));
+ console.log('PASS incorrect passphrase cannot decrypt vault');
+ const damaged=context.vaultB64ToBytes(sealed.ciphertext);damaged[0]^=1;
+ await assert.rejects(()=>require("node:crypto").webcrypto.subtle.decrypt({name:'AES-GCM',iv:context.vaultB64ToBytes(sealed.iv)},key,damaged));
+ console.log('PASS modified ciphertext fails integrity check');
+})().catch(e=>{console.error(e);process.exitCode=1});
