@@ -1,10 +1,14 @@
-# Waypoint 10.6.0 — AI batch planner, place cards, shared trip RSVPs, reminders, Wallet filtering, offline summary and optional AirLabs flight status. See RELEASE-V10.5.3.md.
+# Waypoint V10.9.2 — Web, iOS & Android
 
-# V10.3.9: Additional AI ideas, bilingual shared invitation and trip-purpose selection. See RELEASE-V10.3.9.md.
-# V10.3.8: Gemini ideas by theme, accessible interactive AI cards, international emergency-contact country codes, privacy/terms updated (v1.3), optional Google Places addresses. See RELEASE-V10.3.8.md.
-# V10.3.7: Google Places (optional) supplies exact addresses to AI suggestions. See RELEASE-V10.3.7.md.
+Latest release notes: [RELEASE-V10.9.2.md](RELEASE-V10.9.2.md). Historical changes: [CHANGELOG.md](CHANGELOG.md).
 
-> **Current release: Waypoint V10.3.0.** See [RELEASE-V10.3.0.md](RELEASE-V10.3.0.md) and [QA-V10.3.0.txt](QA-V10.3.0.txt) for actual feature status; older notes below are historical.
+# Waypoint 10.6.0 — AI batch planner, place cards, shared trip RSVPs, reminders, Wallet filtering, offline summary and optional AirLabs flight status. See CHANGELOG.md.
+
+# V10.3.9: Additional AI ideas, bilingual shared invitation and trip-purpose selection. See CHANGELOG.md.
+# V10.3.8: Gemini ideas by theme, accessible interactive AI cards, international emergency-contact country codes, privacy/terms updated (v1.3), optional Google Places addresses. See CHANGELOG.md.
+# V10.3.7: Google Places (optional) supplies exact addresses to AI suggestions. See CHANGELOG.md.
+
+> **Current release: Waypoint V10.9.2.** See [RELEASE-V10.9.2.md](RELEASE-V10.9.2.md) and [CHANGELOG.md](CHANGELOG.md).
 
 # Waypoint 4.0 — Production Release
 
@@ -546,25 +550,33 @@ The existing `WAYPOINT_DATA_FILE=/data/waypoint-sync-data.json` and `WAYPOINT_FI
 - Admin-only diagnostics are available after login at `/admin` → **System** → **Run diagnostics**. The technical status endpoint `/api/admin/system` remains protected with the existing administrator session and now includes nonsecret provider configuration flags.
 - No changes to traveler data schemas, trip sharing credentials, persistent `/data` volume, or AdSense publisher identification / `ads.txt`. Advertising is not enabled merely by verifying the site.
 
-See RELEASE-V10.5.3.md for the clean trip-purpose selector.
+See CHANGELOG.md for the clean trip-purpose selector.
 
 ## V10.5.3
-See RELEASE-V10.5.3.md for navigation/UX changes.
+See CHANGELOG.md for navigation/UX changes.
 
 
 ## V10.6.0
-See `RELEASE-V10.6.0.md` for finished features and explicit pending items.
+See `CHANGELOG.md` for finished features and explicit pending items.
 
 ## V10.6.1
-The trip menu's **Recuerdos** tab is now correctly labeled **Resumen del viaje**. Receipt photo reading uses the configured Gemini API when an optional custom OCR provider is absent, with review-before-save, image size/type limits, clear errors and updated privacy notice. See `RELEASE-V10.6.1.md`.
+The trip menu's **Recuerdos** tab is now correctly labeled **Resumen del viaje**. Receipt photo reading uses the configured Gemini API when an optional custom OCR provider is absent, with review-before-save, image size/type limits, clear errors and updated privacy notice. See `CHANGELOG.md`.
 
 ## Waypoint 10.7.0 — Web billing and Android development scaffold
-See [`RELEASE-V10.7.0.md`](RELEASE-V10.7.0.md) for completed work/limitations and [`BILLING-ADS-ANDROID-SETUP.md`](BILLING-ADS-ANDROID-SETUP.md) for exact Stripe/AdSense/AdMob and Android setup. **Only the Stripe web checkout/webhook is integrated**; native store purchases and production ads still require provider onboarding, consent, receipt validation and native build/testing. Do not mark them live without these conditions.
+See [`CHANGELOG.md`](CHANGELOG.md) for completed work/limitations and [`BILLING-ADS-ANDROID-SETUP.md`](BILLING-ADS-ANDROID-SETUP.md) for exact Stripe/AdSense/AdMob and Android setup. **Only the Stripe web checkout/webhook is integrated**; native store purchases and production ads still require provider onboarding, consent, receipt validation and native build/testing. Do not mark them live without these conditions.
 
 ## Waypoint 10.8.2 — Free / Premium
 
-Beneficios verificables a nivel de servidor: 4/18 consultas diarias de Gemini, 1/8 lecturas OCR, planificación completa con un clic y adición múltiple en Premium. Ver [`PREMIUM-TEST-GUIDE.md`](PREMIUM-TEST-GUIDE.md) y [`RELEASE-V10.8.2.md`](RELEASE-V10.8.2.md). El límite global de IA sigue siendo independiente. Publicidad de producción y compras móviles siguen pendientes.
+Beneficios verificables a nivel de servidor: 4/18 consultas diarias de Gemini, 1/8 lecturas OCR, planificación completa con un clic y adición múltiple en Premium. Ver [`PREMIUM-TEST-GUIDE.md`](PREMIUM-TEST-GUIDE.md) y [`CHANGELOG.md`](CHANGELOG.md). El límite global de IA sigue siendo independiente. Publicidad de producción y compras móviles siguen pendientes.
 
 ## Waypoint V10.8.2 — Beneficios explicados y auditoría Premium
 
-Consulta [RELEASE-V10.8.2.md](RELEASE-V10.8.2.md). Incluye una comparativa bilingüe de planes en la aplicación y una auditoría de viaje basada en Gemini con acceso Premium verificado por el servidor.
+Consulta [CHANGELOG.md](CHANGELOG.md). Incluye una comparativa bilingüe de planes en la aplicación y una auditoría de viaje basada en Gemini con acceso Premium verificado por el servidor.
+
+
+## Version 10.9.0
+See `RELEASE-V10.9.0.md` for the scoped recovery upgrade, automated tests, deployment and unimplemented roadmap items.
+
+
+## Version 10.9.1 — portable trips and recovery security
+See `RELEASE-V10.9.1.md`. Trip backups cannot carry account entitlements, old JSON backups are accepted after format checks, and account recovery has a temporary attempt limit. Run `npm run test:backup` for these checks.

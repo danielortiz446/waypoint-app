@@ -1,6 +1,6 @@
 {
   "name": "waypoint-trip-planner",
-  "version": "10.8.3",
+  "version": "10.9.4",
   "private": true,
   "description": "Waypoint production web/PWA and live collaboration server",
   "scripts": {
@@ -9,7 +9,12 @@
     "test:validation": "node scripts/phase-1052-validation-test.js",
     "test:phase1040": "node scripts/phase-1040-ui-test.js && node scripts/phase-1040-flight-test.js && node scripts/ai-mocked-test.js && node scripts/ai-suggestions-test.js && node scripts/test-address-lookup.js && node scripts/wallet-crypto-test.js && node scripts/feature-test-1038.js",
     "test:ux": "node scripts/phase-1053-ux-test.js",
-    "test:phase1060": "node scripts/phase-1060-test.js"
+    "test:phase1060": "node scripts/phase-1060-test.js",
+    "test:recovery": "node scripts/recovery-1090-test.js",
+    "test:backup": "node scripts/backup-security-1091-test.js",
+    "test:encrypted-backup": "node scripts/encrypted-backup-1092-test.js",
+    "test:sync-safety": "node scripts/sync-safety-1093-test.js",
+    "test:timezone": "node scripts/timezone-1094-test.js"
   },
   "engines": {
     "node": ">=18"

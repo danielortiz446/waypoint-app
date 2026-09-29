@@ -36,6 +36,27 @@ const FILE_ROOT=process.env.WAYPOINT_FILE_DIR||path.join(path.dirname(DATA_FILE)
 const ADMIN_DATA_FILE=process.env.WAYPOINT_ADMIN_DATA_FILE||path.join(path.dirname(DATA_FILE),'waypoint-admin-data.json');
 const adminSessions=new Map();
 const adminLoginAttempts=new Map();
+// Recovery attempts are bounded by both remote address and Waypoint ID. The
+// recovery secret is random, but throttling also protects the registration API.
+const recoveryAttempts=new Map();
+function recoveryAllowed(req,waypointId){
+  const now=Date.now(),windowMs=15*60*1000;
+  const ip=String(req.socket.remoteAddress||'unknown');
+  const keys=['ip:'+ip,'id:'+String(waypointId||'').slice(0,40)];
+  for(const key of keys){
+    const row=(recoveryAttempts.get(key)||[]).filter(at=>now-at<windowMs);
+    if(row.length>=8)return false;
+  }
+  for(const key of keys){
+    const row=(recoveryAttempts.get(key)||[]).filter(at=>now-at<windowMs);
+    row.push(now);recoveryAttempts.set(key,row);
+  }
+  if(recoveryAttempts.size>15000){
+    for(const [key,row] of recoveryAttempts)if(row.every(at=>now-at>=windowMs))recoveryAttempts.delete(key);
+  }
+  return true;
+}
+
 function adminLoginAllowed(req){
   const ip=String(req.headers['x-forwarded-for']||req.socket.remoteAddress||'unknown').split(',')[0].trim();
   const now=Date.now(),windowMs=10*60*1000;
@@ -56,7 +77,8 @@ function defaultAdminData(){
       betaFeatures:false
     },
     adminLog:[],
-    premiumUsage:{}
+    premiumUsage:{},
+    aiPlanLimits:{free:{ai:4,ocr:1},premium:{ai:18,ocr:8}}
   };
 }
 function loadAdminData(){
@@ -69,7 +91,8 @@ function loadAdminData(){
       promoCodes:raw.promoCodes&&typeof raw.promoCodes==='object'?raw.promoCodes:{},
       featureFlags:{...defaultAdminData().featureFlags,...(raw.featureFlags||{})},
       adminLog:Array.isArray(raw.adminLog)?raw.adminLog:[],
-      premiumUsage:raw.premiumUsage&&typeof raw.premiumUsage==='object'?raw.premiumUsage:{}
+      premiumUsage:raw.premiumUsage&&typeof raw.premiumUsage==='object'?raw.premiumUsage:{},
+      aiPlanLimits:raw.aiPlanLimits&&typeof raw.aiPlanLimits==='object'?raw.aiPlanLimits:defaultAdminData().aiPlanLimits
     };
   }catch(e){return defaultAdminData();}
 }
@@ -639,12 +662,25 @@ async function getWaypointFlight(number){
 }
 // Verified entitlements and daily counters. Credentials are checked on every paid API call.
 // Counts are stored on the existing Railway volume; never rely on a browser Premium badge.
-const PREMIUM_LIMITS={free:{ai:4,ocr:1},premium:{ai:18,ocr:8}};
+const PREMIUM_DEFAULT_LIMITS={free:{ai:4,ocr:1},premium:{ai:18,ocr:8}};
+function aiPlanLimits(){
+  const stored=adminData.aiPlanLimits||{};
+  const out={};
+  for(const plan of ['free','premium']){
+    out[plan]={};
+    for(const kind of ['ai','ocr']){
+      const n=Number(stored?.[plan]?.[kind]);
+      out[plan][kind]=Number.isInteger(n)&&n>=0&&n<=1000?n:PREMIUM_DEFAULT_LIMITS[plan][kind];
+    }
+  }
+  return out;
+}
+function tomorrowUtc(){const d=new Date();d.setUTCHours(24,0,0,0);return d.toISOString();}
 function premiumContext(req){
   const user=clientAuth(req);
   const plan=entitlementForUser(user).plan;
   const key=user?'user:'+user.waypointId:'guest:'+hash(String(req.socket.remoteAddress||'unknown')).slice(0,24);
-  return {user,plan,key,limits:PREMIUM_LIMITS[plan]};
+  return {user,plan,key,limits:aiPlanLimits()[plan]};
 }
 function premiumUsage(req,kind,consume=false){
   const ctx=premiumContext(req),today=new Date().toISOString().slice(0,10);
@@ -656,7 +692,7 @@ function premiumUsage(req,kind,consume=false){
   const used=Math.max(0,Number(row[kind]||0));
   const limit=ctx.limits[kind];
   if(consume&&used<limit){row[kind]=used+1;persistAdminData();}
-  return {plan:ctx.plan,used,limit,remaining:Math.max(0,limit-used),allowed:used<limit,fullPlanner:ctx.plan==='premium',batchAdd:ctx.plan==='premium'};
+  return {plan:ctx.plan,used:consume&&used<limit?used+1:used,limit,remaining:Math.max(0,limit-(consume&&used<limit?used+1:used)),allowed:(consume?used+1:used)<limit,resetAt:tomorrowUtc(),fullPlanner:ctx.plan==='premium',batchAdd:ctx.plan==='premium'};
 }
 const aiRequestsByIp=new Map();
 let aiToday='',aiDailyUsed=0;
@@ -726,7 +762,7 @@ const server=http.createServer(async(req,res)=>{
       const ent=premiumUsage(req,'ai');
       if(!['standard','full_plan','trip_audit'].includes(mode))return json(res,400,{error:'invalid_ai_mode'});
       if((mode==='full_plan'||mode==='trip_audit')&&!ent.fullPlanner)return json(res,403,{error:'premium_required',feature:mode});
-      if(!ent.allowed)return json(res,429,{error:'premium_daily_limit',feature:'ai',limit:ent.limit});
+      if(!ent.allowed)return json(res,429,{error:'premium_daily_limit',feature:'ai',limit:ent.limit,remaining:0,resetAt:ent.resetAt});
       if(!aiAllowed(req))return json(res,429,{error:'ai_usage_limit'});
       premiumUsage(req,'ai',true);
       const safe={destination:String(trip.destination||'').slice(0,130),start:String(trip.start||'').slice(0,18),end:String(trip.end||'').slice(0,18),currency:String(trip.currency||'').slice(0,5),tripPurpose:String(trip.tripPurpose||'').slice(0,90),budget:Number.isFinite(Number(trip.budget))?Math.max(0,Math.min(10000000,Number(trip.budget))):undefined,days:Array.isArray(trip.days)?trip.days.slice(0,12).map(d=>({date:String(d.date||'').slice(0,18),activities:(Array.isArray(d.activities)?d.activities:[]).slice(0,7).map(a=>String(a||'').slice(0,95))})):[]};
@@ -775,7 +811,7 @@ const server=http.createServer(async(req,res)=>{
         return json(res,502,{error:'ai_temporarily_unavailable'});
       }
     }
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'10.8.3',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'10.9.4',time:new Date().toISOString()});
 
     if(req.method==='GET'&&u.pathname==='/api/fx/rate'){
       const from=String(u.searchParams.get('from')||'').trim().toUpperCase();
@@ -976,7 +1012,7 @@ const server=http.createServer(async(req,res)=>{
       try{imageBuffer=Buffer.from(match[2],'base64');}catch(_){return json(res,400,{enabled:true,error:'invalid_image'});}
       if(!imageBuffer.length||imageBuffer.length>3_000_000)return json(res,400,{enabled:true,error:'invalid_image'});
       const ent=premiumUsage(req,'ocr');
-      if(!ent.allowed)return json(res,429,{enabled:true,error:'premium_daily_limit',feature:'ocr',limit:ent.limit});
+      if(!ent.allowed)return json(res,429,{enabled:true,error:'premium_daily_limit',feature:'ocr',limit:ent.limit,remaining:0,resetAt:ent.resetAt});
       if(!aiAllowed(req))return json(res,429,{enabled:true,error:'ai_usage_limit'});
       premiumUsage(req,'ocr',true);
       try{
@@ -1054,6 +1090,36 @@ const server=http.createServer(async(req,res)=>{
       }
       return json(res,200,{ok:true,user:publicUser(existing)});
     }
+    /* Recovery code is displayed only once, hashed at rest, rotated when used.
+       Recovery replaces the former device credentials (one active device per ID).
+       It restores the Premium entitlement, not local-only trips or encrypted vaults. */
+    if(req.method==='POST'&&u.pathname==='/api/client/recovery-code'){
+      const user=clientAuth(req);
+      if(!user)return json(res,401,{error:'invalid_client_credentials'});
+      const recoveryCode=crypto.randomBytes(32).toString('hex').toUpperCase();
+      user.recoveryHash=hash(recoveryCode);
+      user.recoveryIssuedAt=new Date().toISOString();
+      persistAdminData();
+      return json(res,200,{ok:true,recoveryCode,warning:'Store offline. This code is displayed once and replaces any previous recovery code.'},{'Cache-Control':'no-store'});
+    }
+    if(req.method==='POST'&&u.pathname==='/api/client/recover'){
+      const body=await readBody(req);
+      const waypointId=String(body.waypointId||'').trim().toUpperCase().slice(0,40);
+      const recoveryCode=String(body.recoveryCode||'').trim().toUpperCase();
+      const clientId=String(body.clientId||'').trim();
+      const clientSecret=String(body.clientSecret||'').trim();
+      if(!/^WP-[A-Z0-9-]{8,20}$/.test(waypointId)||!/^[A-F0-9]{64}$/.test(recoveryCode)||
+         !/^wc-[a-f0-9]{36}$/.test(clientId)||!/^[a-f0-9]{64}$/.test(clientSecret))return json(res,400,{error:'invalid_recovery_request'});
+      if(!recoveryAllowed(req,waypointId))return json(res,429,{error:'recovery_too_many_attempts',retryAfterSeconds:900},{'Retry-After':'900','Cache-Control':'no-store'});
+      const user=adminData.users[waypointId];
+      if(!user?.recoveryHash||!timingSafeTextEqual(user.recoveryHash,hash(recoveryCode)))return json(res,403,{error:'invalid_recovery_code'},{'Cache-Control':'no-store'});
+      if(Object.values(adminData.users).some(x=>x!==user&&x.clientId===clientId))return json(res,409,{error:'client_id_already_used'});
+      user.clientId=clientId;user.clientSecretHash=hash(clientSecret);
+      user.recoveryHash=null;user.recoveryIssuedAt=null;
+      user.lastSeenAt=new Date().toISOString();
+      adminAudit('client_recovered',{waypointId});
+      return json(res,200,{ok:true,user:publicUser(user)},{'Cache-Control':'no-store'});
+    }
     if(req.method==='GET'&&u.pathname==='/api/client/status'){
       const user=clientAuth(req);
       if(!user)return json(res,401,{error:'invalid client credentials'});
@@ -1110,6 +1176,24 @@ const server=http.createServer(async(req,res)=>{
       return json(res,200,{ok:true,email:s.email,expiresAt:new Date(s.expiresAt).toISOString()});
     }
 
+    /* ===================== Admin-controlled daily Gemini/OCR quotas ===================== */
+    if(u.pathname==='/api/admin/ai-limits'&&req.method==='GET'){
+      if(!requireAdmin(req,res))return;
+      return json(res,200,{limits:aiPlanLimits(),resetTimezone:'UTC'});
+    }
+    if(u.pathname==='/api/admin/ai-limits'&&req.method==='PUT'){
+      const admin=requireAdmin(req,res);if(!admin)return;
+      const body=await readBody(req);
+      const next={free:{},premium:{}};
+      for(const plan of ['free','premium'])for(const kind of ['ai','ocr']){
+        const n=body?.limits?.[plan]?.[kind];
+        if(typeof n!=='number'||!Number.isInteger(n)||n<0||n>1000)return json(res,400,{error:'invalid_ai_limit',plan,kind});
+        next[plan][kind]=n;
+      }
+      adminData.aiPlanLimits=next;persistAdminData();
+      adminAudit('ai_limits_updated',{admin:admin.email,limits:next});
+      return json(res,200,{ok:true,limits:aiPlanLimits()});
+    }
     /* ===================== Admin dashboard / users ===================== */
     if(req.method==='GET'&&u.pathname==='/api/admin/dashboard'){
       const s=requireAdmin(req,res);if(!s)return;
@@ -1229,7 +1313,7 @@ const server=http.createServer(async(req,res)=>{
     if(req.method==='GET'&&u.pathname==='/api/admin/system'){
       const s=requireAdmin(req,res);if(!s)return;
       return json(res,200,{
-        version:'10.8.3',
+        version:'10.9.4',
         uptimeSeconds:Math.round(process.uptime()),
         node:process.version,
         dataFile:DATA_FILE,
@@ -1585,4 +1669,4 @@ const server=http.createServer(async(req,res)=>{
   }
 });
 
-server.listen(PORT,HOST,()=>console.log(`Waypoint 10.8.3 listening on http://${HOST}:${PORT}`));
+server.listen(PORT,HOST,()=>console.log(`Waypoint 10.9.4 listening on http://${HOST}:${PORT}`));

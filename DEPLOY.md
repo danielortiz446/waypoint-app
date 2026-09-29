@@ -1,4 +1,4 @@
-> **Current release: Waypoint V10.3.0.** See [RELEASE-V10.3.0.md](RELEASE-V10.3.0.md) and [QA-V10.3.0.txt](QA-V10.3.0.txt) for actual feature status; older notes below are historical.
+> **Current release: Waypoint V10.8.3.** See [RELEASE-V10.8.3.md](RELEASE-V10.8.3.md), [QA-V10.8.3.txt](QA-V10.8.3.txt), and [CHANGELOG.md](CHANGELOG.md).
 
 # Deploy Waypoint to production
 

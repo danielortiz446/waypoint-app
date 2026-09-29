@@ -100,6 +100,14 @@ pre{white-space:pre-wrap;word-break:break-word;background:rgba(0,0,0,.18);paddin
 
     <section id="tab-dashboard">
       <div id="metrics" class="grid"></div>
+      <div class="card" style="margin-top:12px"><h3>Gemini / OCR daily quotas</h3><p class="sub">Server-enforced per verified Waypoint ID (anonymous users share a connection-address bucket). Resets daily at 00:00 UTC. Changes take effect immediately.</p>
+        <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">
+          <div class="field"><label>Free AI / day</label><input id="limit-free-ai" type="number" min="0" max="1000" step="1"></div>
+          <div class="field"><label>Premium AI / day</label><input id="limit-premium-ai" type="number" min="0" max="1000" step="1"></div>
+          <div class="field"><label>Free OCR / day</label><input id="limit-free-ocr" type="number" min="0" max="1000" step="1"></div>
+          <div class="field"><label>Premium OCR / day</label><input id="limit-premium-ocr" type="number" min="0" max="1000" step="1"></div>
+        </div><button class="btn primary" onclick="saveAiLimits()">Save daily limits</button><p id="limitsStatus" class="sub" aria-live="polite"></p>
+      </div>
       <div class="two" style="margin-top:12px">
         <div class="card"><h3>Services</h3><div id="services"></div></div>
         <div class="card"><h3>Privacy boundary</h3><p class="sub">This panel manages Waypoint IDs, entitlement status, promo codes, feature flags, operational metrics, and admin actions. It intentionally does not expose itinerary, chat, document, or expense contents from user trips.</p></div>
@@ -216,8 +224,27 @@ async function loadDashboard(){
       ['Shared trips',d.sharedTrips],['Promo codes',d.promoCodes],['File storage',fmtBytes(d.fileStorageBytes)]
     ];
     $('#metrics').innerHTML=metrics.map(([k,v])=>`<div class="metric"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`).join('');
+    loadAiLimits();
     $('#services').innerHTML=Object.entries(d.services||{}).map(([k,v])=>`<div class="row"><div class="row-main"><div class="name">${esc(k)}</div></div><span class="pill ${v?'ok':'off'}">${v?'ON':'OFF'}</span></div>`).join('');
   }catch(e){if(e.status===401)location.reload()}
+}
+async function loadAiLimits(){
+ try{
+   const d=await api('/api/admin/ai-limits');
+   for(const plan of ['free','premium'])for(const kind of ['ai','ocr'])$('#limit-'+plan+'-'+kind).value=d.limits[plan][kind];
+ }catch(e){$('#limitsStatus').textContent=e.message;}
+}
+async function saveAiLimits(){
+ const limits={free:{},premium:{}};
+ for(const plan of ['free','premium'])for(const kind of ['ai','ocr']){
+   const raw=$('#limit-'+plan+'-'+kind).value.trim();const n=Number(raw);
+   if(raw===''||!Number.isInteger(n)||n<0||n>1000){$('#limitsStatus').textContent='Enter whole numbers between 0 and 1000.';return;}
+   limits[plan][kind]=n;
+ }
+ try{
+   await api('/api/admin/ai-limits',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({limits})});
+   $('#limitsStatus').textContent='Daily limits saved successfully.';
+ }catch(e){$('#limitsStatus').textContent=e.message;}
 }
 async function loadUsers(){
   try{
