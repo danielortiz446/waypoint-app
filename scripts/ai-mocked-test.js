@@ -2,7 +2,7 @@ const {spawn}=require('node:child_process'),assert=require('node:assert/strict')
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
 const folder=fs.mkdtempSync(path.join(os.tmpdir(),'wp-ai-mock-'));
 const port=18778,base=`http://127.0.0.1:${port}`;
-const child=spawn(process.execPath,['--require',path.resolve(__dirname,'mock-ai-provider.cjs'),'server.js'],{cwd:path.resolve(__dirname,'..'),env:{...process.env,HOST:'127.0.0.1',PORT:String(port),WAYPOINT_DATA_FILE:path.join(folder,'rooms.json'),WAYPOINT_ADMIN_DATA_FILE:path.join(folder,'admin.json'),WAYPOINT_AI_ENABLED:'true',OPENAI_API_KEY:'fake-key',WAYPOINT_AI_DAILY_LIMIT:'2'},stdio:'ignore'});
+const child=spawn(process.execPath,['--require',path.resolve(__dirname,'mock-ai-provider.cjs'),'server.js'],{cwd:path.resolve(__dirname,'..'),env:{...process.env,HOST:'127.0.0.1',PORT:String(port),WAYPOINT_DATA_FILE:path.join(folder,'rooms.json'),WAYPOINT_ADMIN_DATA_FILE:path.join(folder,'admin.json'),WAYPOINT_AI_ENABLED:'true',GEMINI_API_KEY:'fake-gemini-key',WAYPOINT_AI_DAILY_LIMIT:'2'},stdio:'ignore'});
 const body={question:'Sugiere actividades para tres días',trip:{destination:'Villavicencio',start:'2026-10-20',end:'2026-10-23',docs:'TOP_SECRET_TEST_MARKER',days:[{date:'2026-10-20',activities:['City tour']} ]}};
 async function main(){try{
  let ok=false;for(let i=0;i<70;i++){try{ok=(await fetch(base+'/health')).ok;if(ok)break;}catch(e){}await new Promise(r=>setTimeout(r,60));}assert(ok);

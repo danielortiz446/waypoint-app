@@ -1,0 +1,8 @@
+Waypoint V10.5.0 QA summary
+PASS: Existing Node server smoke suite (all tests).
+PASS: Existing v10.4.0 targeted suites: AI selection; shared RSVP; Wallet encryption; international emergency numbers; Google Places mocking; Gemini mocking; AirLabs mocking.
+PASS: v10.5.0 readiness calculation: 6 conditions; warning triggers for overspending, undated bookings, unchecked baggage, unscheduled activities; bilingual rendering; travel mode navigation.
+PASS: JavaScript syntax for server.js, service-worker.js, inline browser app and admin.html.
+PASS: ZIP CRC/structure check.
+UNVERIFIED: Live Google Gemini/Places/AirLabs, real Apple iPhone, Xcode build, browser visual end-to-end, Apple and Google store submission.
+NO CLAIM: Native push, native biometric Wallet, AdMob, payments, background flight watches, widgets or Live Activities are finished.

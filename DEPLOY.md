@@ -162,3 +162,20 @@ Commit the `public/index.html`, `public/ads.txt`, `server.js`, `public/service-w
 ### V10.1.5 — private diagnostics
 
 Deploy the files to the **existing** GitHub repository and Railway service. Verify `/health` returns `10.1.5`, `/ads.txt` shows the authorized publisher line, and the Settings view no longer contains diagnostics. To run diagnostics, authenticate at `/admin`, then open **System** and choose **Run diagnostics**. `/api/admin/system` must return HTTP 401 without a logged-in admin session. Preserve `/data` and all existing Railway environment variables.
+
+## Waypoint V10.5.0 additions (same Railway service)
+
+1. Replace files in your existing GitHub repository; do **not** create another Railway project.
+2. Keep `WAYPOINT_DATA_FILE`, `WAYPOINT_ADMIN_DATA_FILE`, `/data` volume and all existing variables unchanged. Do not clear browser/PWA local storage.
+3. Confirm `https://YOUR-DOMAIN/health` reports `10.5.0` and `https://YOUR-DOMAIN/ads.txt` still contains your Google publisher line.
+4. Google Gemini remains the only AI provider. `GEMINI_API_KEY`, `WAYPOINT_AI_ENABLED`, `WAYPOINT_AI_MODEL` and optional `GOOGLE_PLACES_API_KEY` work as before.
+5. **Optional flight lookup:** create an AirLabs key for the documented Flight Information API at `https://www.airlabs.co/docs/flight`, then add the secret `AIRLABS_API_KEY` in Railway Variables. Optional `WAYPOINT_FLIGHT_DAILY_LIMIT=40` bounds upstream requests each UTC day. Never paste your key into the repository or public HTML.
+6. Test AI: generate named venues, adjust dates/times, check/uncheck selection, confirm batch addition, confirm no duplicates in itinerary.
+7. Test sharing: on an editable shared trip, open itinerary and RSVP; ask another participant to verify updates after sync. Concurrent edits to the same activity can conflict; coordinate edits.
+8. Test flight on a saved flight using **Current status**. AirLabs returns the closest known flight number: verify its actual operation date against your booking; this is not an automatic flight alert.
+9. Test encrypted Wallet category filter, offline summary text download, local reminders 10/30/60/120-minute settings, bilingual legal acceptance v1.4.
+10. iOS folder remains the existing Capacitor **development shell**, not a compiled native app. Compile/test with Xcode on macOS; Face ID, native push, widgets and Live Activities are future phases.
+
+### Tests run in the build environment
+
+`npm test` (61 existing smoke checks), `npm run test:phase1040` (mocked Gemini/Places/AirLabs, wallet crypto and UI logic), syntax checks for server, service worker and browser code, ZIP integrity check. Browser navigation to localhost was blocked by the test environment; no successful visual E2E run or real-provider/Apple test is claimed.

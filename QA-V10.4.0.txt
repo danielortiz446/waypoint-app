@@ -1,0 +1,16 @@
+Waypoint V10.4.0 QA summary
+
+PASS: 61 baseline Node server smoke checks.
+PASS: AI user-selected batch add; date validation, duplicate prevention and verified-address reuse.
+PASS: shared activity RSVP choice and toggle logic.
+PASS: wallet category filter/offline summary UI existence.
+PASS: AirLabs integration using mocked upstream responses: absent key 503, configured status sanitized, caching and invalid flight-number rejection.
+PASS: mocked Gemini response, privacy-scrubbing, per-day request quota.
+PASS: mocked Google Places verified address and graceful missing API key.
+PASS: AES-GCM vault encryption, incorrect passphrase and tamper detection.
+PASS: bilingual legal text change and international emergency contact numbers.
+PASS: server/client/service-worker JavaScript syntax.
+NOT VERIFIED: live AirLabs or Google Places against real API keys; on-device iOS; App Store/AdMob/native push; visual E2E browser (environment blocks localhost navigation).
+LIMITATION: Flights on demand only; no background monitoring. Provider may return a different operating date for the saved flight number.
+LIMITATION: local reminder notifications require app running, not native push. Wallet does not have Face ID. No native widgets / Live Activities.
+LIMITATION: concurrent edits to the same RSVP activity on collaborative trips can have last-writer sync conflicts.

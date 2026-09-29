@@ -1,11 +1,11 @@
-// Test-only AI HTTP stub: no external network calls occur.
+// Mock Gemini only. Never contacts the real provider.
 const nativeFetch=global.fetch;
 global.fetch=(url,options)=>{
- if(String(url)==='https://api.openai.com/v1/responses'){
-  const payload=JSON.parse(options.body);
-  if(!payload.store===false)throw Error('Store must be false');
-  if(payload.input.includes('TOP_SECRET_TEST_MARKER'))throw Error('Private documents leaked into AI request');
-  return Promise.resolve({ok:true,json:async()=>({output:[{type:'message',content:[{type:'output_text',text:'A bilingual three-day itinerary suggestion, not verified.'}]}]})});
+ if(String(url).startsWith('https://generativelanguage.googleapis.com/v1beta/models/')){
+  const payload=JSON.parse(options.body||'{}');
+  if(JSON.stringify(payload).includes('TOP_SECRET_TEST_MARKER'))throw Error('Private documents leaked into Gemini request');
+  if(options.headers?.['x-goog-api-key']!=='fake-gemini-key')throw Error('Gemini credential not sent');
+  return Promise.resolve({ok:true,status:200,json:async()=>({candidates:[{content:{parts:[{text:'A bilingual three-day itinerary suggestion, not verified.'}]}}]})});
  }
  return nativeFetch(url,options);
 };
