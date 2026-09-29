@@ -1,3 +1,4 @@
+# V10.3.9: Additional AI ideas, bilingual shared invitation and trip-purpose selection. See RELEASE-V10.3.9.md.
 # V10.3.8: Gemini ideas by theme, accessible interactive AI cards, international emergency-contact country codes, privacy/terms updated (v1.3), optional Google Places addresses. See RELEASE-V10.3.8.md.
 # V10.3.7: Google Places (optional) supplies exact addresses to AI suggestions. See RELEASE-V10.3.7.md.
 

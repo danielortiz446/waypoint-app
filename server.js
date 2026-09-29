@@ -641,7 +641,7 @@ const server=http.createServer(async(req,res)=>{
         return json(res,502,{error:'ai_temporarily_unavailable'});
       }
     }
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'10.3.8',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'10.3.9',time:new Date().toISOString()});
 
     if(req.method==='GET'&&u.pathname==='/api/fx/rate'){
       const from=String(u.searchParams.get('from')||'').trim().toUpperCase();
@@ -1047,7 +1047,7 @@ const server=http.createServer(async(req,res)=>{
     if(req.method==='GET'&&u.pathname==='/api/admin/system'){
       const s=requireAdmin(req,res);if(!s)return;
       return json(res,200,{
-        version:'10.3.8',
+        version:'10.3.9',
         uptimeSeconds:Math.round(process.uptime()),
         node:process.version,
         dataFile:DATA_FILE,
@@ -1401,4 +1401,4 @@ const server=http.createServer(async(req,res)=>{
   }
 });
 
-server.listen(PORT,HOST,()=>console.log(`Waypoint 10.3.8 listening on http://${HOST}:${PORT}`));
+server.listen(PORT,HOST,()=>console.log(`Waypoint 10.3.9 listening on http://${HOST}:${PORT}`));
