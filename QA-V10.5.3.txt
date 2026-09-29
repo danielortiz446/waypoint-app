@@ -1,0 +1,13 @@
+WAYPOINT V10.5.3 — Function review and usability simplification
+
+PASS — Existing server smoke suite (61/61).
+PASS — Existing additional component & provider-mock tests (AI structured suggestions, Gemini, Google Places, AirLabs, AES-GCM Wallet, emergency dialing, sharing RSVP, itinerary validation).
+PASS — Legacy trip type preservation, date order and budget validation regression.
+PASS — V10.5.3 usability/navigation regression: all tabs accessible in one grouped menu, no duplicate tool strip, Travel Mode does not force redirects, home search preserves typing focus, iOS HTML equals web HTML.
+PASS — node --check: server.js, client inline script and public/service-worker.js.
+PASS — Local HTTP: /health (10.5.3), / (200), /ads.txt (200), unknown API route (404 JSON), unauthenticated admin system endpoint (401).
+
+NOT VERIFIED — End-to-end Chromium browser run (execution environment blocks local navigation; ERR_BLOCKED_BY_ADMINISTRATOR).
+NOT VERIFIED — Real-device iPhone Xcode build, Android, real Railway deployment, real Gemini/Places/AirLabs requests or third-party billing. Do not call this launch-certified.
+
+No data migration, no deleted trip features. All existing sensitive credentials remain Railway-only. Never remove Railway /data or clear user browser/PWA storage. Back up first.

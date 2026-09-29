@@ -1,0 +1,23 @@
+Waypoint V10.5.2 — QA report
+
+Implemented:
+- No automatic conversion of existing legacy trip types during unrelated edits.
+- Clear new travel purpose selection, validated against supported values.
+- Return date cannot precede departure date; budget must be finite and nonnegative.
+- Unknown /api/* paths return JSON 404, never the public PWA HTML.
+- Web and iOS Capacitor source HTML kept in sync.
+
+Automated tests:
+- Existing server smoke: 61 PASS, 0 FAIL.
+- Additional integration/regression suite: 18 PASS, 0 FAIL.
+- New trip validation script: PASS.
+- JavaScript syntax: server.js, service-worker.js, extracted main UI script: PASS.
+- Local HTTP: /health => 10.5.2; /api/nonexistent-route => 404; /api/admin/system without session => 401; /ads.txt => 200; / => 200.
+- ZIP integrity test: see completed package inspection.
+
+Not verified:
+- Chromium direct local browser navigation is blocked by execution environment; browser UI/device interactions not verified.
+- Xcode/iOS build, live Railway, Gemini, Places, AirLabs, billing, payments or provider keys not validated.
+
+Preservation:
+No destructive storage migration. Do not delete /data or clear browser/PWA storage. Export a backup before deploying.

@@ -179,3 +179,13 @@ Deploy the files to the **existing** GitHub repository and Railway service. Veri
 ### Tests run in the build environment
 
 `npm test` (61 existing smoke checks), `npm run test:phase1040` (mocked Gemini/Places/AirLabs, wallet crypto and UI logic), syntax checks for server, service worker and browser code, ZIP integrity check. Browser navigation to localhost was blocked by the test environment; no successful visual E2E run or real-provider/Apple test is claimed.
+
+## V10.5.2
+Update same existing project. Trip type dropdown now excludes old destination category choices. Preserve /data and browser data. Confirm /health version 10.5.2.
+
+## V10.5.3
+Deploy to the EXISTING Railway service via your current GitHub repo. Keep all environment variables, /data volume and local browser storage. Check /health = 10.5.3. Verify Today, Plan, AI, Map, More (with Wallet, flights, assistance, bookings), shared trips and permissions manually on phone.
+
+
+## V10.6.0 update
+Deploy to the existing Railway service and keep the existing `/data` volume and environment variables. After deploy, verify `/health` reports `10.6.0`. Do not clear browser site data because trips may be stored locally.

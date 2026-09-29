@@ -1,0 +1,35 @@
+Waypoint V10.6.0 QA Summary
+============================
+Source: Waypoint V10.5.3 simplified verified build.
+
+Completed checks
+- server.js syntax: PASS
+- public client JS syntax: PASS
+- service-worker.js syntax: PASS
+- admin inline JS syntax: PASS
+- 61 server smoke tests: PASS
+- V10.5.2 validation regression: PASS
+- 18 phase 10.4 / integrations / crypto / legal tests: PASS
+- 4 V10.5.3 UX/navigation regression tests: PASS
+- 11 V10.6.0 feature checks: PASS
+- public/index.html == ios-capacitor/www/index.html: PASS
+
+V10.6.0 implemented
+- One-click Gemini itinerary draft using existing Railway /api/ai/plan.
+- User review remains mandatory before AI suggestions are added to itinerary.
+- Today quick actions for itinerary generation, booking import, offline verification and conflict review.
+- Cross-date schedule-conflict detection using saved duration + travel buffer.
+- Confirmed manual conflict adjustment; no silent schedule changes.
+- Offline verification checks cached shell, active service worker and local trip presence.
+- Data reliability card with local storage, collaboration sync, offline state and backup export.
+- Reservation import from pasted text and TXT/EML/ICS/CSV/JSON text files.
+- Raw imported confirmation text is discarded after structured fields are saved.
+- Existing Railway, Gemini, Places, PWA, collaboration, Wallet and Capacitor structure preserved.
+
+Not verified / pending
+- No visual browser E2E run in this environment.
+- No Xcode/iPhone build performed.
+- No live Gemini/Google Places/AirLabs call made with the user's production keys.
+- PDF/image OCR reservation import is not implemented.
+- Offline third-party maps/AI/flight/chat data are not available without internet.
+- Native iOS push, Face ID, widgets and Live Activities remain pending.

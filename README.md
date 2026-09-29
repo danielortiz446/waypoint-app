@@ -1,4 +1,4 @@
-# Waypoint V10.5.0 — AI batch planner, place cards, shared trip RSVPs, reminders, Wallet filtering, offline summary and optional AirLabs flight status. See RELEASE-V10.5.0.md.
+# Waypoint 10.6.0 — AI batch planner, place cards, shared trip RSVPs, reminders, Wallet filtering, offline summary and optional AirLabs flight status. See RELEASE-V10.5.3.md.
 
 # V10.3.9: Additional AI ideas, bilingual shared invitation and trip-purpose selection. See RELEASE-V10.3.9.md.
 # V10.3.8: Gemini ideas by theme, accessible interactive AI cards, international emergency-contact country codes, privacy/terms updated (v1.3), optional Google Places addresses. See RELEASE-V10.3.8.md.
@@ -545,3 +545,12 @@ The existing `WAYPOINT_DATA_FILE=/data/waypoint-sync-data.json` and `WAYPOINT_FI
 - Removed the publicly visible Diagnostics and integrations status panel from Settings. End-user app retains its normal functional connection/synchronization indicators, plan details and user data controls.
 - Admin-only diagnostics are available after login at `/admin` → **System** → **Run diagnostics**. The technical status endpoint `/api/admin/system` remains protected with the existing administrator session and now includes nonsecret provider configuration flags.
 - No changes to traveler data schemas, trip sharing credentials, persistent `/data` volume, or AdSense publisher identification / `ads.txt`. Advertising is not enabled merely by verifying the site.
+
+See RELEASE-V10.5.3.md for the clean trip-purpose selector.
+
+## V10.5.3
+See RELEASE-V10.5.3.md for navigation/UX changes.
+
+
+## V10.6.0
+See `RELEASE-V10.6.0.md` for finished features and explicit pending items.
