@@ -5,6 +5,7 @@ global.fetch=(url,options)=>{
   const payload=JSON.parse(options.body||'{}');
   if(JSON.stringify(payload).includes('TOP_SECRET_TEST_MARKER'))throw Error('Private documents leaked into Gemini request');
   if(options.headers?.['x-goog-api-key']!=='fake-gemini-key')throw Error('Gemini credential not sent');
+  if(JSON.stringify(payload).includes('FORCE_TEST_FAILURE'))return Promise.resolve({ok:false,status:403});
   return Promise.resolve({ok:true,status:200,json:async()=>({candidates:[{content:{parts:[{text:'A bilingual three-day itinerary suggestion, not verified.'}]}}]})});
  }
  return nativeFetch(url,options);

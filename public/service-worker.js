@@ -1,4 +1,4 @@
-const CACHE='waypoint-v10.9.5-ai-quota';
+const CACHE='waypoint-v10.9.7-ai-quota';
 const DATA_CACHE='waypoint-v9-data-v1';
 const SHELL=['/','/index.html','/manifest.webmanifest','/privacy.html','/terms.html','/assets/icons/icon-192.png','/assets/icons/icon-512.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));

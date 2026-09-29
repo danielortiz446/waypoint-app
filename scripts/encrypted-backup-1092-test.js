@@ -22,7 +22,7 @@ vm.runInContext(source+';globalThis.encrypt=waypointEncryptBackup;globalThis.dec
  await assert.rejects(()=>ctx.encrypt(serialized,'short'));
  assert.throws(()=>ctx.validate({trips:'not array'}));
  for(const p of ['ios-capacitor/www/index.html','android-capacitor/www/index.html']){
-  const body=fs.readFileSync(p,'utf8');assert(body.includes('waypointDecryptBackup')&&body.includes('Waypoint v10.9.4'));
+  const body=fs.readFileSync(p,'utf8');assert(body.includes('waypointDecryptBackup')&&body.includes('Waypoint v10.9.7'));
  }
  console.log('PASS encrypted backup roundtrip, incorrect password, tampering protection, and minimum length');
  console.log('PASS portable backup validation removes forged Premium and mobile source parity');

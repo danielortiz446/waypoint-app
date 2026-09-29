@@ -676,10 +676,35 @@ function aiPlanLimits(){
   return out;
 }
 function tomorrowUtc(){const d=new Date();d.setUTCHours(24,0,0,0);return d.toISOString();}
+// Each anonymous installation receives a server-signed, HttpOnly first-party cookie.
+// This is more stable than an IP address, but clearing app/site data can reset a guest quota.
+const GUEST_COOKIE_NAME='wp_guest_v1';
+function guestSigningKey(){
+  if(!adminData.guestCookieSigningKey){
+    adminData.guestCookieSigningKey=crypto.randomBytes(32).toString('hex');
+    persistAdminData();
+  }
+  return adminData.guestCookieSigningKey;
+}
+function guestCookieSignature(id){return crypto.createHmac('sha256',guestSigningKey()).update(id).digest('hex');}
+function ensureGuestCookie(req,res){
+  if(clientAuth(req))return;
+  let guestId='';
+  const cookie=String(parseCookies(req)[GUEST_COOKIE_NAME]||'');
+  const match=/^([a-f0-9]{32})\.([a-f0-9]{64})$/.exec(cookie);
+  if(match && timingSafeTextEqual(match[2],guestCookieSignature(match[1])))guestId=match[1];
+  if(!guestId){
+    guestId=crypto.randomBytes(16).toString('hex');
+    const secure=String(req.headers['x-forwarded-proto']||'').split(',')[0].trim()==='https'||Boolean(req.socket.encrypted);
+    res.setHeader('Set-Cookie',`${GUEST_COOKIE_NAME}=${guestId}.${guestCookieSignature(guestId)}; Path=/api; HttpOnly; SameSite=Lax; Max-Age=31536000${secure?'; Secure':''}`);
+  }
+  req.waypointGuestId=guestId;
+}
+
 function premiumContext(req){
   const user=clientAuth(req);
   const plan=entitlementForUser(user).plan;
-  const key=user?'user:'+user.waypointId:'guest:'+hash(String(req.socket.remoteAddress||'unknown')).slice(0,24);
+  const key=user?'user:'+user.waypointId:req.waypointGuestId?'guest:'+req.waypointGuestId:'guest-ip:'+hash(String(req.socket.remoteAddress||'unknown')).slice(0,24);
   return {user,plan,key,limits:aiPlanLimits()[plan]};
 }
 function premiumUsage(req,kind,consume=false){
@@ -694,6 +719,25 @@ function premiumUsage(req,kind,consume=false){
   if(consume&&used<limit){row[kind]=used+1;persistAdminData();}
   return {plan:ctx.plan,used:consume&&used<limit?used+1:used,limit,remaining:Math.max(0,limit-(consume&&used<limit?used+1:used)),allowed:(consume?used+1:used)<limit,resetAt:tomorrowUtc(),fullPlanner:ctx.plan==='premium',batchAdd:ctx.plan==='premium'};
 }
+// Reservations prevent concurrent requests from consuming more than the daily allowance.
+// Only successful Gemini answers are charged; errors release the reservation.
+const aiPendingByAccount=new Map();
+function reserveAiRequest(req){
+  const context=premiumContext(req),date=new Date().toISOString().slice(0,10);
+  const key=date+':'+context.key;
+  const active=aiPendingByAccount.get(key)||0;
+  const current=premiumUsage(req,'ai');
+  if(current.used+active>=current.limit)return null;
+  aiPendingByAccount.set(key,active+1);
+  let released=false;
+  return ()=>{
+    if(released)return;
+    released=true;
+    const left=(aiPendingByAccount.get(key)||1)-1;
+    if(left>0)aiPendingByAccount.set(key,left);
+    else aiPendingByAccount.delete(key);
+  };
+}
 const aiRequestsByIp=new Map();
 let aiToday='',aiDailyUsed=0;
 function aiAllowed(req){
@@ -703,7 +747,7 @@ function aiAllowed(req){
   const maxDay=Math.max(1,Math.min(500,Number(process.env.WAYPOINT_AI_DAILY_LIMIT||30)||30));
   if(aiDailyUsed>=maxDay)return false;
   const list=(aiRequestsByIp.get(ip)||[]).filter(t=>now-t<10*60*1000);
-  if(list.length>=3)return false;
+  if(list.length>=12)return false; // Anti-burst only; the per-plan daily quota remains authoritative.
   list.push(now);aiRequestsByIp.set(ip,list);aiDailyUsed++;return true;
 }
 const server=http.createServer(async(req,res)=>{
@@ -737,6 +781,7 @@ const server=http.createServer(async(req,res)=>{
       return json(res,200,{received:true});
     }
     if((u.pathname.startsWith('/api/')||u.pathname==='/health')&&!allowRate(req))return json(res,429,{error:'rate limit exceeded'});
+    if(['/api/premium/benefits','/api/ai/plan','/api/ocr/receipt'].includes(u.pathname))ensureGuestCookie(req,res);
 
     if(req.method==='GET'&&u.pathname==='/api/flights/status'){
       const number=String(u.searchParams.get('number')||'').trim().toUpperCase().replace(/\s+/g,'');
@@ -763,8 +808,9 @@ const server=http.createServer(async(req,res)=>{
       if(!['standard','full_plan','trip_audit'].includes(mode))return json(res,400,{error:'invalid_ai_mode'});
       if((mode==='full_plan'||mode==='trip_audit')&&!ent.fullPlanner)return json(res,403,{error:'premium_required',feature:mode});
       if(!ent.allowed)return json(res,429,{error:'premium_daily_limit',feature:'ai',limit:ent.limit,remaining:0,resetAt:ent.resetAt});
-      if(!aiAllowed(req))return json(res,429,{error:'ai_usage_limit'});
-      const consumedAiUsage=premiumUsage(req,'ai',true);
+      const releaseAiReservation=reserveAiRequest(req);
+      if(!releaseAiReservation)return json(res,429,{error:'premium_daily_limit',feature:'ai',limit:ent.limit,remaining:0,resetAt:ent.resetAt});
+      if(!aiAllowed(req)){releaseAiReservation();return json(res,429,{error:'ai_usage_limit',usage:premiumUsage(req,'ai')});}
       res.setHeader('Cache-Control','no-store, no-cache, must-revalidate');
       const safe={destination:String(trip.destination||'').slice(0,130),start:String(trip.start||'').slice(0,18),end:String(trip.end||'').slice(0,18),currency:String(trip.currency||'').slice(0,5),tripPurpose:String(trip.tripPurpose||'').slice(0,90),budget:Number.isFinite(Number(trip.budget))?Math.max(0,Math.min(10000000,Number(trip.budget))):undefined,days:Array.isArray(trip.days)?trip.days.slice(0,12).map(d=>({date:String(d.date||'').slice(0,18),activities:(Array.isArray(d.activities)?d.activities:[]).slice(0,7).map(a=>String(a||'').slice(0,95))})):[]};
       try{
@@ -804,15 +850,16 @@ const server=http.createServer(async(req,res)=>{
           if(!output.trim())return json(res,502,{error:'ai_empty_reply'});
           const parsed=extractWaypointSuggestions(output,safe);
           const enriched=await enrichWaypointSuggestions(parsed.suggestions,safe.destination);
+          const consumedAiUsage=premiumUsage(req,'ai',true);
           return json(res,200,{answer:parsed.answer.slice(0,4500),suggestions:enriched,source:'generated',provider,live:false,usage:consumedAiUsage});
         }
         return json(res,502,{error:'ai_provider_unavailable'});
       }catch(e){
         console.warn('[Waypoint AI] request failed:',e?.code||e?.name||'unexpected_error');
         return json(res,502,{error:'ai_temporarily_unavailable'});
-      }
+      }finally{releaseAiReservation();}
     }
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'10.9.5',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'10.9.7',time:new Date().toISOString()});
 
     if(req.method==='GET'&&u.pathname==='/api/fx/rate'){
       const from=String(u.searchParams.get('from')||'').trim().toUpperCase();
