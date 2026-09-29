@@ -189,3 +189,6 @@ Deploy to the EXISTING Railway service via your current GitHub repo. Keep all en
 
 ## V10.6.0 update
 Deploy to the existing Railway service and keep the existing `/data` volume and environment variables. After deploy, verify `/health` reports `10.6.0`. Do not clear browser site data because trips may be stored locally.
+
+## V10.6.1 update
+Keep the existing Railway service, `/data` volume and environment variables. To read receipts with Gemini, configure `WAYPOINT_AI_ENABLED=true`, `GEMINI_API_KEY`, and a model accessible to your Google AI Studio project. Do not add `OCR_API_URL` unless intentionally using a separate OCR adapter. Confirm `/health` shows `10.6.1`. The new reader sends the selected image to the configured provider; obtain user consent before submitting sensitive receipts.

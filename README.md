@@ -554,3 +554,6 @@ See RELEASE-V10.5.3.md for navigation/UX changes.
 
 ## V10.6.0
 See `RELEASE-V10.6.0.md` for finished features and explicit pending items.
+
+## V10.6.1
+The trip menu's **Recuerdos** tab is now correctly labeled **Resumen del viaje**. Receipt photo reading uses the configured Gemini API when an optional custom OCR provider is absent, with review-before-save, image size/type limits, clear errors and updated privacy notice. See `RELEASE-V10.6.1.md`.
