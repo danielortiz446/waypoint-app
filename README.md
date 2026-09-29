@@ -1,3 +1,4 @@
+# V10.3.8: Gemini ideas by theme, accessible interactive AI cards, international emergency-contact country codes, privacy/terms updated (v1.3), optional Google Places addresses. See RELEASE-V10.3.8.md.
 # V10.3.7: Google Places (optional) supplies exact addresses to AI suggestions. See RELEASE-V10.3.7.md.
 
 > **Current release: Waypoint V10.3.0.** See [RELEASE-V10.3.0.md](RELEASE-V10.3.0.md) and [QA-V10.3.0.txt](QA-V10.3.0.txt) for actual feature status; older notes below are historical.
