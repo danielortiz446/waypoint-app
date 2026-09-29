@@ -18,7 +18,7 @@ const ctx={
  ]},
  document:{getElementById:(x)=>fields[x],querySelectorAll:(x)=>x==='.wp-ai-select:checked'?[{dataset:{aiIndex:'0'}},{dataset:{aiIndex:'1'}},{dataset:{aiIndex:'2'}},{dataset:{aiIndex:'3'}}]:[]},
  tripById:id=>id==='trip'?{id:'trip',start:'2026-10-05',end:'2026-10-12',liveSync:true,collabParticipantId:'p123'}:null,
- canEditTrip:()=>true,uid:(()=>{let i=0;return()=>`id-${++i}`})(),
+ isPremium:()=>true,canEditTrip:()=>true,uid:(()=>{let i=0;return()=>`id-${++i}`})(),
  showToast:s=>alerts.push(s),render:()=>{},saveState:()=>storeCalls.push('saved'),confirm:()=>true,
  chatParticipantId:()=> 'device123',escapeHtml:s=>s||'',
 };

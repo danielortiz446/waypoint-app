@@ -1,0 +1,13 @@
+'use strict';
+const assert=require('assert'),fs=require('fs'),vm=require('vm');
+const src=fs.readFileSync('public/index.html','utf8');
+const a=src.indexOf('function premiumMoneySummary1083('),b=src.indexOf('const _viewBudgetSub1083=',a);
+assert(a>0&&b>a);
+const ctx={state:{expenses:[{tripId:'t1',date:'2026-10-01',amount:40,category:'food',desc:'Lunch',paidBy:'A',splitWith:['A','B'],sourceCurrency:'USD',sourceAmount:40},{tripId:'t1',date:'2026-10-02',amount:20,category:'travel',desc:'=BAD',paidBy:'B',splitWith:['A','B']} ]},roundMoney:x=>Math.round(x*100)/100,expenseSettlementSuggestions:()=>[{from:'B',to:'A',amount:10}],Number,Math,String,Array,URL,Blob};
+vm.createContext(ctx);vm.runInContext(src.slice(a,b),ctx);
+const tr={id:'t1',currency:'USD',name:'Test'};
+const report=ctx.premiumMoneySummary1083(tr);
+assert.equal(report.total,60);assert.equal(report.byDay['2026-10-01'],40);assert.equal(report.byCategory.travel,20);
+const csv=ctx.premiumExpensesCSV1083(tr);assert(csv.includes('"\'=BAD"'),'formula injection escaped');assert(csv.includes('"Trip currency"'));assert(!csv.includes('waypoint-client-secret'));
+assert.equal(fs.readFileSync('ios-capacitor/www/index.html','utf8'),src);assert.equal(fs.readFileSync('android-capacitor/www/index.html','utf8'),src);
+console.log('PASS Premium Money Desk: reports, CSV formula escaping, mobile source parity');
