@@ -748,7 +748,7 @@ const server=http.createServer(async(req,res)=>{
       try{return json(res,200,await getWaypointFlight(number));}
       catch(e){console.warn('[Waypoint flights] error='+String(e?.code||e?.name||'unknown'));return json(res,e?.code==='flight_not_found'?404:502,{error:e?.code||'flight_provider_unavailable'});}
     }
-    if(req.method==='GET'&&u.pathname==='/api/premium/benefits')return json(res,200,{ai:premiumUsage(req,'ai'),ocr:premiumUsage(req,'ocr')});
+    if(req.method==='GET'&&u.pathname==='/api/premium/benefits'){res.setHeader('Cache-Control','no-store, no-cache, must-revalidate');return json(res,200,{ai:premiumUsage(req,'ai'),ocr:premiumUsage(req,'ocr')});}
     if(req.method==='GET'&&u.pathname==='/api/ai/status')return json(res,200,{configured:waypointAiConfigured(),provider:'Gemini',model:waypointAiModel(),live:false});
     if(req.method==='POST'&&u.pathname==='/api/ai/plan'){
       const origin=String(req.headers.origin||'');
@@ -764,7 +764,8 @@ const server=http.createServer(async(req,res)=>{
       if((mode==='full_plan'||mode==='trip_audit')&&!ent.fullPlanner)return json(res,403,{error:'premium_required',feature:mode});
       if(!ent.allowed)return json(res,429,{error:'premium_daily_limit',feature:'ai',limit:ent.limit,remaining:0,resetAt:ent.resetAt});
       if(!aiAllowed(req))return json(res,429,{error:'ai_usage_limit'});
-      premiumUsage(req,'ai',true);
+      const consumedAiUsage=premiumUsage(req,'ai',true);
+      res.setHeader('Cache-Control','no-store, no-cache, must-revalidate');
       const safe={destination:String(trip.destination||'').slice(0,130),start:String(trip.start||'').slice(0,18),end:String(trip.end||'').slice(0,18),currency:String(trip.currency||'').slice(0,5),tripPurpose:String(trip.tripPurpose||'').slice(0,90),budget:Number.isFinite(Number(trip.budget))?Math.max(0,Math.min(10000000,Number(trip.budget))):undefined,days:Array.isArray(trip.days)?trip.days.slice(0,12).map(d=>({date:String(d.date||'').slice(0,18),activities:(Array.isArray(d.activities)?d.activities:[]).slice(0,7).map(a=>String(a||'').slice(0,95))})):[]};
       try{
         const provider=waypointAiProvider();
@@ -803,7 +804,7 @@ const server=http.createServer(async(req,res)=>{
           if(!output.trim())return json(res,502,{error:'ai_empty_reply'});
           const parsed=extractWaypointSuggestions(output,safe);
           const enriched=await enrichWaypointSuggestions(parsed.suggestions,safe.destination);
-          return json(res,200,{answer:parsed.answer.slice(0,4500),suggestions:enriched,source:'generated',provider,live:false});
+          return json(res,200,{answer:parsed.answer.slice(0,4500),suggestions:enriched,source:'generated',provider,live:false,usage:consumedAiUsage});
         }
         return json(res,502,{error:'ai_provider_unavailable'});
       }catch(e){
@@ -811,7 +812,7 @@ const server=http.createServer(async(req,res)=>{
         return json(res,502,{error:'ai_temporarily_unavailable'});
       }
     }
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'10.9.4',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'10.9.5',time:new Date().toISOString()});
 
     if(req.method==='GET'&&u.pathname==='/api/fx/rate'){
       const from=String(u.searchParams.get('from')||'').trim().toUpperCase();
