@@ -55,7 +55,8 @@ function defaultAdminData(){
       premiumPurchasesDesired:false,
       betaFeatures:false
     },
-    adminLog:[]
+    adminLog:[],
+    premiumUsage:{}
   };
 }
 function loadAdminData(){
@@ -67,7 +68,8 @@ function loadAdminData(){
       users:raw.users&&typeof raw.users==='object'?raw.users:{},
       promoCodes:raw.promoCodes&&typeof raw.promoCodes==='object'?raw.promoCodes:{},
       featureFlags:{...defaultAdminData().featureFlags,...(raw.featureFlags||{})},
-      adminLog:Array.isArray(raw.adminLog)?raw.adminLog:[]
+      adminLog:Array.isArray(raw.adminLog)?raw.adminLog:[],
+      premiumUsage:raw.premiumUsage&&typeof raw.premiumUsage==='object'?raw.premiumUsage:{}
     };
   }catch(e){return defaultAdminData();}
 }
@@ -635,10 +637,31 @@ async function getWaypointFlight(number){
  const result={number,provider:'AirLabs',status:clean(data.status),dep:clean(data.dep_iata,8),arr:clean(data.arr_iata,8),terminal:clean(data.dep_terminal,16),gate:clean(data.dep_gate,16),delay:Number.isFinite(Number(data.dep_delayed))&&data.dep_delayed!=null?Math.max(0,Number(data.dep_delayed)):null,updated:Number.isFinite(Number(data.updated))&&data.updated?new Date(Number(data.updated)*1000).toISOString():'',checkedAt:new Date().toISOString(),live:true};
  liveFlightCache.set(number,{ts:now,value:result});if(liveFlightCache.size>500)liveFlightCache.clear();return result;
 }
+// Verified entitlements and daily counters. Credentials are checked on every paid API call.
+// Counts are stored on the existing Railway volume; never rely on a browser Premium badge.
+const PREMIUM_LIMITS={free:{ai:4,ocr:1},premium:{ai:18,ocr:8}};
+function premiumContext(req){
+  const user=clientAuth(req);
+  const plan=entitlementForUser(user).plan;
+  const key=user?'user:'+user.waypointId:'guest:'+hash(String(req.socket.remoteAddress||'unknown')).slice(0,24);
+  return {user,plan,key,limits:PREMIUM_LIMITS[plan]};
+}
+function premiumUsage(req,kind,consume=false){
+  const ctx=premiumContext(req),today=new Date().toISOString().slice(0,10);
+  if(!adminData.premiumUsage||typeof adminData.premiumUsage!=='object')adminData.premiumUsage={};
+  // Safely prune old counters. Usage persists across application redeploys on the mounted volume.
+  for(const date of Object.keys(adminData.premiumUsage))if(date!==today)delete adminData.premiumUsage[date];
+  const day=adminData.premiumUsage[today]||(adminData.premiumUsage[today]={});
+  const row=day[ctx.key]||(day[ctx.key]={ai:0,ocr:0});
+  const used=Math.max(0,Number(row[kind]||0));
+  const limit=ctx.limits[kind];
+  if(consume&&used<limit){row[kind]=used+1;persistAdminData();}
+  return {plan:ctx.plan,used,limit,remaining:Math.max(0,limit-used),allowed:used<limit,fullPlanner:ctx.plan==='premium',batchAdd:ctx.plan==='premium'};
+}
 const aiRequestsByIp=new Map();
 let aiToday='',aiDailyUsed=0;
 function aiAllowed(req){
-  const ip=String(req.socket.remoteAddress||'unknown');
+  const ip=premiumContext(req).key; // Per verified installation, otherwise shared by anonymous connection address.
   const now=Date.now(),today=new Date().toISOString().slice(0,10);
   if(aiToday!==today){aiToday=today;aiDailyUsed=0;aiRequestsByIp.clear();}
   const maxDay=Math.max(1,Math.min(500,Number(process.env.WAYPOINT_AI_DAILY_LIMIT||30)||30));
@@ -689,20 +712,27 @@ const server=http.createServer(async(req,res)=>{
       try{return json(res,200,await getWaypointFlight(number));}
       catch(e){console.warn('[Waypoint flights] error='+String(e?.code||e?.name||'unknown'));return json(res,e?.code==='flight_not_found'?404:502,{error:e?.code||'flight_provider_unavailable'});}
     }
+    if(req.method==='GET'&&u.pathname==='/api/premium/benefits')return json(res,200,{ai:premiumUsage(req,'ai'),ocr:premiumUsage(req,'ocr')});
     if(req.method==='GET'&&u.pathname==='/api/ai/status')return json(res,200,{configured:waypointAiConfigured(),provider:'Gemini',model:waypointAiModel(),live:false});
     if(req.method==='POST'&&u.pathname==='/api/ai/plan'){
       const origin=String(req.headers.origin||'');
       if(origin){try{if(new URL(origin).host!==req.headers.host)return json(res,403,{error:'origin_not_allowed'});}catch(e){return json(res,403,{error:'origin_not_allowed'});}}
       if(!waypointAiConfigured())return json(res,503,{error:'ai_not_configured'});
-      if(!aiAllowed(req))return json(res,429,{error:'ai_usage_limit'});
       const data=await readBody(req);
       const question=String(data.question||'').trim().slice(0,650);
       const trip=data.trip&&typeof data.trip==='object'?data.trip:{};
       if(question.length<5)return json(res,400,{error:'question_too_short'});
+      const mode=String(data.mode||'standard');
+      const ent=premiumUsage(req,'ai');
+      if(!['standard','full_plan','trip_audit'].includes(mode))return json(res,400,{error:'invalid_ai_mode'});
+      if((mode==='full_plan'||mode==='trip_audit')&&!ent.fullPlanner)return json(res,403,{error:'premium_required',feature:mode});
+      if(!ent.allowed)return json(res,429,{error:'premium_daily_limit',feature:'ai',limit:ent.limit});
+      if(!aiAllowed(req))return json(res,429,{error:'ai_usage_limit'});
+      premiumUsage(req,'ai',true);
       const safe={destination:String(trip.destination||'').slice(0,130),start:String(trip.start||'').slice(0,18),end:String(trip.end||'').slice(0,18),currency:String(trip.currency||'').slice(0,5),tripPurpose:String(trip.tripPurpose||'').slice(0,90),budget:Number.isFinite(Number(trip.budget))?Math.max(0,Math.min(10000000,Number(trip.budget))):undefined,days:Array.isArray(trip.days)?trip.days.slice(0,12).map(d=>({date:String(d.date||'').slice(0,18),activities:(Array.isArray(d.activities)?d.activities:[]).slice(0,7).map(a=>String(a||'').slice(0,95))})):[]};
       try{
         const provider=waypointAiProvider();
-        const input='Travel context (user-supplied, not independently verified): '+JSON.stringify(safe)+'\nUser question: '+question;
+        const input='Travel context (user-supplied, not independently verified): '+JSON.stringify(safe)+'\n'+(mode==='trip_audit'?'This is a premium itinerary audit. Assess ONLY the supplied itinerary data. Do not claim live opening hours, address verification or transport duration. Flag uncertainty and propose changes for user review. Do not invent activities already on the plan.\n':'')+'User question: '+question;
         const model=waypointAiModel();
         if(!/^[a-zA-Z0-9._-]{2,100}$/.test(model))return json(res,400,{error:'ai_model_unavailable'});
         const endpoint='https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent';
@@ -745,7 +775,7 @@ const server=http.createServer(async(req,res)=>{
         return json(res,502,{error:'ai_temporarily_unavailable'});
       }
     }
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'10.7.0',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'10.8.3',time:new Date().toISOString()});
 
     if(req.method==='GET'&&u.pathname==='/api/fx/rate'){
       const from=String(u.searchParams.get('from')||'').trim().toUpperCase();
@@ -945,7 +975,10 @@ const server=http.createServer(async(req,res)=>{
       let imageBuffer;
       try{imageBuffer=Buffer.from(match[2],'base64');}catch(_){return json(res,400,{enabled:true,error:'invalid_image'});}
       if(!imageBuffer.length||imageBuffer.length>3_000_000)return json(res,400,{enabled:true,error:'invalid_image'});
+      const ent=premiumUsage(req,'ocr');
+      if(!ent.allowed)return json(res,429,{enabled:true,error:'premium_daily_limit',feature:'ocr',limit:ent.limit});
       if(!aiAllowed(req))return json(res,429,{enabled:true,error:'ai_usage_limit'});
+      premiumUsage(req,'ocr',true);
       try{
         let rr;
         if(endpoint){
@@ -1196,7 +1229,7 @@ const server=http.createServer(async(req,res)=>{
     if(req.method==='GET'&&u.pathname==='/api/admin/system'){
       const s=requireAdmin(req,res);if(!s)return;
       return json(res,200,{
-        version:'10.7.0',
+        version:'10.8.3',
         uptimeSeconds:Math.round(process.uptime()),
         node:process.version,
         dataFile:DATA_FILE,
@@ -1552,4 +1585,4 @@ const server=http.createServer(async(req,res)=>{
   }
 });
 
-server.listen(PORT,HOST,()=>console.log(`Waypoint 10.5.3 listening on http://${HOST}:${PORT}`));
+server.listen(PORT,HOST,()=>console.log(`Waypoint 10.8.3 listening on http://${HOST}:${PORT}`));

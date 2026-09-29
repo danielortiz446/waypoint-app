@@ -560,3 +560,11 @@ The trip menu's **Recuerdos** tab is now correctly labeled **Resumen del viaje**
 
 ## Waypoint 10.7.0 — Web billing and Android development scaffold
 See [`RELEASE-V10.7.0.md`](RELEASE-V10.7.0.md) for completed work/limitations and [`BILLING-ADS-ANDROID-SETUP.md`](BILLING-ADS-ANDROID-SETUP.md) for exact Stripe/AdSense/AdMob and Android setup. **Only the Stripe web checkout/webhook is integrated**; native store purchases and production ads still require provider onboarding, consent, receipt validation and native build/testing. Do not mark them live without these conditions.
+
+## Waypoint 10.8.2 — Free / Premium
+
+Beneficios verificables a nivel de servidor: 4/18 consultas diarias de Gemini, 1/8 lecturas OCR, planificación completa con un clic y adición múltiple en Premium. Ver [`PREMIUM-TEST-GUIDE.md`](PREMIUM-TEST-GUIDE.md) y [`RELEASE-V10.8.2.md`](RELEASE-V10.8.2.md). El límite global de IA sigue siendo independiente. Publicidad de producción y compras móviles siguen pendientes.
+
+## Waypoint V10.8.2 — Beneficios explicados y auditoría Premium
+
+Consulta [RELEASE-V10.8.2.md](RELEASE-V10.8.2.md). Incluye una comparativa bilingüe de planes en la aplicación y una auditoría de viaje basada en Gemini con acceso Premium verificado por el servidor.

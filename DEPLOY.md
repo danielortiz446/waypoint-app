@@ -195,3 +195,7 @@ Keep the existing Railway service, `/data` volume and environment variables. To 
 
 ## V10.7.0 optional Stripe test-mode deployment
 Do not enable payments until you review `BILLING-ADS-ANDROID-SETUP.md` and verify the payment integration end-to-end with Stripe test-mode webhooks, cancellations, renewals and a public HTTPS URL. Existing Railway volume `/data`, service, repository, provider keys and current trips must be kept unchanged. Unconfigured Stripe endpoints are gated and Premium checkout is disabled. Web ads remain unserved until consent and approved placements are implemented.
+
+## Waypoint 10.8.2: Free y Premium (sin variables nuevas)
+
+Conserva `WAYPOINT_ADMIN_DATA_FILE` apuntando al volumen persistente (por ejemplo `/data/waypoint-admin-data.json`) para mantener concesiones y contadores de consumo después de un reinicio. El límite `WAYPOINT_AI_DAILY_LIMIT` sigue siendo global y debe dimensionarse para los usuarios esperados, con presupuesto/cotas del proveedor; por ejemplo con valor 30, toda la aplicación comparte 30 peticiones/día aunque Premium tenga 18 por cuenta. Ver `PREMIUM-TEST-GUIDE.md`.

@@ -1,0 +1,10 @@
+WAYPOINT V10.8.1 — VALIDACIÓN LOCAL
+PASÓ: sintaxis de servidor, JS del cliente, service worker.
+PASÓ: batería principal npm test.
+PASÓ: validación de fechas y tipos.
+PASÓ: pruebas de integraciones simuladas / fase 10.4.0.
+PASÓ: pruebas UX e igualdad HTML web/iOS/Android.
+PASÓ: 11 controles fase 10.6.0.
+PASÓ: controles reales de servidor para Free/Premium, incl. auditoría (403 Free, 200 Premium simulado, 403 después de revocar) y límites.
+NO PROBADO: Gemini o Stripe con claves reales; navegador visual; iPhone/Android físicos; compilación nativa; anuncios en producción.
+LIMITACIÓN: 3 solicitudes / 10 min por instalación, límite global y cuotas del proveedor pueden impedir consumir toda la cuota diaria.

@@ -1,0 +1,16 @@
+WAYPOINT V10.8.0 — LOCAL AUTOMATED QA
+
+PASS: JavaScript syntax checks (server, extracted client script, service worker)
+PASS: 61 existing smoke tests (see scripts/smoke-test.js)
+PASS: V10.5.2 trip validation checks
+PASS: existing integration suite (Gemini simulated, Places mock, encrypted Wallet, contact formats, travel changes)
+PASS: simplified-navigation UX source checks
+PASS: legacy phase 10.6 source assertions
+PASS: Stripe test-mode provider simulation: verified webhook, no fake purchase, cancel/revoke
+PASS: Premium end-to-end simulated provider: server-side Free quota, Premium plan route gate, upgraded OCR quotas, admin grant/revoke, bogus token cannot inherit Premium, persisted quota file
+PASS: iOS and Android Capacitor HTML copies exactly match public/index.html
+PASS: updated privacy disclosure of AI and OCR usage counters
+
+NOT VERIFIED: live Gemini, live Stripe payment, AdSense/AdMob ads, actual device iOS/Android builds, visual E2E in Safari/Chromium, App Store/Google Play IAP.
+
+Plan quotas: Free 4 AI calls and 1 receipt OCR photo per UTC day. Premium 18 AI calls and 8 receipt OCR photos per UTC day. The global WAYPOINT_AI_DAILY_LIMIT and short-window antiabuse limits remain independently enforced.

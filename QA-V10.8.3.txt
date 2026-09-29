@@ -1,0 +1,4 @@
+Waypoint V10.8.3: server/client/service worker JavaScript syntax checks passed.
+Existing smoke tests and premium V10.8.2 desk tests passed after version marker update.
+Premium Money Desk test passed for category/day aggregation, CSV spreadsheet formula injection defense and mobile source mirroring.
+Not tested on physical iOS or Android device, deployed Railway instance, real payment processors or external AI providers.

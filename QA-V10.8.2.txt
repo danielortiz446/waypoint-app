@@ -1,0 +1,13 @@
+WAYPOINT V10.8.2 — PREMIUM TRAVEL DESK
+Verified locally:
+- JS syntax: server, client and service worker.
+- Base test suite, dates and trip validation, mocked integrations and UX tests.
+- Existing Free/Premium server entitlement checks (including grant/revoke).
+- Stripe simulated signed-webhook tests.
+- 11 phase1060 checks after updating expected release version.
+- New Premium desk tests for actionable flags, expense scenario, validation, client code mirroring, privacy disclosure and premium guard.
+Not validated in this environment:
+- Visual browser navigation (Chromium reports ERR_BLOCKED_BY_ADMINISTRATOR).
+- Actual Railway deployment, Apple Xcode/Android Studio builds, mobile devices, real Google Gemini/Places/Stripe/ads.
+- Local Premium tools are client-gated, not server-protected.
+- Global Gemini limit 30/day may reduce available per-person advertised 18/day.
