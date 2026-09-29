@@ -71,6 +71,45 @@ function loadAdminData(){
     };
   }catch(e){return defaultAdminData();}
 }
+/* Waypoint Web Billing: Stripe Checkout + verified webhooks. No credentials in the browser. */
+const STRIPE_API='https://api.stripe.com/v1';
+function stripeConfigured(){return Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_WEBHOOK_SECRET && process.env.STRIPE_PRICE_MONTHLY && process.env.STRIPE_PRICE_YEARLY && process.env.WAYPOINT_PUBLIC_URL);}
+function stripePrice(interval){return interval==='year'?process.env.STRIPE_PRICE_YEARLY:process.env.STRIPE_PRICE_MONTHLY;}
+function stripeConfiguredUrl(){
+  try{const x=new URL(process.env.WAYPOINT_PUBLIC_URL);return x.protocol==='https:' && !x.username && !x.password && x.pathname==='/' && !x.search && !x.hash?x.origin:null;}catch(e){return null;}
+}
+async function stripeRequest(method,resource,form){
+  const body=form?new URLSearchParams(form):undefined;
+  const r=await fetch(STRIPE_API+resource,{method,headers:{Authorization:'Bearer '+process.env.STRIPE_SECRET_KEY,...(body?{'Content-Type':'application/x-www-form-urlencoded'}:{})},body,signal:AbortSignal.timeout(15000)});
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok)throw Object.assign(new Error('stripe request failed'),{status:r.status,code:data.error?.code||'stripe_unavailable'});
+  return data;
+}
+function rawBody(req,limit=500000){return new Promise((resolve,reject)=>{const chunks=[];let len=0;req.on('data',c=>{len+=c.length;if(len>limit){reject(new Error('payload too large'));req.destroy();}else chunks.push(c);});req.on('end',()=>resolve(Buffer.concat(chunks)));req.on('error',reject);});}
+function verifyStripeWebhook(raw,header,secret){
+  const pieces=String(header||'').split(',').map(s=>s.split('='));
+  const ts=pieces.find(p=>p[0]==='t')?.[1], sigs=pieces.filter(p=>p[0]==='v1').map(p=>p[1]);
+  if(!ts||!sigs.length||!/^\d{10,}$/.test(ts)||Math.abs(Date.now()/1000-Number(ts))>300)return false;
+  const expected=crypto.createHmac('sha256',secret).update(ts+'.'+raw.toString('utf8')).digest('hex');
+  return sigs.some(x=>/^[0-9a-f]{64}$/i.test(x)&&timingSafeTextEqual(x,expected));
+}
+async function reconcileStripeSubscription(id){
+  if(!id || !/^sub_[A-Za-z0-9]+$/.test(id))return;
+  const subscription=await stripeRequest('GET','/subscriptions/'+encodeURIComponent(id));
+  const matches=Object.values(adminData.users).filter(u=>u.stripeSubscriptionId===id);
+  const waypointId=subscription.metadata?.waypointId;
+  if(!matches.length && waypointId && adminData.users[waypointId]?.stripeSubscriptionId===id)matches.push(adminData.users[waypointId]);
+  for(const user of matches){
+    if(!user || user.stripeSubscriptionId!==id)continue;
+    const active=['active','trialing'].includes(subscription.status);
+    // Stripe is the only authority on purchased entitlements. Do not overwrite unrelated manual grants.
+    if(user.entitlementSource!=='stripe' && user.entitlementSource!=='none' && user.entitlementSource!==undefined)continue;
+    user.stripeStatus=subscription.status;
+    if(active){user.plan='premium';user.entitlementSource='stripe';user.premiumUntil=subscription.current_period_end?new Date(subscription.current_period_end*1000).toISOString():new Date(Date.now()+3600_000).toISOString();}
+    else if(user.entitlementSource==='stripe'){user.plan='free';user.entitlementSource='none';user.premiumUntil=null;}
+  }
+  if(matches.length)persistAdminData();
+}
 const adminData=loadAdminData();
 function persistAdminData(){
   fs.mkdirSync(path.dirname(ADMIN_DATA_FILE),{recursive:true});
@@ -612,6 +651,32 @@ const server=http.createServer(async(req,res)=>{
   applySecurityHeaders(res);
   try{
     const u=new URL(req.url,'http://localhost');
+    // Webhook requires the exact raw bytes, before parsing or general rate limits.
+    if(req.method==='POST' && u.pathname==='/api/billing/stripe/webhook'){
+      if(!process.env.STRIPE_WEBHOOK_SECRET)return json(res,503,{error:'billing_not_configured'});
+      let raw;try{raw=await rawBody(req);}catch(e){return json(res,413,{error:'payload_too_large'});}
+      if(!verifyStripeWebhook(raw,req.headers['stripe-signature'],process.env.STRIPE_WEBHOOK_SECRET))return json(res,400,{error:'invalid_signature'});
+      let event;try{event=JSON.parse(raw);}catch(e){return json(res,400,{error:'invalid_json'});}
+      if(!event || !event.id || !event.type)return json(res,400,{error:'invalid_event'});
+      // Webhook delivery can be retried. Reconciliation is idempotent, with Stripe as source of truth.
+      try{
+        if(event.type==='checkout.session.completed'){
+          const session=event.data?.object;
+          if(session?.mode==='subscription'&&session?.subscription&&session?.metadata?.waypointId){
+            const user=adminData.users[session.metadata.waypointId];
+            // Bind only a session created for this device, never arbitrary metadata.
+            if(user && user.stripeCheckoutSessionId===session.id && !user.stripeSubscriptionId){
+              user.stripeSubscriptionId=String(session.subscription);user.stripeCustomerId=String(session.customer||'');persistAdminData();
+            }
+            if(user?.stripeSubscriptionId===session.subscription)await reconcileStripeSubscription(session.subscription);
+          }
+        }else if(['customer.subscription.updated','customer.subscription.deleted','customer.subscription.created'].includes(event.type)){
+          const id=event.data?.object?.id;
+          if(id && Object.values(adminData.users).some(x=>x.stripeSubscriptionId===id))await reconcileStripeSubscription(id);
+        }
+      }catch(e){console.warn('[Waypoint Stripe] webhook reconciliation failed: '+String(e.code||e.name));return json(res,503,{error:'webhook_retry_later'});}
+      return json(res,200,{received:true});
+    }
     if((u.pathname.startsWith('/api/')||u.pathname==='/health')&&!allowRate(req))return json(res,429,{error:'rate limit exceeded'});
 
     if(req.method==='GET'&&u.pathname==='/api/flights/status'){
@@ -680,7 +745,7 @@ const server=http.createServer(async(req,res)=>{
         return json(res,502,{error:'ai_temporarily_unavailable'});
       }
     }
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'10.6.1',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'10.7.0',time:new Date().toISOString()});
 
     if(req.method==='GET'&&u.pathname==='/api/fx/rate'){
       const from=String(u.searchParams.get('from')||'').trim().toUpperCase();
@@ -908,6 +973,29 @@ const server=http.createServer(async(req,res)=>{
     }
 
 
+    /* ===================== Web billing (Stripe) ===================== */
+    if(req.method==='GET'&&u.pathname==='/api/billing/config'){
+      return json(res,200,{webCheckoutConfigured:stripeConfigured()&&Boolean(stripeConfiguredUrl()),nativePurchasesConfigured:false,webAdsConfigured:false});
+    }
+    if(req.method==='POST'&&u.pathname==='/api/billing/stripe/checkout'){
+      if(!stripeConfigured()||!stripeConfiguredUrl())return json(res,503,{error:'billing_not_configured'});
+      const origin=String(req.headers.origin||'');
+      if(origin){try{if(new URL(origin).origin!==stripeConfiguredUrl())return json(res,403,{error:'origin_not_allowed'});}catch(e){return json(res,403,{error:'origin_not_allowed'});}}
+      const user=clientAuth(req);if(!user)return json(res,401,{error:'register_waypoint_id_first'});
+      const body=await readBody(req);
+      const interval=String(body.interval||'');if(!['month','year'].includes(interval))return json(res,400,{error:'invalid_interval'});
+      if(entitlementForUser(user).plan==='premium')return json(res,409,{error:'premium_already_active'});
+      if(user.stripeSubscriptionId&&user.stripeStatus&&['active','trialing','past_due'].includes(user.stripeStatus))return json(res,409,{error:'subscription_already_exists'});
+      try{
+        const price=stripePrice(interval);
+        if(!/^price_[a-zA-Z0-9]+$/.test(price||''))return json(res,503,{error:'invalid_stripe_price_configuration'});
+        const form={mode:'subscription','line_items[0][price]':price,'line_items[0][quantity]':'1',success_url:stripeConfiguredUrl()+'/?billing=success&session_id={CHECKOUT_SESSION_ID}',cancel_url:stripeConfiguredUrl()+'/?billing=cancel',client_reference_id:user.waypointId,'metadata[waypointId]':user.waypointId,'subscription_data[metadata][waypointId]':user.waypointId};
+        const session=await stripeRequest('POST','/checkout/sessions',form);
+        if(!/^https:\/\//.test(session.url||'')||!/^cs_/.test(session.id||''))throw new Error('invalid checkout session');
+        user.stripeCheckoutSessionId=session.id;persistAdminData();
+        return json(res,200,{url:session.url});
+      }catch(e){console.warn('[Waypoint Stripe] checkout failure '+String(e.code||e.name));return json(res,502,{error:'billing_provider_unavailable'});}
+    }
     /* ===================== Waypoint identity / entitlements ===================== */
     if(req.method==='POST'&&u.pathname==='/api/client/register'){
       const body=await readBody(req);
@@ -1009,7 +1097,7 @@ const server=http.createServer(async(req,res)=>{
           traffic:Boolean(process.env.GOOGLE_ROUTES_API_KEY),
           ocr:Boolean(process.env.OCR_API_URL||waypointAiConfigured()),
           cloudFiles:true,
-          billing:false,
+          billing:stripeConfigured()&&Boolean(stripeConfiguredUrl()),
           adsProvider:false,
           affiliatesProvider:false
         }
@@ -1108,7 +1196,7 @@ const server=http.createServer(async(req,res)=>{
     if(req.method==='GET'&&u.pathname==='/api/admin/system'){
       const s=requireAdmin(req,res);if(!s)return;
       return json(res,200,{
-        version:'10.6.1',
+        version:'10.7.0',
         uptimeSeconds:Math.round(process.uptime()),
         node:process.version,
         dataFile:DATA_FILE,
@@ -1130,7 +1218,7 @@ const server=http.createServer(async(req,res)=>{
           emailImport:false,
           adsenseVerification:true,
           adsServing:false,
-          premiumPurchases:false
+          premiumPurchases:stripeConfigured()&&Boolean(stripeConfiguredUrl())
         }
       });
     }
@@ -1147,7 +1235,7 @@ const server=http.createServer(async(req,res)=>{
         smartTextImport:true,
         monetization:true,
         adminControlCenter:adminConfigured(),
-        premiumPurchases:false,
+        premiumPurchases:stripeConfigured()&&Boolean(stripeConfiguredUrl()),
         ads:false,
         affiliates:false,
         desired:{

@@ -9,10 +9,10 @@ assert(formatted.includes('<h4 class="wp-ai-heading">Lugares</h4>'));assert(form
 assert.strictEqual(ctx.emergencyContactDialNumber({countryCode:'+57',phone:'321 456 7890'}),'+573214567890');
 assert.strictEqual(ctx.emergencyContactDialNumber({phone:'+1 (407) 123-4567'}),'+14071234567');
 assert(server.includes('at most 10 objects'));assert(server.includes('const date=clean(row.date,10),time=clean(row.time,5),reason=clean(row.reason,100)'));assert(!server.includes('process.env.OPENAI_API_KEY'));
-assert(html.includes("WAYPOINT_LEGAL_VERSION='1.5'"));
-for(const legal of ['public/privacy.html','public/terms.html']){const s=fs.readFileSync(legal,'utf8');assert(s.includes('Google Gemini'));assert(s.includes('Google Places'));assert(!s.includes('(OpenAI)'));assert(s.includes('1.5'));}
+assert(html.includes("WAYPOINT_LEGAL_VERSION='1.6'"));
+for(const legal of ['public/privacy.html','public/terms.html']){const s=fs.readFileSync(legal,'utf8');assert(s.includes('Google Gemini'));assert(s.includes('Google Places'));assert(!s.includes('(OpenAI)'));assert(s.includes('1.6'));}
 assert(html.includes('chooseWaypointAIIdea'));assert(html.includes('¿Qué quieres planificar?'));
 console.log('PASS AI structured answer safe HTML');
 console.log('PASS international dialing + legacy contacts');
 console.log('PASS Gemini-only prompt and 10 suggestions');
-console.log('PASS legal Gemini/Places v1.5 and interactive choices');
+console.log('PASS legal Gemini/Places v1.6 and interactive choices');

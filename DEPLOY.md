@@ -192,3 +192,6 @@ Deploy to the existing Railway service and keep the existing `/data` volume and 
 
 ## V10.6.1 update
 Keep the existing Railway service, `/data` volume and environment variables. To read receipts with Gemini, configure `WAYPOINT_AI_ENABLED=true`, `GEMINI_API_KEY`, and a model accessible to your Google AI Studio project. Do not add `OCR_API_URL` unless intentionally using a separate OCR adapter. Confirm `/health` shows `10.6.1`. The new reader sends the selected image to the configured provider; obtain user consent before submitting sensitive receipts.
+
+## V10.7.0 optional Stripe test-mode deployment
+Do not enable payments until you review `BILLING-ADS-ANDROID-SETUP.md` and verify the payment integration end-to-end with Stripe test-mode webhooks, cancellations, renewals and a public HTTPS URL. Existing Railway volume `/data`, service, repository, provider keys and current trips must be kept unchanged. Unconfigured Stripe endpoints are gated and Premium checkout is disabled. Web ads remain unserved until consent and approved placements are implemented.

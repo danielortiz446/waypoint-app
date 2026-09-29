@@ -557,3 +557,6 @@ See `RELEASE-V10.6.0.md` for finished features and explicit pending items.
 
 ## V10.6.1
 The trip menu's **Recuerdos** tab is now correctly labeled **Resumen del viaje**. Receipt photo reading uses the configured Gemini API when an optional custom OCR provider is absent, with review-before-save, image size/type limits, clear errors and updated privacy notice. See `RELEASE-V10.6.1.md`.
+
+## Waypoint 10.7.0 — Web billing and Android development scaffold
+See [`RELEASE-V10.7.0.md`](RELEASE-V10.7.0.md) for completed work/limitations and [`BILLING-ADS-ANDROID-SETUP.md`](BILLING-ADS-ANDROID-SETUP.md) for exact Stripe/AdSense/AdMob and Android setup. **Only the Stripe web checkout/webhook is integrated**; native store purchases and production ads still require provider onboarding, consent, receipt validation and native build/testing. Do not mark them live without these conditions.
