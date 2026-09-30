@@ -1,3 +1,10 @@
+# Waypoint V11.0.1 — Emergency Contact UX Fix
+
+- Replaced prompt-based emergency-contact creation with a persistent modal form.
+- Invalid country calling codes or phone numbers no longer close the flow or erase entered data.
+- Country code supports direct entry with or without `+` and a searchable browser suggestion list.
+- Added inline validation and preserved behavior across Web, iOS, and Android builds.
+
 ## 10.9.3 — Sync safety
 - Prevent cloud pulls from overwriting pending local edits.
 - Serialize in-flight uploads; expose retry/status.

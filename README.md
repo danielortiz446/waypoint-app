@@ -1,3 +1,7 @@
+# Waypoint 12.1.0
+
+Final all-in candidate for Web, iOS and Android. Includes Copilot, global trip search, reusable templates, smart planning, route optimization, reservations import, collaboration, Wallet, packing, memories, encrypted vault, backups and Premium controls.
+
 # Waypoint V10.9.2 — Web, iOS & Android
 
 Latest release notes: [RELEASE-V10.9.2.md](RELEASE-V10.9.2.md). Historical changes: [CHANGELOG.md](CHANGELOG.md).

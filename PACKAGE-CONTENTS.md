@@ -1,5 +1,9 @@
-# Paquete simplificado
+# Waypoint 12.1.0 package
 
-Se conserva el proyecto web (`public/`, `server.js`), los proyectos de preparación móvil (`ios-capacitor/`, `android-capacitor/`), scripts de prueba, configuración y guías técnicas.
+Core: `server.js`, `public/`, `package.json`, Docker/Railway deployment files.
 
-Los archivos `RELEASE` históricos se reunieron en `CHANGELOG.md`; los informes QA antiguos se reunieron en `QA-HISTORY.md`. La documentación vigente es `RELEASE-V10.8.3.md` y `QA-V10.8.3.txt`. No se han modificado las funcionalidades de la aplicación en esta limpieza. Las aplicaciones nativas requieren compilación y publicación por separado.
+Mobile wrappers: `ios-capacitor/`, `android-capacitor/`.
+
+Current docs: `README.md`, `DEPLOY.md`, `FINAL-V12.md`, `GEMINI-SETUP.md`, `GOOGLE-PLACES-SETUP.md`, `IOS-SETUP.md`, `MOBILE-PUBLISHING.md`, `BILLING-ADS-ANDROID-SETUP.md`, `PREMIUM-TEST-GUIDE.md`, `CHANGELOG.md`.
+
+Historical release-note files were intentionally removed from this distribution.
