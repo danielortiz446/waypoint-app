@@ -65,12 +65,14 @@ code{color:#f0cf64}
 pre{white-space:pre-wrap;word-break:break-word;background:rgba(0,0,0,.18);padding:10px;border-radius:10px;font-size:10px}
 @media(max-width:820px){.grid{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}}
 @media(max-width:500px){.grid{grid-template-columns:1fr}.row{align-items:flex-start;flex-direction:column}.row>.actions{width:100%}.row>.actions .btn{flex:1}.wrap{padding:14px 10px 50px}}
+
+.bar-row{display:grid;grid-template-columns:82px 1fr 40px;gap:8px;align-items:center;margin:8px 0}.bar-track{height:10px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden}.bar-fill{height:100%;background:linear-gradient(90deg,var(--gold),#f0cf64);border-radius:999px}.live-dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 4px rgba(122,217,163,.08);display:inline-block;margin-right:6px}.live-dot.idle{background:var(--muted);box-shadow:none}.analytics-note{font-size:10px;color:var(--muted);margin-top:8px}.mini-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}@media(max-width:700px){.mini-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand">WAYPOINT <small>ADMIN CONTROL CENTER · 10.1.1</small></div>
+    <div class="brand">WAYPOINT <small>ADMIN CONTROL CENTER · 12.1.2</small></div>
     <div class="actions">
       <button class="btn" onclick="location.href='/'">← App</button>
       <button id="logoutBtn" class="btn danger hidden" onclick="logout()">Logout</button>
@@ -91,6 +93,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:rgba(0,0,0,.18);paddin
   <div id="adminView" class="hidden">
     <div class="tabs">
       <button class="btn active" data-tab="dashboard" onclick="showTab('dashboard',this)">Dashboard</button>
+      <button class="btn" data-tab="analytics" onclick="showTab('analytics',this)">Live analytics</button>
       <button class="btn" data-tab="users" onclick="showTab('users',this)">Users & Premium</button>
       <button class="btn" data-tab="promos" onclick="showTab('promos',this)">Promo codes</button>
       <button class="btn" data-tab="flags" onclick="showTab('flags',this)">Feature flags</button>
@@ -100,7 +103,7 @@ pre{white-space:pre-wrap;word-break:break-word;background:rgba(0,0,0,.18);paddin
 
     <section id="tab-dashboard">
       <div id="metrics" class="grid"></div>
-      <div class="card" style="margin-top:12px"><h3>Gemini / OCR daily quotas</h3><p class="sub">Server-enforced per verified Waypoint ID (anonymous users share a connection-address bucket). Resets daily at 00:00 UTC. Changes take effect immediately.</p>
+      <div class="card" style="margin-top:12px"><h3>Gemini / OCR daily quotas</h3><p class="sub">Server-enforced per verified Waypoint ID (anonymous devices receive a browser-specific guest quota). Resets daily at 00:00 UTC. Changes take effect immediately.</p>
         <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">
           <div class="field"><label>Free AI / day</label><input id="limit-free-ai" type="number" min="0" max="1000" step="1"></div>
           <div class="field"><label>Premium AI / day</label><input id="limit-premium-ai" type="number" min="0" max="1000" step="1"></div>
@@ -112,6 +115,15 @@ pre{white-space:pre-wrap;word-break:break-word;background:rgba(0,0,0,.18);paddin
         <div class="card"><h3>Services</h3><div id="services"></div></div>
         <div class="card"><h3>Privacy boundary</h3><p class="sub">This panel manages Waypoint IDs, entitlement status, promo codes, feature flags, operational metrics, and admin actions. It intentionally does not expose itinerary, chat, document, or expense contents from user trips.</p></div>
       </div>
+    </section>
+
+    <section id="tab-analytics" class="hidden">
+      <div id="analyticsMetrics" class="grid"></div>
+      <div class="two" style="margin-top:12px">
+        <div class="card"><h3>Live users <span class="pill ok" id="liveUpdated">AUTO</span></h3><p class="sub">Active now means a device has checked in during the last 2 minutes. This view refreshes every 10 seconds while open.</p><div id="liveUsers"></div></div>
+        <div class="card"><h3>Platform mix</h3><div id="platformMix"></div><div class="analytics-note">Waypoint stores only operational metadata for analytics. It does not collect trip content, chat messages, documents, expenses, searches or AI prompts for this dashboard.</div></div>
+      </div>
+      <div class="card"><h3>Last 14 days</h3><p class="sub">Daily active installations, new installations and successful AI/OCR usage.</p><div id="dailyAnalytics"></div></div>
     </section>
 
     <section id="tab-users" class="hidden">
@@ -210,6 +222,7 @@ function showTab(name,btn){
   $('#tab-'+name).classList.remove('hidden');
   document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));btn?.classList.add('active');
   if(name==='dashboard')loadDashboard();
+  if(name==='analytics')loadAnalytics();
   if(name==='users')loadUsers();
   if(name==='promos')loadPromos();
   if(name==='flags')loadFlags();
@@ -220,8 +233,9 @@ async function loadDashboard(){
   try{
     const d=await api('/api/admin/dashboard');
     const metrics=[
+      ['Active now',d.analytics?.activeNow??0],['Active today',d.analytics?.activeToday??0],['Installations',d.analytics?.totalInstallations??0],
       ['Registered IDs',d.registeredUsers],['Premium',d.premiumUsers],['Free',d.freeUsers],
-      ['Shared trips',d.sharedTrips],['Promo codes',d.promoCodes],['File storage',fmtBytes(d.fileStorageBytes)]
+      ['Shared trips',d.sharedTrips],['AI today',d.usageToday?.ai??0],['OCR today',d.usageToday?.ocr??0],['File storage',fmtBytes(d.fileStorageBytes)]
     ];
     $('#metrics').innerHTML=metrics.map(([k,v])=>`<div class="metric"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`).join('');
     loadAiLimits();
@@ -245,6 +259,24 @@ async function saveAiLimits(){
    await api('/api/admin/ai-limits',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({limits})});
    $('#limitsStatus').textContent='Daily limits saved successfully.';
  }catch(e){$('#limitsStatus').textContent=e.message;}
+}
+let analyticsTimer=null;
+function metricCards(items){return items.map(([k,v])=>`<div class="metric"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`).join('')}
+function platformLabel(k){return ({web:'Web',ios:'iOS',android:'Android',browser:'Browser',pwa:'PWA',native:'Native'})[k]||k}
+async function loadAnalytics(){
+  try{
+    const [a,l]=await Promise.all([api('/api/admin/analytics?days=14'),api('/api/admin/live')]);
+    const s=a.snapshot||{};
+    $('#analyticsMetrics').innerHTML=metricCards([['Active now',s.activeNow||0],['Active 5 min',s.active5m||0],['Today',s.activeToday||0],['7 days',s.active7d||0],['Total installations',s.totalInstallations||0],['New today',s.newToday||0],['Registered online',s.registeredOnline||0],['Guests online',s.guestOnline||0]]);
+    const sessions=l.sessions||[];
+    $('#liveUsers').innerHTML=sessions.length?sessions.map(x=>`<div class="row"><div class="row-main"><div class="name"><span class="live-dot ${x.activeNow?'':'idle'}"></span>${esc(x.label)} <span class="pill ${x.plan==='premium'?'premium':''}">${esc((x.plan||'free').toUpperCase())}</span></div><div class="meta">${esc(platformLabel(x.platform))} · ${esc(platformLabel(x.appMode))} · ${esc((x.lang||'').toUpperCase())} · seen ${esc(fmtDate(x.lastSeenAt))}</div></div></div>`).join(''):'<div class="sub">No active devices in the last 5 minutes.</div>';
+    const mix={...(s.byPlatform||{}),...(s.byMode||{})},max=Math.max(1,...Object.values(mix).map(Number));
+    $('#platformMix').innerHTML=Object.entries(mix).map(([k,v])=>`<div class="bar-row"><div class="meta">${esc(platformLabel(k))}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(Number(v||0)/max*100)}%"></div></div><strong>${esc(v||0)}</strong></div>`).join('');
+    const daily=a.daily||[],maxDaily=Math.max(1,...daily.map(x=>Number(x.active||0)));
+    $('#dailyAnalytics').innerHTML=daily.map(x=>`<div class="row"><div class="row-main" style="width:100%"><div class="name">${esc(x.date)}</div><div class="bar-track" style="margin-top:7px"><div class="bar-fill" style="width:${Math.round(Number(x.active||0)/maxDaily*100)}%"></div></div><div class="meta">Active ${esc(x.active||0)} · New ${esc(x.newInstalls||0)} · AI ${esc(x.ai||0)} · OCR ${esc(x.ocr||0)}</div></div></div>`).join('');
+    $('#liveUpdated').textContent='LIVE · '+new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    clearTimeout(analyticsTimer);analyticsTimer=setTimeout(()=>{if(!$('#tab-analytics').classList.contains('hidden'))loadAnalytics()},10000);
+  }catch(e){if(e.status===401)location.reload();else $('#liveUsers').innerHTML='<div class="sub">'+esc(e.message)+'</div>'}
 }
 async function loadUsers(){
   try{

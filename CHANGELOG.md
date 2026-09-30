@@ -1,3 +1,14 @@
+# Waypoint 12.1.2
+
+- Added privacy-preserving admin analytics and real-time active-device dashboard.
+- Added web/iOS/Android platform and app-mode breakdowns plus 14-day activity summaries.
+- Renamed visible “Copilot” branding to Waypoint AI Assistant and clarified Gemini as the AI provider.
+- Fixed OCR quota charging so failed OCR attempts do not consume the daily allowance.
+- Fixed quota `allowed` state after successful consumption.
+- Aligned app/server/service-worker versions to 12.1.2.
+- Aligned legal acceptance to Privacy/Terms v1.8 and disclosed operational analytics in English and Spanish.
+- Cleaned current documentation and removed obsolete FINAL/RELEASE files from the package.
+
 # Waypoint V11.0.1 — Emergency Contact UX Fix
 
 - Replaced prompt-based emergency-contact creation with a persistent modal form.

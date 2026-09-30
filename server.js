@@ -78,7 +78,8 @@ function defaultAdminData(){
     },
     adminLog:[],
     premiumUsage:{},
-    aiPlanLimits:{free:{ai:4,ocr:1},premium:{ai:18,ocr:8}}
+    aiPlanLimits:{free:{ai:4,ocr:1},premium:{ai:18,ocr:8}},
+    analytics:{installations:{},daily:{}}
   };
 }
 function loadAdminData(){
@@ -92,7 +93,8 @@ function loadAdminData(){
       featureFlags:{...defaultAdminData().featureFlags,...(raw.featureFlags||{})},
       adminLog:Array.isArray(raw.adminLog)?raw.adminLog:[],
       premiumUsage:raw.premiumUsage&&typeof raw.premiumUsage==='object'?raw.premiumUsage:{},
-      aiPlanLimits:raw.aiPlanLimits&&typeof raw.aiPlanLimits==='object'?raw.aiPlanLimits:defaultAdminData().aiPlanLimits
+      aiPlanLimits:raw.aiPlanLimits&&typeof raw.aiPlanLimits==='object'?raw.aiPlanLimits:defaultAdminData().aiPlanLimits,
+      analytics:raw.analytics&&typeof raw.analytics==='object'?raw.analytics:{installations:{},daily:{}}
     };
   }catch(e){return defaultAdminData();}
 }
@@ -136,6 +138,66 @@ async function reconcileStripeSubscription(id){
   if(matches.length)persistAdminData();
 }
 const adminData=loadAdminData();
+// Privacy-preserving product analytics. Only operational metadata is stored:
+// installation hash, platform, app mode, language, plan and timestamps.
+// Waypoint never records itinerary, chat, document, expense, search or AI prompt contents here.
+const livePresence=new Map();
+const analyticsPersistedAt=new Map();
+function ensureAnalytics(){
+  if(!adminData.analytics||typeof adminData.analytics!=='object')adminData.analytics={installations:{},daily:{}};
+  if(!adminData.analytics.installations||typeof adminData.analytics.installations!=='object')adminData.analytics.installations={};
+  if(!adminData.analytics.daily||typeof adminData.analytics.daily!=='object')adminData.analytics.daily={};
+  return adminData.analytics;
+}
+function analyticsDay(date=new Date()){return date.toISOString().slice(0,10);}
+function analyticsDailyRow(date=analyticsDay()){
+  const a=ensureAnalytics();
+  const row=a.daily[date]||(a.daily[date]={active:{},newInstalls:0,ai:0,ocr:0});
+  if(!row.active||typeof row.active!=='object')row.active={};
+  const dates=Object.keys(a.daily).sort();
+  for(const d of dates.slice(0,Math.max(0,dates.length-31)))delete a.daily[d];
+  return row;
+}
+function recordUsageMetric(kind){
+  const row=analyticsDailyRow();
+  if(kind==='ai'||kind==='ocr')row[kind]=Math.max(0,Number(row[kind]||0))+1;
+}
+function platformFromTelemetry(v){v=String(v||'web').toLowerCase();return ['ios','android','web'].includes(v)?v:'web';}
+function appModeFromTelemetry(v){v=String(v||'browser').toLowerCase();return ['browser','pwa','native'].includes(v)?v:'browser';}
+function telemetrySnapshot(){
+  const now=Date.now(),a=ensureAnalytics(),installs=Object.values(a.installations||{});
+  const active=[...livePresence.values()].filter(x=>now-x.lastSeenAt<120000);
+  const active5=[...livePresence.values()].filter(x=>now-x.lastSeenAt<300000);
+  const active15=[...livePresence.values()].filter(x=>now-x.lastSeenAt<900000);
+  const today=analyticsDay(),todayStart=Date.parse(today+'T00:00:00Z'),weekStart=now-7*86400000;
+  const byPlatform={web:0,ios:0,android:0},byMode={browser:0,pwa:0,native:0};
+  for(const x of active){byPlatform[x.platform]=(byPlatform[x.platform]||0)+1;byMode[x.appMode]=(byMode[x.appMode]||0)+1;}
+  return {
+    activeNow:active.length,active5m:active5.length,active15m:active15.length,
+    activeToday:installs.filter(x=>Number(x.lastSeenAt||0)>=todayStart).length,
+    active7d:installs.filter(x=>Number(x.lastSeenAt||0)>=weekStart).length,
+    totalInstallations:installs.length,newToday:installs.filter(x=>Number(x.firstSeenAt||0)>=todayStart).length,
+    byPlatform,byMode,registeredOnline:active.filter(x=>x.waypointId).length,guestOnline:active.filter(x=>!x.waypointId).length
+  };
+}
+function recordTelemetry(req,body){
+  const rawId=String(body?.installationId||'').trim();
+  if(!/^[A-Za-z0-9._:-]{12,160}$/.test(rawId))return null;
+  const installHash=hash('analytics:'+rawId).slice(0,32),now=Date.now();
+  const a=ensureAnalytics(),platform=platformFromTelemetry(body?.platform),appMode=appModeFromTelemetry(body?.appMode);
+  const lang=String(body?.lang||'').toLowerCase().slice(0,8)||'unknown';
+  const user=clientAuth(req),ent=entitlementForUser(user);
+  let row=a.installations[installHash];const isNew=!row;
+  if(!row)row=a.installations[installHash]={firstSeenAt:now,lastSeenAt:now,platform,appMode,lang};
+  row.lastSeenAt=now;row.platform=platform;row.appMode=appMode;row.lang=lang;row.plan=ent.plan;
+  if(user?.waypointId)row.waypointId=user.waypointId;else delete row.waypointId;
+  const day=analyticsDailyRow();day.active[installHash]=1;if(isNew)day.newInstalls=Math.max(0,Number(day.newInstalls||0))+1;
+  livePresence.set(installHash,{installHash,lastSeenAt:now,platform,appMode,lang,plan:ent.plan,waypointId:user?.waypointId||null});
+  for(const [k,v] of livePresence)if(now-v.lastSeenAt>30*60*1000)livePresence.delete(k);
+  const last=analyticsPersistedAt.get(installHash)||0;
+  if(isNew||now-last>5*60*1000){analyticsPersistedAt.set(installHash,now);persistAdminData();}
+  return {ok:true};
+}
 function persistAdminData(){
   fs.mkdirSync(path.dirname(ADMIN_DATA_FILE),{recursive:true});
   const tmp=ADMIN_DATA_FILE+'.tmp';
@@ -724,8 +786,9 @@ function premiumUsage(req,kind,consume=false){
   const row=day[ctx.key]||(day[ctx.key]={ai:0,ocr:0});
   const used=Math.max(0,Number(row[kind]||0));
   const limit=ctx.limits[kind];
-  if(consume&&used<limit){row[kind]=used+1;persistAdminData();}
-  return {plan:ctx.plan,used:consume&&used<limit?used+1:used,limit,remaining:Math.max(0,limit-(consume&&used<limit?used+1:used)),allowed:(consume?used+1:used)<limit,resetAt:tomorrowUtc(),fullPlanner:ctx.plan==='premium',batchAdd:ctx.plan==='premium'};
+  const nextUsed=consume&&used<limit?used+1:used;
+  if(consume&&used<limit){row[kind]=nextUsed;recordUsageMetric(kind);persistAdminData();}
+  return {plan:ctx.plan,used:nextUsed,limit,remaining:Math.max(0,limit-nextUsed),allowed:nextUsed<limit,resetAt:tomorrowUtc(),fullPlanner:ctx.plan==='premium',batchAdd:ctx.plan==='premium'};
 }
 // Reservations prevent concurrent requests from consuming more than the daily allowance.
 // Only successful Gemini answers are charged; errors release the reservation.
@@ -868,7 +931,14 @@ const server=http.createServer(async(req,res)=>{
         return json(res,502,{error:'ai_temporarily_unavailable'});
       }finally{releaseAiReservation();}
     }
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'12.1.0',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'12.1.2',time:new Date().toISOString()});
+    if(req.method==='POST'&&u.pathname==='/api/telemetry/ping'){
+      const origin=String(req.headers.origin||'');
+      if(origin){try{if(new URL(origin).host!==req.headers.host)return json(res,403,{error:'origin_not_allowed'});}catch(e){return json(res,403,{error:'origin_not_allowed'});}}
+      const body=await readBody(req,8000).catch(()=>null);if(!body)return json(res,400,{error:'invalid_telemetry'});
+      const out=recordTelemetry(req,body);if(!out)return json(res,400,{error:'invalid_telemetry'});
+      return json(res,200,out);
+    }
 
     if(req.method==='GET'&&u.pathname==='/api/fx/rate'){
       const from=String(u.searchParams.get('from')||'').trim().toUpperCase();
@@ -1105,7 +1175,6 @@ const server=http.createServer(async(req,res)=>{
       const ent=premiumUsage(req,'ocr');
       if(!ent.allowed)return json(res,429,{enabled:true,error:'premium_daily_limit',feature:'ocr',limit:ent.limit,remaining:0,resetAt:ent.resetAt});
       if(!aiAllowed(req))return json(res,429,{enabled:true,error:'ai_usage_limit'});
-      premiumUsage(req,'ocr',true);
       try{
         let rr;
         if(endpoint){
@@ -1123,7 +1192,8 @@ const server=http.createServer(async(req,res)=>{
         const data=await rr.json().catch(()=>({}));
         const extracted=endpoint?String(data.text||data.result?.text||''):String((data.candidates||[]).flatMap(c=>c.content?.parts||[]).map(part=>part.text||'').join('\n'));
         if(!extracted.trim())return json(res,422,{enabled:true,error:'ocr_no_text'});
-        return json(res,200,{enabled:true,provider:endpoint?'Custom OCR':'Gemini',text:extracted.slice(0,6000)});
+        const usage=premiumUsage(req,'ocr',true);
+        return json(res,200,{enabled:true,provider:endpoint?'Custom OCR':'Gemini',text:extracted.slice(0,6000),usage});
       }catch(e){console.warn('[Waypoint OCR] failed='+String(e?.name||'unknown'));return json(res,502,{enabled:true,error:'ocr_provider_unavailable'});}
     }
 
@@ -1315,6 +1385,8 @@ const server=http.createServer(async(req,res)=>{
         promoCodes:promoCodes.length,
         sharedTrips:Object.keys(rooms).length,
         fileStorageBytes:directorySize(FILE_ROOT),
+        analytics:telemetrySnapshot(),
+        usageToday:(()=>{const row=analyticsDailyRow();return {ai:Number(row.ai||0),ocr:Number(row.ocr||0)}})(),
         featureFlags:adminData.featureFlags,
         services:{
           weather:Boolean(process.env.WEATHERAPI_KEY),
@@ -1327,6 +1399,19 @@ const server=http.createServer(async(req,res)=>{
           affiliatesProvider:false
         }
       });
+    }
+    if(req.method==='GET'&&u.pathname==='/api/admin/analytics'){
+      if(!requireAdmin(req,res))return;
+      const days=Math.max(7,Math.min(31,Number(u.searchParams.get('days')||14)));
+      const a=ensureAnalytics(),out=[];
+      for(let i=days-1;i>=0;i--){const d=new Date(Date.now()-i*86400000),date=analyticsDay(d),row=a.daily[date]||{};out.push({date,active:Object.keys(row.active||{}).length,newInstalls:Number(row.newInstalls||0),ai:Number(row.ai||0),ocr:Number(row.ocr||0)});}
+      return json(res,200,{snapshot:telemetrySnapshot(),daily:out,generatedAt:new Date().toISOString()});
+    }
+    if(req.method==='GET'&&u.pathname==='/api/admin/live'){
+      if(!requireAdmin(req,res))return;
+      const now=Date.now();
+      const sessions=[...livePresence.values()].filter(x=>now-x.lastSeenAt<5*60*1000).sort((a,b)=>b.lastSeenAt-a.lastSeenAt).slice(0,500).map(x=>({label:x.waypointId||('Guest '+x.installHash.slice(0,6).toUpperCase()),waypointId:x.waypointId||null,platform:x.platform,appMode:x.appMode,lang:x.lang,plan:x.plan,lastSeenAt:new Date(x.lastSeenAt).toISOString(),activeNow:now-x.lastSeenAt<120000}));
+      return json(res,200,{sessions,generatedAt:new Date().toISOString()});
     }
     if(req.method==='GET'&&u.pathname==='/api/admin/users'){
       const s=requireAdmin(req,res);if(!s)return;
@@ -1421,7 +1506,7 @@ const server=http.createServer(async(req,res)=>{
     if(req.method==='GET'&&u.pathname==='/api/admin/system'){
       const s=requireAdmin(req,res);if(!s)return;
       return json(res,200,{
-        version:'12.1.0',
+        version:'12.1.2',
         uptimeSeconds:Math.round(process.uptime()),
         node:process.version,
         dataFile:DATA_FILE,
