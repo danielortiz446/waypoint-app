@@ -1,6 +1,6 @@
 # Waypoint Admin Analytics
 
-Waypoint 12.1.4 adds privacy-preserving product analytics to the existing Admin Control Center.
+Waypoint 12.1.5 adds privacy-preserving product analytics to the existing Admin Control Center.
 
 ## Dashboard metrics
 - Active now (heartbeat within 2 minutes)

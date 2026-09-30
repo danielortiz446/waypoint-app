@@ -1,4 +1,4 @@
-V12.1.4
+V12.1.5
 - Reviewed every Toolbox calculator for clarity and mobile usability.
 - Currency names shown in money-related calculators.
 - Tip and split-bill calculators now support currency selection and formatted totals.

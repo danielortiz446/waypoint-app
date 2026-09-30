@@ -11,7 +11,7 @@ async function run(){
   let ready=false;
   for(let i=0;i<70;i++){try{let r=await fetch(url+'/health');ready=r.ok; if(ready)break;}catch(e){}await new Promise(ok=>setTimeout(ok,75));}
   assert(ready,'Server did not start');
-  let r=await fetch(url+'/health');assert.equal((await r.json()).version,'12.1.4');console.log('PASS health v12.1.4');
+  let r=await fetch(url+'/health');assert.equal((await r.json()).version,'12.1.5');console.log('PASS health v12.1.5');
   r=await fetch(url+'/api/ai/status');assert.equal((await r.json()).configured,false);console.log('PASS AI disabled status without key');
   r=await fetch(url+'/api/ai/plan',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({question:'Find something interesting for tomorrow'})});assert.equal(r.status,503);console.log('PASS AI does not make live calls without key');
   r=await fetch(url+'/api/ai/plan',{method:'POST',headers:{origin:'https://evil.example','content-type':'application/json'},body:'{}'});assert.equal(r.status,403);console.log('PASS cross-origin AI request blocked');
