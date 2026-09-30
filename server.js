@@ -868,7 +868,7 @@ const server=http.createServer(async(req,res)=>{
         return json(res,502,{error:'ai_temporarily_unavailable'});
       }finally{releaseAiReservation();}
     }
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'10.9.9',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'10.10.0',time:new Date().toISOString()});
 
     if(req.method==='GET'&&u.pathname==='/api/fx/rate'){
       const from=String(u.searchParams.get('from')||'').trim().toUpperCase();
@@ -1148,13 +1148,27 @@ const server=http.createServer(async(req,res)=>{
       return json(res,200,{ok:true,user:publicUser(existing)});
     }
     /* Recovery code is displayed only once, hashed at rest, rotated when used.
+       New codes are short, human-friendly and avoid ambiguous characters.
+       Legacy 64-character hexadecimal codes remain valid for existing users.
        Recovery replaces the former device credentials (one active device per ID).
        It restores the Premium entitlement, not local-only trips or encrypted vaults. */
+    function createReadableRecoveryCode(){
+      const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      const bytes=crypto.randomBytes(16);
+      let compact='';
+      for(let i=0;i<16;i++)compact+=alphabet[bytes[i]%alphabet.length];
+      return compact.match(/.{1,4}/g).join('-');
+    }
+    function normalizeRecoveryCode(value){
+      const raw=String(value||'').trim().toUpperCase();
+      if(/^[A-F0-9]{64}$/.test(raw))return raw; // backwards compatibility
+      return raw.replace(/[^A-Z0-9]/g,'');
+    }
     if(req.method==='POST'&&u.pathname==='/api/client/recovery-code'){
       const user=clientAuth(req);
       if(!user)return json(res,401,{error:'invalid_client_credentials'});
-      const recoveryCode=crypto.randomBytes(32).toString('hex').toUpperCase();
-      user.recoveryHash=hash(recoveryCode);
+      const recoveryCode=createReadableRecoveryCode();
+      user.recoveryHash=hash(normalizeRecoveryCode(recoveryCode));
       user.recoveryIssuedAt=new Date().toISOString();
       persistAdminData();
       return json(res,200,{ok:true,recoveryCode,warning:'Store offline. This code is displayed once and replaces any previous recovery code.'},{'Cache-Control':'no-store'});
@@ -1162,10 +1176,13 @@ const server=http.createServer(async(req,res)=>{
     if(req.method==='POST'&&u.pathname==='/api/client/recover'){
       const body=await readBody(req);
       const waypointId=String(body.waypointId||'').trim().toUpperCase().slice(0,40);
-      const recoveryCode=String(body.recoveryCode||'').trim().toUpperCase();
+      const rawRecoveryCode=String(body.recoveryCode||'').trim().toUpperCase();
+      const recoveryCode=normalizeRecoveryCode(rawRecoveryCode);
       const clientId=String(body.clientId||'').trim();
       const clientSecret=String(body.clientSecret||'').trim();
-      if(!/^WP-[A-Z0-9-]{8,20}$/.test(waypointId)||!/^[A-F0-9]{64}$/.test(recoveryCode)||
+      const isLegacy=/^[A-F0-9]{64}$/.test(recoveryCode);
+      const isReadable=/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{16}$/.test(recoveryCode);
+      if(!/^WP-[A-Z0-9-]{8,20}$/.test(waypointId)||(!isLegacy&&!isReadable)||
          !/^wc-[a-f0-9]{36}$/.test(clientId)||!/^[a-f0-9]{64}$/.test(clientSecret))return json(res,400,{error:'invalid_recovery_request'});
       if(!recoveryAllowed(req,waypointId))return json(res,429,{error:'recovery_too_many_attempts',retryAfterSeconds:900},{'Retry-After':'900','Cache-Control':'no-store'});
       const user=adminData.users[waypointId];

@@ -7,7 +7,7 @@ for(const file of files){
   assert(html.includes("items.push({id:uid(),text,category:suggestion.category||'other'"),`${file}: smart packing still not writing text`);
   const scripts=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)];
   for(const [,script] of scripts) if(script.trim()) new vm.Script(script,{filename:file});
-  console.log('PASS UI 10.9.9:',file);
+  console.log('PASS UI 10.10.0:',file);
 }
 for(const file of ['public/privacy.html','public/terms.html','ios-capacitor/www/privacy.html','ios-capacitor/www/terms.html','android-capacitor/www/privacy.html','android-capacitor/www/terms.html']){
   const html=fs.readFileSync(path.join(root,file),'utf8');

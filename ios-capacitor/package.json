@@ -1,6 +1,6 @@
 {
   "name": "waypoint-ios",
-  "version": "10.9.9",
+  "version": "10.10.0",
   "private": true,
   "description": "Waypoint Capacitor iOS development shell; connects to existing Railway deployment",
   "scripts": {
