@@ -1,4 +1,4 @@
-# Waypoint 12.1.2
+# Waypoint 12.1.4
 
 Waypoint is a cross-platform travel planner for Web/PWA, iOS (Capacitor) and Android (Capacitor).
 
@@ -48,3 +48,7 @@ Most trip data remains local unless the user enables sharing, chat or shared fil
 ## Mobile
 
 The `ios-capacitor/` and `android-capacitor/` folders mirror the current web UI. Native publishing, store billing and push notifications still require the developer's Apple/Google accounts, credentials and store configuration.
+
+
+## Toolbox V12.1.4
+All quick calculators use human-readable labels and mobile-safe controls.

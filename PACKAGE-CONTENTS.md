@@ -1,4 +1,4 @@
-# Waypoint 12.1.2 package
+# Waypoint 12.1.4 package
 
 ## Core
 - `server.js`

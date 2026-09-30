@@ -1,6 +1,6 @@
 {
   "name": "waypoint-android",
-  "version": "12.1.2",
+  "version": "12.1.4",
   "private": true,
   "description": "Development-only Capacitor Android remote HTTPS shell",
   "scripts": {
