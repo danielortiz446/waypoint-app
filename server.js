@@ -727,7 +727,7 @@ async function getWaypointFlight(number){
  const data=jsonData.response;
  if(!data||Array.isArray(data)){const e=new Error('not found');e.code='flight_not_found';throw e;}
  const clean=(v,max=80)=>typeof v==='string'?v.slice(0,max):'';
- const result={number,provider:'AirLabs',status:clean(data.status),dep:clean(data.dep_iata,8),arr:clean(data.arr_iata,8),terminal:clean(data.dep_terminal,16),gate:clean(data.dep_gate,16),delay:Number.isFinite(Number(data.dep_delayed))&&data.dep_delayed!=null?Math.max(0,Number(data.dep_delayed)):null,updated:Number.isFinite(Number(data.updated))&&data.updated?new Date(Number(data.updated)*1000).toISOString():'',checkedAt:new Date().toISOString(),live:true};
+ const result={number,provider:'AirLabs',status:clean(data.status),dep:clean(data.dep_iata,8),arr:clean(data.arr_iata,8),terminal:clean(data.dep_terminal,16),gate:clean(data.dep_gate,16),arrTerminal:clean(data.arr_terminal,16),arrGate:clean(data.arr_gate,16),depTime:clean(data.dep_time||data.dep_estimated||data.dep_actual,40),arrTime:clean(data.arr_time||data.arr_estimated||data.arr_actual,40),aircraft:clean(data.aircraft_icao||data.aircraft_reg_number,32),delay:Number.isFinite(Number(data.dep_delayed))&&data.dep_delayed!=null?Math.max(0,Number(data.dep_delayed)):null,updated:Number.isFinite(Number(data.updated))&&data.updated?new Date(Number(data.updated)*1000).toISOString():'',checkedAt:new Date().toISOString(),live:true};
  liveFlightCache.set(number,{ts:now,value:result});if(liveFlightCache.size>500)liveFlightCache.clear();return result;
 }
 // Verified entitlements and daily counters. Credentials are checked on every paid API call.
@@ -931,7 +931,7 @@ const server=http.createServer(async(req,res)=>{
         return json(res,502,{error:'ai_temporarily_unavailable'});
       }finally{releaseAiReservation();}
     }
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'12.1.5',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'12.1.6',time:new Date().toISOString()});
     if(req.method==='POST'&&u.pathname==='/api/telemetry/ping'){
       const origin=String(req.headers.origin||'');
       if(origin){try{if(new URL(origin).host!==req.headers.host)return json(res,403,{error:'origin_not_allowed'});}catch(e){return json(res,403,{error:'origin_not_allowed'});}}
@@ -1506,7 +1506,7 @@ const server=http.createServer(async(req,res)=>{
     if(req.method==='GET'&&u.pathname==='/api/admin/system'){
       const s=requireAdmin(req,res);if(!s)return;
       return json(res,200,{
-        version:'12.1.5',
+        version:'12.1.6',
         uptimeSeconds:Math.round(process.uptime()),
         node:process.version,
         dataFile:DATA_FILE,

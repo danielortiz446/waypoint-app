@@ -52,3 +52,7 @@ The `ios-capacitor/` and `android-capacitor/` folders mirror the current web UI.
 
 ## Toolbox V12.1.5
 All quick calculators use human-readable labels and mobile-safe controls.
+
+
+### Flight Hub 12.1.6
+The flight center now supports detailed flight records, local departure/arrival times and time zones, terminals/gates, baggage, seats, confirmation codes, manual status/check-in, and optional AirLabs status lookups. Always verify operational flight details with the airline.
