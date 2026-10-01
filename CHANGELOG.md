@@ -1,3 +1,9 @@
+## 12.1.9
+- Replaced the native airline dropdown with a searchable custom airline picker.
+- Added Popular and Recent airlines for faster flight entry.
+- Added name/code search and a clean Other airline fallback.
+- Updated PWA cache/version to prevent stale flight UI.
+
 ## 12.1.8
 - Flight entry now uses an airline selector plus numeric flight number for faster entry.
 - Waypoint composes the IATA flight number internally for live lookups.
