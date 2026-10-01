@@ -931,7 +931,7 @@ const server=http.createServer(async(req,res)=>{
         return json(res,502,{error:'ai_temporarily_unavailable'});
       }finally{releaseAiReservation();}
     }
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'12.1.6',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'12.1.8',time:new Date().toISOString()});
     if(req.method==='POST'&&u.pathname==='/api/telemetry/ping'){
       const origin=String(req.headers.origin||'');
       if(origin){try{if(new URL(origin).host!==req.headers.host)return json(res,403,{error:'origin_not_allowed'});}catch(e){return json(res,403,{error:'origin_not_allowed'});}}
@@ -1506,7 +1506,7 @@ const server=http.createServer(async(req,res)=>{
     if(req.method==='GET'&&u.pathname==='/api/admin/system'){
       const s=requireAdmin(req,res);if(!s)return;
       return json(res,200,{
-        version:'12.1.6',
+        version:'12.1.8',
         uptimeSeconds:Math.round(process.uptime()),
         node:process.version,
         dataFile:DATA_FILE,

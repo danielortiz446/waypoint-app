@@ -25,3 +25,9 @@
 - `CHANGELOG.md`
 
 Historical `RELEASE-*` and `FINAL-*` files are intentionally excluded from this distribution.
+
+## V12.1.8 Flight airline selector
+- Grouped airline selector with IATA codes.
+- Numeric-only flight number entry.
+- Full IATA flight number composed automatically for live lookup.
+- Other-airline fallback with manual IATA code.

@@ -1,3 +1,17 @@
+## 12.1.8
+- Flight entry now uses an airline selector plus numeric flight number for faster entry.
+- Waypoint composes the IATA flight number internally for live lookups.
+- Added grouped airline list and fallback for other carriers.
+
+# Changelog
+
+## 12.1.7 — Professional Simple Flights
+- Simplified flight entry to four required fields: flight number, date, origin and destination.
+- Departure time and confirmation remain quick fields.
+- Advanced details moved into an optional disclosure.
+- Flight cards now show a clean summary with expandable details.
+- Preserved live AirLabs lookup, check-in, collaboration and legacy compatibility.
+
 V12.1.5
 - Reviewed every Toolbox calculator for clarity and mobile usability.
 - Currency names shown in money-related calculators.
