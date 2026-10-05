@@ -36,10 +36,20 @@ V12.1.5
 - Added route mismatch warning when provider data does not match the saved route.
 
 
-## 12.2.0
+## 12.3.0
 - Added Smart Travel Center dashboard with contextual alerts, budget projection, readiness score, nearby shortcuts and emergency quick access.
 - Added Airport Assistant with configurable airport-arrival buffer, estimated travel time, suggested leave time, flight facts and airport/check-in shortcuts.
 - Enhanced Today with contextual alerts and direct Travel Center access.
 - Enhanced Trip Recap with flights, activities, spending, memories and optional Premium Gemini recap prompt.
 - Kept existing group expenses, settlement suggestions, Smart Reservations, packing, Wallet/Vault, emergency assistance, notifications, collaboration, offline support and AI tools integrated rather than duplicating them.
-- Updated PWA cache and platform versions to 12.2.0.
+- Updated PWA cache and platform versions to 12.3.0.
+
+## 12.3.0 — Production hardening
+- Added Support & Diagnostics center with privacy-safe technical export.
+- Added `WAYPOINT_SUPPORT_EMAIL` / `WAYPOINT_PRIVACY_EMAIL` configuration.
+- Added privacy-preserving client error counters and active app-version analytics.
+- Added Travel Readiness card with offline-preparation verification.
+- Improved flight airport entry with IATA/city/airport suggestions and automatic common-airport timezone/name fill.
+- Added notification permission/status controls.
+- Legal acceptance version updated to 1.9.
+- Web/PWA/iOS/Android synchronized to 12.3.0.

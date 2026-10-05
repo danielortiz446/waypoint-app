@@ -4,5 +4,5 @@ for(const x of ['/api/telemetry/ping','/api/admin/analytics','/api/admin/live','
 for(const x of ['Live analytics','analyticsMetrics','liveUsers','Last 14 days','loadAnalytics'])assert(admin.includes(x),x);
 for(const x of ['waypointTelemetryPing','waypointInstallationId','/api/telemetry/ping'])assert(app.includes(x),x);
 assert(privacy.includes('Privacy-preserving app analytics'));assert(privacy.includes('Analítica de uso con privacidad'));
-assert(app.includes("WAYPOINT_LEGAL_VERSION='1.8'"));
+assert(app.includes("WAYPOINT_LEGAL_VERSION='1.9'"));
 console.log('PASS privacy-preserving admin analytics, live presence UI and legal disclosure');

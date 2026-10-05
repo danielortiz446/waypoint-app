@@ -235,7 +235,7 @@ async function loadDashboard(){
     const metrics=[
       ['Active now',d.analytics?.activeNow??0],['Active today',d.analytics?.activeToday??0],['Installations',d.analytics?.totalInstallations??0],
       ['Registered IDs',d.registeredUsers],['Premium',d.premiumUsers],['Free',d.freeUsers],
-      ['Shared trips',d.sharedTrips],['AI today',d.usageToday?.ai??0],['OCR today',d.usageToday?.ocr??0],['File storage',fmtBytes(d.fileStorageBytes)]
+      ['Shared trips',d.sharedTrips],['AI today',d.usageToday?.ai??0],['OCR today',d.usageToday?.ocr??0],['Errors today',d.analytics?.errorToday??0],['File storage',fmtBytes(d.fileStorageBytes)]
     ];
     $('#metrics').innerHTML=metrics.map(([k,v])=>`<div class="metric"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`).join('');
     loadAiLimits();
@@ -267,9 +267,9 @@ async function loadAnalytics(){
   try{
     const [a,l]=await Promise.all([api('/api/admin/analytics?days=14'),api('/api/admin/live')]);
     const s=a.snapshot||{};
-    $('#analyticsMetrics').innerHTML=metricCards([['Active now',s.activeNow||0],['Active 5 min',s.active5m||0],['Today',s.activeToday||0],['7 days',s.active7d||0],['Total installations',s.totalInstallations||0],['New today',s.newToday||0],['Registered online',s.registeredOnline||0],['Guests online',s.guestOnline||0]]);
+    $('#analyticsMetrics').innerHTML=metricCards([['Active now',s.activeNow||0],['Active 5 min',s.active5m||0],['Today',s.activeToday||0],['7 days',s.active7d||0],['Total installations',s.totalInstallations||0],['New today',s.newToday||0],['Registered online',s.registeredOnline||0],['Guests online',s.guestOnline||0],['Errors today',s.errorToday||0]]);
     const sessions=l.sessions||[];
-    $('#liveUsers').innerHTML=sessions.length?sessions.map(x=>`<div class="row"><div class="row-main"><div class="name"><span class="live-dot ${x.activeNow?'':'idle'}"></span>${esc(x.label)} <span class="pill ${x.plan==='premium'?'premium':''}">${esc((x.plan||'free').toUpperCase())}</span></div><div class="meta">${esc(platformLabel(x.platform))} · ${esc(platformLabel(x.appMode))} · ${esc((x.lang||'').toUpperCase())} · seen ${esc(fmtDate(x.lastSeenAt))}</div></div></div>`).join(''):'<div class="sub">No active devices in the last 5 minutes.</div>';
+    $('#liveUsers').innerHTML=sessions.length?sessions.map(x=>`<div class="row"><div class="row-main"><div class="name"><span class="live-dot ${x.activeNow?'':'idle'}"></span>${esc(x.label)} <span class="pill ${x.plan==='premium'?'premium':''}">${esc((x.plan||'free').toUpperCase())}</span></div><div class="meta">${esc(platformLabel(x.platform))} · ${esc(platformLabel(x.appMode))} · ${esc((x.lang||'').toUpperCase())} · v${esc(x.version||'unknown')} · seen ${esc(fmtDate(x.lastSeenAt))}</div></div></div>`).join(''):'<div class="sub">No active devices in the last 5 minutes.</div>';
     const mix={...(s.byPlatform||{}),...(s.byMode||{})},max=Math.max(1,...Object.values(mix).map(Number));
     $('#platformMix').innerHTML=Object.entries(mix).map(([k,v])=>`<div class="bar-row"><div class="meta">${esc(platformLabel(k))}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(Number(v||0)/max*100)}%"></div></div><strong>${esc(v||0)}</strong></div>`).join('');
     const daily=a.daily||[],maxDaily=Math.max(1,...daily.map(x=>Number(x.active||0)));

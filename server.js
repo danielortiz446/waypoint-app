@@ -152,7 +152,7 @@ function ensureAnalytics(){
 function analyticsDay(date=new Date()){return date.toISOString().slice(0,10);}
 function analyticsDailyRow(date=analyticsDay()){
   const a=ensureAnalytics();
-  const row=a.daily[date]||(a.daily[date]={active:{},newInstalls:0,ai:0,ocr:0});
+  const row=a.daily[date]||(a.daily[date]={active:{},newInstalls:0,ai:0,ocr:0,errors:0});
   if(!row.active||typeof row.active!=='object')row.active={};
   const dates=Object.keys(a.daily).sort();
   for(const d of dates.slice(0,Math.max(0,dates.length-31)))delete a.daily[d];
@@ -164,35 +164,43 @@ function recordUsageMetric(kind){
 }
 function platformFromTelemetry(v){v=String(v||'web').toLowerCase();return ['ios','android','web'].includes(v)?v:'web';}
 function appModeFromTelemetry(v){v=String(v||'browser').toLowerCase();return ['browser','pwa','native'].includes(v)?v:'browser';}
+function versionFromTelemetry(v){v=String(v||'unknown').trim();return /^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9._-]+)?$/.test(v)?v.slice(0,40):'unknown';}
+function recordClientError(body){
+  const rawId=String(body?.installationId||'').trim();if(!/^[A-Za-z0-9._:-]{12,160}$/.test(rawId))return null;
+  const a=ensureAnalytics(),now=Date.now(),installHash=hash('analytics:'+rawId).slice(0,32),type=String(body?.type||'client_error').replace(/[^A-Za-z0-9._-]/g,'_').slice(0,60)||'client_error',context=String(body?.context||'runtime').replace(/[^A-Za-z0-9._-]/g,'_').slice(0,80)||'runtime',version=versionFromTelemetry(body?.version),platform=platformFromTelemetry(body?.platform);
+  const day=analyticsDailyRow();day.errors=Math.max(0,Number(day.errors||0))+1;
+  a.errors=Array.isArray(a.errors)?a.errors:[];a.errors.push({at:now,installHash,type,context,version,platform});a.errors=a.errors.slice(-250);persistAdminData();return {ok:true};
+}
+
 function telemetrySnapshot(){
   const now=Date.now(),a=ensureAnalytics(),installs=Object.values(a.installations||{});
   const active=[...livePresence.values()].filter(x=>now-x.lastSeenAt<120000);
   const active5=[...livePresence.values()].filter(x=>now-x.lastSeenAt<300000);
   const active15=[...livePresence.values()].filter(x=>now-x.lastSeenAt<900000);
   const today=analyticsDay(),todayStart=Date.parse(today+'T00:00:00Z'),weekStart=now-7*86400000;
-  const byPlatform={web:0,ios:0,android:0},byMode={browser:0,pwa:0,native:0};
-  for(const x of active){byPlatform[x.platform]=(byPlatform[x.platform]||0)+1;byMode[x.appMode]=(byMode[x.appMode]||0)+1;}
+  const byPlatform={web:0,ios:0,android:0},byMode={browser:0,pwa:0,native:0},byVersion={};
+  for(const x of active){byPlatform[x.platform]=(byPlatform[x.platform]||0)+1;byMode[x.appMode]=(byMode[x.appMode]||0)+1;byVersion[x.version||'unknown']=(byVersion[x.version||'unknown']||0)+1;}
   return {
     activeNow:active.length,active5m:active5.length,active15m:active15.length,
     activeToday:installs.filter(x=>Number(x.lastSeenAt||0)>=todayStart).length,
     active7d:installs.filter(x=>Number(x.lastSeenAt||0)>=weekStart).length,
     totalInstallations:installs.length,newToday:installs.filter(x=>Number(x.firstSeenAt||0)>=todayStart).length,
-    byPlatform,byMode,registeredOnline:active.filter(x=>x.waypointId).length,guestOnline:active.filter(x=>!x.waypointId).length
+    byPlatform,byMode,byVersion,errorToday:Number(a.daily?.[today]?.errors||0),registeredOnline:active.filter(x=>x.waypointId).length,guestOnline:active.filter(x=>!x.waypointId).length
   };
 }
 function recordTelemetry(req,body){
   const rawId=String(body?.installationId||'').trim();
   if(!/^[A-Za-z0-9._:-]{12,160}$/.test(rawId))return null;
   const installHash=hash('analytics:'+rawId).slice(0,32),now=Date.now();
-  const a=ensureAnalytics(),platform=platformFromTelemetry(body?.platform),appMode=appModeFromTelemetry(body?.appMode);
+  const a=ensureAnalytics(),platform=platformFromTelemetry(body?.platform),appMode=appModeFromTelemetry(body?.appMode),version=versionFromTelemetry(body?.version);
   const lang=String(body?.lang||'').toLowerCase().slice(0,8)||'unknown';
   const user=clientAuth(req),ent=entitlementForUser(user);
   let row=a.installations[installHash];const isNew=!row;
-  if(!row)row=a.installations[installHash]={firstSeenAt:now,lastSeenAt:now,platform,appMode,lang};
-  row.lastSeenAt=now;row.platform=platform;row.appMode=appMode;row.lang=lang;row.plan=ent.plan;
+  if(!row)row=a.installations[installHash]={firstSeenAt:now,lastSeenAt:now,platform,appMode,lang,version};
+  row.lastSeenAt=now;row.platform=platform;row.appMode=appMode;row.lang=lang;row.version=version;row.plan=ent.plan;
   if(user?.waypointId)row.waypointId=user.waypointId;else delete row.waypointId;
   const day=analyticsDailyRow();day.active[installHash]=1;if(isNew)day.newInstalls=Math.max(0,Number(day.newInstalls||0))+1;
-  livePresence.set(installHash,{installHash,lastSeenAt:now,platform,appMode,lang,plan:ent.plan,waypointId:user?.waypointId||null});
+  livePresence.set(installHash,{installHash,lastSeenAt:now,platform,appMode,lang,version,plan:ent.plan,waypointId:user?.waypointId||null});
   for(const [k,v] of livePresence)if(now-v.lastSeenAt>30*60*1000)livePresence.delete(k);
   const last=analyticsPersistedAt.get(installHash)||0;
   if(isNew||now-last>5*60*1000){analyticsPersistedAt.set(installHash,now);persistAdminData();}
@@ -931,13 +939,18 @@ const server=http.createServer(async(req,res)=>{
         return json(res,502,{error:'ai_temporarily_unavailable'});
       }finally{releaseAiReservation();}
     }
-    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'12.2.0',time:new Date().toISOString()});
+    if(req.method==='GET'&&u.pathname==='/health') return json(res,200,{ok:true,service:'waypoint',version:'12.3.0',time:new Date().toISOString()});
     if(req.method==='POST'&&u.pathname==='/api/telemetry/ping'){
       const origin=String(req.headers.origin||'');
       if(origin){try{if(new URL(origin).host!==req.headers.host)return json(res,403,{error:'origin_not_allowed'});}catch(e){return json(res,403,{error:'origin_not_allowed'});}}
       const body=await readBody(req,8000).catch(()=>null);if(!body)return json(res,400,{error:'invalid_telemetry'});
       const out=recordTelemetry(req,body);if(!out)return json(res,400,{error:'invalid_telemetry'});
       return json(res,200,out);
+    }
+    if(req.method==='POST'&&u.pathname==='/api/telemetry/error'){
+      const origin=String(req.headers.origin||'');if(origin){try{if(new URL(origin).host!==req.headers.host)return json(res,403,{error:'origin_not_allowed'});}catch(e){return json(res,403,{error:'origin_not_allowed'});}}
+      if(!allowRate(req,30,60000))return json(res,429,{error:'telemetry_rate_limit'});
+      const body=await readBody(req,6000).catch(()=>null);if(!body)return json(res,400,{error:'invalid_telemetry'});const out=recordClientError(body);if(!out)return json(res,400,{error:'invalid_telemetry'});return json(res,200,out);
     }
 
     if(req.method==='GET'&&u.pathname==='/api/fx/rate'){
@@ -1404,13 +1417,13 @@ const server=http.createServer(async(req,res)=>{
       if(!requireAdmin(req,res))return;
       const days=Math.max(7,Math.min(31,Number(u.searchParams.get('days')||14)));
       const a=ensureAnalytics(),out=[];
-      for(let i=days-1;i>=0;i--){const d=new Date(Date.now()-i*86400000),date=analyticsDay(d),row=a.daily[date]||{};out.push({date,active:Object.keys(row.active||{}).length,newInstalls:Number(row.newInstalls||0),ai:Number(row.ai||0),ocr:Number(row.ocr||0)});}
-      return json(res,200,{snapshot:telemetrySnapshot(),daily:out,generatedAt:new Date().toISOString()});
+      for(let i=days-1;i>=0;i--){const d=new Date(Date.now()-i*86400000),date=analyticsDay(d),row=a.daily[date]||{};out.push({date,active:Object.keys(row.active||{}).length,newInstalls:Number(row.newInstalls||0),ai:Number(row.ai||0),ocr:Number(row.ocr||0),errors:Number(row.errors||0)});}
+      return json(res,200,{snapshot:telemetrySnapshot(),daily:out,recentErrors:(ensureAnalytics().errors||[]).slice(-30).reverse(),generatedAt:new Date().toISOString()});
     }
     if(req.method==='GET'&&u.pathname==='/api/admin/live'){
       if(!requireAdmin(req,res))return;
       const now=Date.now();
-      const sessions=[...livePresence.values()].filter(x=>now-x.lastSeenAt<5*60*1000).sort((a,b)=>b.lastSeenAt-a.lastSeenAt).slice(0,500).map(x=>({label:x.waypointId||('Guest '+x.installHash.slice(0,6).toUpperCase()),waypointId:x.waypointId||null,platform:x.platform,appMode:x.appMode,lang:x.lang,plan:x.plan,lastSeenAt:new Date(x.lastSeenAt).toISOString(),activeNow:now-x.lastSeenAt<120000}));
+      const sessions=[...livePresence.values()].filter(x=>now-x.lastSeenAt<5*60*1000).sort((a,b)=>b.lastSeenAt-a.lastSeenAt).slice(0,500).map(x=>({label:x.waypointId||('Guest '+x.installHash.slice(0,6).toUpperCase()),waypointId:x.waypointId||null,platform:x.platform,appMode:x.appMode,lang:x.lang,version:x.version||'unknown',plan:x.plan,lastSeenAt:new Date(x.lastSeenAt).toISOString(),activeNow:now-x.lastSeenAt<120000}));
       return json(res,200,{sessions,generatedAt:new Date().toISOString()});
     }
     if(req.method==='GET'&&u.pathname==='/api/admin/users'){
@@ -1506,7 +1519,7 @@ const server=http.createServer(async(req,res)=>{
     if(req.method==='GET'&&u.pathname==='/api/admin/system'){
       const s=requireAdmin(req,res);if(!s)return;
       return json(res,200,{
-        version:'12.2.0',
+        version:'12.3.0',
         uptimeSeconds:Math.round(process.uptime()),
         node:process.version,
         dataFile:DATA_FILE,
@@ -1525,12 +1538,17 @@ const server=http.createServer(async(req,res)=>{
           receiptOCR:Boolean(process.env.OCR_API_URL),
           aiTravelAssistant:waypointAiConfigured(),
           pushNotifications:false,
+          supportContact:Boolean(process.env.WAYPOINT_SUPPORT_EMAIL),
           emailImport:false,
           adsenseVerification:true,
           adsServing:false,
           premiumPurchases:stripeConfigured()&&Boolean(stripeConfiguredUrl())
         }
       });
+    }
+
+    if(req.method==='GET'&&u.pathname==='/api/public-config'){
+      return json(res,200,{version:'12.3.0',supportEmail:String(process.env.WAYPOINT_SUPPORT_EMAIL||'').trim().slice(0,200),privacyEmail:String(process.env.WAYPOINT_PRIVACY_EMAIL||process.env.WAYPOINT_SUPPORT_EMAIL||'').trim().slice(0,200),pushConfigured:false,nativePurchasesConfigured:false});
     }
 
     if(req.method==='GET'&&u.pathname==='/api/features'){

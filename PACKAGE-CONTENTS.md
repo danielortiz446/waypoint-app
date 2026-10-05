@@ -33,3 +33,11 @@ Historical `RELEASE-*` and `FINAL-*` files are intentionally excluded from this 
 - Other-airline fallback with manual IATA code.
 
 - `TRAVEL-CENTER-1220.md` — Travel Center and Airport Assistant notes.
+
+## V12.3.0 additions
+- `PRODUCTION-HARDENING-1230.md`
+- `scripts/production-hardening-1230-test.js`
+- Support/diagnostics UI and `/api/public-config`
+- Client error telemetry `/api/telemetry/error`
+- Admin app-version/error analytics
+- Airport suggestion dataset for faster flight entry
