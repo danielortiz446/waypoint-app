@@ -31,3 +31,5 @@ Historical `RELEASE-*` and `FINAL-*` files are intentionally excluded from this 
 - Numeric-only flight number entry.
 - Full IATA flight number composed automatically for live lookup.
 - Other-airline fallback with manual IATA code.
+
+- `TRAVEL-CENTER-1220.md` — Travel Center and Airport Assistant notes.

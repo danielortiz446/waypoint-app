@@ -34,3 +34,12 @@ V12.1.5
 - Added next-flight summary, manual check-in status toggle and clearer flight cards.
 - Enhanced AirLabs on-demand status to surface arrival terminal/gate and reported times when available.
 - Added route mismatch warning when provider data does not match the saved route.
+
+
+## 12.2.0
+- Added Smart Travel Center dashboard with contextual alerts, budget projection, readiness score, nearby shortcuts and emergency quick access.
+- Added Airport Assistant with configurable airport-arrival buffer, estimated travel time, suggested leave time, flight facts and airport/check-in shortcuts.
+- Enhanced Today with contextual alerts and direct Travel Center access.
+- Enhanced Trip Recap with flights, activities, spending, memories and optional Premium Gemini recap prompt.
+- Kept existing group expenses, settlement suggestions, Smart Reservations, packing, Wallet/Vault, emergency assistance, notifications, collaboration, offline support and AI tools integrated rather than duplicating them.
+- Updated PWA cache and platform versions to 12.2.0.
