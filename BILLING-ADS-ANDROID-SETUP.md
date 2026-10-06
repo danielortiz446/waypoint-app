@@ -20,3 +20,12 @@ The project already includes the AdSense verification script for `ca-pub-1755628
 Apple In-App Purchase and Google Play Billing are different from Stripe web checkout. Create app records and actual store products, implement native SDKs, server-side transaction verification and restore purchases, then test in TestFlight and Play internal testing. Create separate AdMob app IDs/ad units for each native platform; integrate Google Mobile Ads SDK or a maintained Capacitor 8 plugin, plus consent. Native digital-goods store payment policies apply, subject to platform/location-specific exceptions. The current remote-URL wrappers are for internal testing only, not app store submissions.
 
 **For Android testing:** open `android-capacitor/README.md`. Do not touch the existing Railway `/data` volume; back it up before deployment.
+
+
+## AdSense web publisher — V12.3.1
+
+Publisher: `ca-pub-1755628880712670`
+
+The AdSense publisher script is included only on the public website pages (`index.html`, `privacy.html`, and `terms.html`). `public/ads.txt` is configured for the same publisher. Do not copy the AdSense website tag into Capacitor iOS/Android WebViews; use Google AdMob for native advertising.
+
+The publisher script prepares the site for AdSense/Auto Ads. Actual ad serving still depends on Google approval and the AdSense account/site configuration. If Premium must remain ad-free, do not enable unrestricted Auto Ads until plan-aware ad suppression is implemented; manual ad units can later be rendered only for Free users.
